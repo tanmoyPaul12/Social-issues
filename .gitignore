@@ -1,0 +1,218 @@
+# ============================================================
+# Societal Innovation Collaboration Portal — Root .gitignore
+# Covers: Next.js (frontend), Java/Maven (backend), Python (ai-service)
+# ============================================================
+
+# ──────────────────────────────────────────────
+# OPERATING SYSTEM
+# ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ──────────────────────────────────────────────
+# EDITORS & IDES
+# ──────────────────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*~
+
+# ──────────────────────────────────────────────
+# ENVIRONMENT & SECRETS
+# ──────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+application-local.properties
+application-local.yml
+
+# ──────────────────────────────────────────────
+# FRONTEND — Next.js / Node.js (frontend/web/)
+# ──────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# pnpm
+.pnpm-store/
+pnpm-debug.log*
+
+# yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# npm / yarn debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+.next/
+out/
+
+# Production build
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing
+coverage/
+
+# Vercel
+.vercel
+
+# Misc
+*.pem
+
+# ──────────────────────────────────────────────
+# BACKEND — Java / Spring Boot / Maven (backend/)
+# ──────────────────────────────────────────────
+
+# Maven build output
+backend/target/
+!backend/.mvn/wrapper/maven-wrapper.jar
+!backend/**/src/main/**/target/
+!backend/**/src/test/**/target/
+
+# Maven wrapper downloads
+backend/.mvn/wrapper/maven-wrapper.properties
+
+# Compiled Java class files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Spring Boot DevTools
+.spring-boot-devtools.properties
+
+# Spring log files
+spring.log
+backend/logs/
+
+# Lombok
+lombok.config
+
+# ──────────────────────────────────────────────
+# AI MICROSERVICE — Python / FastAPI (ai-service/)
+# ──────────────────────────────────────────────
+
+# Virtual environments
+ai-service/.venv/
+ai-service/venv/
+ai-service/env/
+ai-service/.env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Pytest & test coverage
+.pytest_cache/
+.cache/
+nosetests.xml
+test-reports/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# MyPy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# AI / ML model artifacts (large binary files — store in DVC or S3)
+ai-service/**/*.bin
+ai-service/**/*.pt
+ai-service/**/*.pth
+ai-service/**/*.onnx
+ai-service/**/*.pkl
+ai-service/**/*.joblib
+ai-service/**/*.h5
+ai-service/models/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# ──────────────────────────────────────────────
+# LOGS (all services)
+# ──────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ──────────────────────────────────────────────
+# DOCKER
+# ──────────────────────────────────────────────
+.docker/
+docker-compose.override.yml
+
+# ──────────────────────────────────────────────
+# MISC PROJECT FILES
+# ──────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.orig
+*.backup
