@@ -1,22 +1,87 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { OFFICIAL_RESEARCH_DOMAINS } from "@/app/page";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
+import { GoogleMapPicker, JHARKHAND_DISTRICT_COORDINATES } from "@/components/common/GoogleMapPicker";
+
+// Constants for backend communication
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+
+const JHARKHAND_DISTRICTS = [
+  "Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum", "Garhwa", 
+  "Giridih", "Godda", "Gumla", "Hazaribagh", "Jamtara", "Khunti", "Koderma", 
+  "Latehar", "Lohardaga", "Pakur", "Palamu", "Ramgarh", "Ranchi", "Sahibganj", 
+  "Saraikela Kharsawan", "Simdega", "West Singhbhum"
+].sort();
+
+const ISSUE_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+// Map the official research domains to IssueSector backend enum values
+const domainToSectorMap: Record<string, string> = {
+  "Water Management": "WATER",
+  "Healthcare & Public Health": "HEALTH",
+  "Education & Skilling": "EDUCATION",
+  "Rural Infrastructure": "INFRASTRUCTURE",
+  "Agriculture & Agro-Tech": "AGRICULTURE",
+  "Energy & Electricity": "ELECTRICITY",
+  "Sanitation & Waste": "SANITATION",
+  "Livelihood & Employment": "LIVELIHOOD",
+  "Environment & Climate": "ENVIRONMENT",
+  "Governance & Civic": "GOVERNANCE"
+};
+
+const sectorToDomainMap: Record<string, string> = {
+  "WATER": "Water Management",
+  "HEALTH": "Healthcare & Public Health",
+  "EDUCATION": "Education & Skilling",
+  "INFRASTRUCTURE": "Rural Infrastructure",
+  "AGRICULTURE": "Agriculture & Agro-Tech",
+  "ELECTRICITY": "Energy & Electricity",
+  "SANITATION": "Sanitation & Waste",
+  "LIVELIHOOD": "Livelihood & Employment",
+  "ENVIRONMENT": "Environment & Climate",
+  "GOVERNANCE": "Governance & Civic",
+  "OTHER": "Other Grassroot Need"
+};
+
+const getSectorEnum = (domainStr: string) => {
+  return domainToSectorMap[domainStr] || "OTHER";
+};
+
+interface AttachmentItem {
+  id?: number;
+  fileUrl: string;
+  fileName: string;
+  fileType?: "PHOTO" | "VIDEO" | "DOCUMENT" | "OTHER";
+  mimeType?: string;
+  fileSizeBytes?: number;
+}
 
 interface CitizenSubmission {
-  id: string;
+  id: string | number;
+  numericId?: number;
   title: string;
   domain: string;
   district: string;
+  block?: string;
+  villageOrWard?: string;
+  addressDescription?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   date: string;
-  status: "Submitted" | "Under Review" | "Assigned to University" | "In Progress" | "Resolved & Deployed";
+  status: "DRAFT" | "SUBMITTED" | "TRIAGED" | "ASSIGNED_HEI" | "IN_PROGRESS" | "RESOLVED" | "REJECTED" | string;
   assignedHEI?: string;
   fundingPartner?: string;
   progress: number;
   description: string;
   upvotes: number;
+  priority?: string;
+  affectedPopulation?: number | null;
+  attachments?: AttachmentItem[];
+  attachmentCount?: number;
+  primaryThumbnailUrl?: string;
 }
 
 interface CommunityChallenge {
@@ -34,7 +99,7 @@ interface CitizenDashboardViewProps {
 }
 
 export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboardViewProps) {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const citizenDistrict = user?.district || "Your District";
   const citizenName = user?.name || "Citizen";
 
@@ -42,38 +107,322 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
   const [communityIssues, setCommunityIssues] = useState<CommunityChallenge[]>([]);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<CitizenSubmission | null>(null);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
 
-  // New report form state
+  // Form State matching IssueSubmitRequest
   const [title, setTitle] = useState("");
-  const [domain, setDomain] = useState<string>(OFFICIAL_RESEARCH_DOMAINS[1] || "Agriculture & Agro-Tech");
+  const [domain, setDomain] = useState<string>(OFFICIAL_RESEARCH_DOMAINS[4] || "Agriculture & Agro-Tech");
   const [description, setDescription] = useState("");
-  const [locationPin, setLocationPin] = useState(user?.district ? `${user.district} (Gram Panchayat)` : "Gram Panchayat");
+  const [district, setDistrict] = useState<string>(user?.district || JHARKHAND_DISTRICTS[0]);
+  const [block, setBlock] = useState("");
+  const [villageOrWard, setVillageOrWard] = useState("");
+  const [addressDescription, setAddressDescription] = useState("");
+  
+  // Default coordinates initialized from selected district (never NULL)
+  const initialCoord = JHARKHAND_DISTRICT_COORDINATES[user?.district || JHARKHAND_DISTRICTS[0]] || { lat: 23.3441, lng: 85.3096 };
+  const [latitude, setLatitude] = useState<number | null>(initialCoord.lat);
+  const [longitude, setLongitude] = useState<number | null>(initialCoord.lng);
+
+  const [priority, setPriority] = useState<string>("MEDIUM");
+  const [affectedPopulation, setAffectedPopulation] = useState<number | "">("");
+  const [contactName, setContactName] = useState(user?.name || "");
+  const [contactPhone, setContactPhone] = useState(user?.phone || "");
+  const [isAnonymous, setIsAnonymous] = useState(false);
+
+  // Media files upload state (images, videos, documents)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<{ file: File; previewUrl: string; type: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDrafting, setIsDrafting] = useState(false);
+
+  // Fetch real submissions from backend on mount
+  useEffect(() => {
+    fetchMyIssues();
+  }, [token]);
+
+  const fetchMyIssues = async () => {
+    if (!token) return;
+    setIsLoadingIssues(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/issues/my?page=0&size=20`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.content && Array.isArray(data.content)) {
+          const mapped: CitizenSubmission[] = data.content.map((item: any) => ({
+            id: item.issueNumber || item.id,
+            numericId: item.id,
+            title: item.title,
+            domain: sectorToDomainMap[item.sector] || item.sector || "Grassroot Need",
+            district: item.district,
+            block: item.block,
+            date: item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "Recent",
+            status: item.status,
+            progress: item.status === "RESOLVED" ? 100 : item.status === "IN_PROGRESS" ? 60 : item.status === "ASSIGNED_HEI" ? 40 : 15,
+            description: item.snippet || item.title,
+            upvotes: 1,
+            priority: item.priority,
+            affectedPopulation: item.affectedPopulation,
+            attachmentCount: item.attachmentCount || 0,
+            primaryThumbnailUrl: item.primaryThumbnailUrl
+          }));
+          setSubmissions(mapped);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch citizen submissions from backend:", e);
+    } finally {
+      setIsLoadingIssues(false);
+    }
+  };
+
+  // Inspect detailed issue including attachments
+  const handleInspectIssue = async (sub: CitizenSubmission) => {
+    setSelectedSubmission(sub);
+    const issueId = sub.numericId || sub.id;
+    if (typeof issueId === "number" || (!isNaN(Number(issueId)) && !String(issueId).startsWith("JH-"))) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/issues/${issueId}`);
+        if (res.ok) {
+          const fullData = await res.json();
+          setSelectedSubmission((prev) => prev ? {
+            ...prev,
+            description: fullData.description || prev.description,
+            block: fullData.block || prev.block,
+            villageOrWard: fullData.villageOrWard || prev.villageOrWard,
+            addressDescription: fullData.addressDescription || prev.addressDescription,
+            latitude: fullData.latitude,
+            longitude: fullData.longitude,
+            attachments: fullData.attachments || [],
+            priority: fullData.priority || prev.priority
+          } : null);
+        }
+      } catch (e) {
+        console.error("Could not fetch detailed issue data:", e);
+      }
+    }
+  };
+
+  // Handle District Change & Sync Map Center
+  const handleDistrictSelect = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    const preset = JHARKHAND_DISTRICT_COORDINATES[newDistrict];
+    if (preset) {
+      setLatitude(preset.lat);
+      setLongitude(preset.lng);
+    }
+  };
+
+  // File attachments management
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addFiles(Array.from(e.target.files));
+    }
+  };
+
+  const addFiles = (files: File[]) => {
+    const MAX_FILES = 5;
+    const MAX_SIZE_MB = 15;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    const currentCount = selectedFiles.length;
+    const availableSlots = MAX_FILES - currentCount;
+
+    if (availableSlots <= 0) {
+      toast.error(`Maximum limit of ${MAX_FILES} attachments reached.`);
+      return;
+    }
+
+    const validNewFiles: File[] = [];
+    const newPreviews: { file: File; previewUrl: string; type: string }[] = [];
+
+    files.slice(0, availableSlots).forEach((file) => {
+      if (file.size > MAX_SIZE_BYTES) {
+        toast.error(`File "${file.name}" exceeds maximum allowed size of ${MAX_SIZE_MB}MB.`);
+        return;
+      }
+
+      validNewFiles.push(file);
+      const isImg = file.type.startsWith("image/");
+      const isVid = file.type.startsWith("video/");
+      const isDoc = file.type.includes("pdf") || file.type.includes("document");
+
+      newPreviews.push({
+        file,
+        previewUrl: isImg ? URL.createObjectURL(file) : "",
+        type: isImg ? "image" : isVid ? "video" : isDoc ? "document" : "other"
+      });
+    });
+
+    setSelectedFiles((prev) => [...prev, ...validNewFiles]);
+    setFilePreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    const previewToRemove = filePreviews[index];
+    if (previewToRemove?.previewUrl) {
+      URL.revokeObjectURL(previewToRemove.previewUrl);
+    }
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setFilePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const submitToBackend = async (isDraft: boolean) => {
+    if (!title.trim() || !description.trim()) {
+      toast.error("Title and description are mandatory.");
+      return;
+    }
+    
+    if (description.trim().length < 20) {
+      toast.error("Description must be at least 20 characters of detail.");
+      return;
+    }
+
+    if (!district) {
+      toast.error("District is mandatory.");
+      return;
+    }
+
+    // Ensure fallback coordinates if still null
+    const finalLat = latitude ?? (JHARKHAND_DISTRICT_COORDINATES[district]?.lat || 23.3441);
+    const finalLng = longitude ?? (JHARKHAND_DISTRICT_COORDINATES[district]?.lng || 85.3096);
+
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      sector: getSectorEnum(domain),
+      district,
+      block: block.trim() || null,
+      villageOrWard: villageOrWard.trim() || null,
+      addressDescription: addressDescription.trim() || null,
+      latitude: finalLat,
+      longitude: finalLng,
+      priority,
+      affectedPopulation: typeof affectedPopulation === "number" ? affectedPopulation : null,
+      contactName: contactName.trim() || null,
+      contactPhone: contactPhone.trim() || null,
+      isAnonymous
+    };
+
+    if (isDraft) setIsDrafting(true);
+    else setIsSubmitting(true);
+
+    try {
+      // Step 1: Create issue in backend
+      const endpoint = isDraft ? `${API_BASE_URL}/issues/draft` : `${API_BASE_URL}/issues`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || "Failed to submit issue");
+      }
+
+      const createdIssue = await res.json();
+      const issueId = createdIssue.id;
+
+      // Step 2: Upload any attached images, videos, or documents
+      let uploadedAttachmentCount = 0;
+      if (selectedFiles.length > 0 && issueId) {
+        for (const file of selectedFiles) {
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const uploadRes = await fetch(`${API_BASE_URL}/issues/${issueId}/attachments`, {
+              method: "POST",
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+              },
+              body: formData
+            });
+            if (uploadRes.ok) {
+              uploadedAttachmentCount++;
+            }
+          } catch (uploadErr) {
+            console.error(`Failed to upload attachment ${file.name}:`, uploadErr);
+          }
+        }
+      }
+
+      // Step 3: Update local state to immediately show in dashboard
+      const newSub: CitizenSubmission = {
+        id: createdIssue.issueNumber || `JH-NEW-${Math.floor(1000 + Math.random() * 9000)}`,
+        numericId: createdIssue.id,
+        title: createdIssue.title,
+        domain: sectorToDomainMap[createdIssue.sector] || domain,
+        district: createdIssue.district,
+        block: createdIssue.block,
+        villageOrWard: createdIssue.villageOrWard,
+        addressDescription: createdIssue.addressDescription,
+        latitude: createdIssue.latitude || finalLat,
+        longitude: createdIssue.longitude || finalLng,
+        date: "Just now",
+        status: createdIssue.status || (isDraft ? "DRAFT" : "SUBMITTED"),
+        progress: 10,
+        description: createdIssue.description,
+        upvotes: 1,
+        priority: createdIssue.priority,
+        affectedPopulation: createdIssue.affectedPopulation,
+        attachmentCount: uploadedAttachmentCount
+      };
+      
+      setSubmissions([newSub, ...submissions]);
+      setIsReportModalOpen(false);
+      resetForm();
+      
+      if (isDraft) {
+        toast.success(`Draft issue saved. (${uploadedAttachmentCount} attachment${uploadedAttachmentCount === 1 ? '' : 's'} saved)`);
+      } else {
+        toast.success(`Grassroots challenge #${createdIssue.issueNumber || ''} submitted to State AI Routing System with GPS (${finalLat.toFixed(3)}, ${finalLng.toFixed(3)}).`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred while submitting.");
+    } finally {
+      setIsSubmitting(false);
+      setIsDrafting(false);
+    }
+  };
 
   const handleCreateChallenge = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    submitToBackend(false);
+  };
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const newSub: CitizenSubmission = {
-        id: `JH-2026-0${Math.floor(6000 + Math.random() * 3000)}`,
-        title: title.trim(),
-        domain,
-        district: user?.district || "Ranchi",
-        date: "Just now",
-        status: "Submitted",
-        progress: 10,
-        description: description.trim(),
-        upvotes: 1,
-      };
-      setSubmissions([newSub, ...submissions]);
-      setIsSubmitting(false);
-      setIsReportModalOpen(false);
-      setTitle("");
-      setDescription("");
-      toast.success(`Grassroots challenge "${newSub.title}" submitted to State AI Routing System.`);
-    }, 400);
+  const resetForm = () => {
+    setTitle("");
+    setDomain(OFFICIAL_RESEARCH_DOMAINS[4] || "Agriculture & Agro-Tech");
+    setDescription("");
+    const defaultDist = user?.district || JHARKHAND_DISTRICTS[0];
+    setDistrict(defaultDist);
+    const defaultCoord = JHARKHAND_DISTRICT_COORDINATES[defaultDist] || { lat: 23.3441, lng: 85.3096 };
+    setLatitude(defaultCoord.lat);
+    setLongitude(defaultCoord.lng);
+    setBlock("");
+    setVillageOrWard("");
+    setAddressDescription("");
+    setPriority("MEDIUM");
+    setAffectedPopulation("");
+    setContactName(user?.name || "");
+    setContactPhone(user?.phone || "");
+    setIsAnonymous(false);
+    
+    // Clean up previews
+    filePreviews.forEach((p) => {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    });
+    setSelectedFiles([]);
+    setFilePreviews([]);
   };
 
   const handleToggleUpvote = (id: string) => {
@@ -93,9 +442,9 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
     );
   };
 
-  const pendingCount = submissions.filter((s) => s.status === "Submitted" || s.status === "Under Review").length;
-  const inProgressCount = submissions.filter((s) => s.status === "Assigned to University" || s.status === "In Progress").length;
-  const resolvedCount = submissions.filter((s) => s.status === "Resolved & Deployed").length;
+  const pendingCount = submissions.filter((s) => s.status === "SUBMITTED" || s.status === "Submitted" || s.status === "TRIAGED" || s.status === "Under Review" || s.status === "DRAFT").length;
+  const inProgressCount = submissions.filter((s) => s.status === "ASSIGNED_HEI" || s.status === "IN_PROGRESS" || s.status === "Assigned to University" || s.status === "In Progress").length;
+  const resolvedCount = submissions.filter((s) => s.status === "RESOLVED" || s.status === "Resolved & Deployed").length;
 
   return (
     <div className="p-6 sm:p-8 space-y-6 animate-in fade-in">
@@ -106,14 +455,14 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
             Citizen Problem Command Center
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Welcome, <strong>{citizenName}</strong>. Report local civic, agricultural, and environmental problems for automatic triage to Jharkhand university R&amp;D labs.
+            Welcome, <strong>{citizenName}</strong>. Report local civic, agricultural, water, and environmental problems with interactive Google Maps pinning and photo/video evidence for AI triage to Jharkhand university R&amp;D labs.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsReportModalOpen(true)}
-          className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer flex-shrink-0"
+          className="px-4 py-2.5 rounded-sm bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 shadow-sm cursor-pointer flex-shrink-0 transition-all"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -144,7 +493,15 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
               Reported Community Problems &amp; Lifecycle Progress
             </h2>
-            <span className="text-xs text-slate-500 font-mono">{submissions.length} Total Records</span>
+            <div className="flex items-center gap-3">
+              {isLoadingIssues && (
+                <span className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                  <span className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  Syncing records...
+                </span>
+              )}
+              <span className="text-xs text-slate-500 font-mono">{submissions.length} Total Records</span>
+            </div>
           </div>
 
           {submissions.length === 0 ? (
@@ -156,7 +513,7 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
               </div>
               <h3 className="text-sm font-bold text-slate-900">No Grassroots Challenges Reported Yet</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-                Have a civic, agricultural, water, or public service problem in your panchayat? Click below to report a challenge directly to state university R&amp;D labs.
+                Have a civic, agricultural, water, or public service problem in your panchayat? Click below to report a challenge directly with Google Maps coordinates and photos/videos to state university R&amp;D labs.
               </p>
               <button
                 type="button"
@@ -173,33 +530,53 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
                     <th className="py-3 px-4">Ticket ID</th>
                     <th className="py-3 px-4">Challenge Title</th>
-                    <th className="py-3 px-4">Domain</th>
-                    <th className="py-3 px-4">Assigned University Lab</th>
+                    <th className="py-3 px-4">Domain &amp; Location</th>
+                    <th className="py-3 px-4">Evidence</th>
+                    <th className="py-3 px-4">Assigned University</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {submissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={String(sub.id)} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-blue-700">{sub.id}</td>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900">{sub.title}</div>
                         <div className="text-[11px] text-slate-500 truncate max-w-xs">{sub.description}</div>
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-slate-700">{sub.domain}</td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-700">{sub.domain}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {sub.district}{sub.block ? ` • ${sub.block}` : ''}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {(sub.attachmentCount && sub.attachmentCount > 0) || (sub.attachments && sub.attachments.length > 0) ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[11px]">
+                            <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            {sub.attachmentCount || sub.attachments?.length} files
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">None</span>
+                        )}
+                      </td>
                       <td className="py-3.5 px-4 text-purple-800 font-semibold">
                         {sub.assignedHEI || "AI Triage In Progress"}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
-                            sub.status === "Resolved & Deployed"
+                            sub.status === "RESOLVED" || sub.status === "Resolved & Deployed"
                               ? "bg-emerald-100 text-emerald-800"
-                              : sub.status === "In Progress"
+                              : sub.status === "IN_PROGRESS" || sub.status === "In Progress"
                               ? "bg-purple-100 text-purple-800"
-                              : sub.status === "Assigned to University"
+                              : sub.status === "ASSIGNED_HEI" || sub.status === "Assigned to University"
                               ? "bg-blue-100 text-blue-800"
+                              : sub.status === "DRAFT"
+                              ? "bg-slate-200 text-slate-700"
                               : "bg-amber-100 text-amber-800"
                           }`}
                         >
@@ -209,7 +586,7 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
                       <td className="py-3.5 px-4 text-right">
                         <button
                           type="button"
-                          onClick={() => setSelectedSubmission(sub)}
+                          onClick={() => handleInspectIssue(sub)}
                           className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
                         >
                           Inspect →
@@ -277,91 +654,361 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
         </div>
       )}
 
-      {/* Modal: Report New Challenge */}
+      {/* Modal: Report New Challenge with Google Maps & Media Upload */}
       {isReportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-md max-w-lg w-full p-6 shadow-2xl border border-slate-300 relative max-h-[90vh] overflow-y-auto text-xs">
+          <div className="bg-white rounded-md max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-slate-300 relative max-h-[92vh] overflow-y-auto text-xs">
             <button
               type="button"
               onClick={() => setIsReportModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <h3 className="text-base font-black text-slate-900">Report Grassroots Challenge</h3>
-            <p className="text-slate-500 mt-1">
-              Submit a civic, agricultural, water, or health problem. AI will cluster and route it to relevant university capstone teams.
+            <h3 className="text-lg font-black text-slate-900">Report Grassroots Challenge</h3>
+            <p className="text-slate-500 mt-1 mb-5 text-xs">
+              Submit a civic, agricultural, water, or health problem. Pin the problem site on the interactive Google Map and attach photo/video evidence for AI triage to Jharkhand university capstone teams.
             </p>
 
-            <form onSubmit={handleCreateChallenge} className="mt-4 space-y-3.5 font-medium">
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Problem Title:</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Tube-well drinking water salinity in block"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
-                />
+            <form onSubmit={handleCreateChallenge} className="space-y-5 font-medium">
+              
+              {/* SECTION 1: Problem Details */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-slate-800 border-b border-slate-200 pb-1 uppercase tracking-wider">
+                  1. Problem Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-700 font-bold mb-1">Problem Title <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Broken check-dam flooding agricultural fields during monsoon"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Domain Classification <span className="text-red-500">*</span></label>
+                    <select
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    >
+                      {OFFICIAL_RESEARCH_DOMAINS.map((d, i) => (
+                        <option key={i} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Priority Level <span className="text-red-500">*</span></label>
+                    <select
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    >
+                      {ISSUE_PRIORITIES.map((p, i) => (
+                        <option key={i} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-700 font-bold mb-1">Detailed Description <span className="text-red-500">*</span></label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Describe the issue in detail, who is affected, past repair attempts, minimum 20 characters..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+                    />
+                    <div className="text-[10px] text-slate-400 mt-1 flex justify-end">
+                      {description.length} characters (min 20)
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Domain Classification:</label>
-                <select
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+              {/* SECTION 2: Location Data with Google Map Picker */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    2. Ground Location &amp; Interactive Google Map
+                  </h4>
+                  <span className="text-[10px] text-slate-500">
+                    Works for both remote workstation &amp; field reporters
+                  </span>
+                </div>
+
+                {/* District Selector (Auto-syncs Map) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">District <span className="text-red-500">*</span></label>
+                    <select
+                      required
+                      value={district}
+                      onChange={(e) => handleDistrictSelect(e.target.value)}
+                      className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    >
+                      <option value="">Select District</option>
+                      {JHARKHAND_DISTRICTS.map((d, i) => (
+                        <option key={i} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Block / Tehsil</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Kanke, Namkum"
+                      value={block}
+                      onChange={(e) => setBlock(e.target.value)}
+                      className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Village / Ward / Panchayat</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tetri Gram Panchayat"
+                      value={villageOrWard}
+                      onChange={(e) => setVillageOrWard(e.target.value)}
+                      className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Interactive Google Map with Search & Pin */}
+                <div className="mt-2">
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Pin Problem Site on Google Map:
+                  </label>
+                  <GoogleMapPicker
+                    district={district}
+                    latitude={latitude}
+                    longitude={longitude}
+                    onChangeLocation={(newLat, newLng, geocodeInfo) => {
+                      setLatitude(newLat);
+                      setLongitude(newLng);
+                      if (geocodeInfo) {
+                        if (geocodeInfo.villageOrWard && !villageOrWard) {
+                          setVillageOrWard(geocodeInfo.villageOrWard);
+                        }
+                        if (geocodeInfo.block && !block) {
+                          setBlock(geocodeInfo.block);
+                        }
+                        if (geocodeInfo.formattedAddress && !addressDescription) {
+                          setAddressDescription(geocodeInfo.formattedAddress);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Landmark or Address note */}
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Specific Landmark / Location Notes</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Near Govt Primary School or North Canal Gate"
+                    value={addressDescription}
+                    onChange={(e) => setAddressDescription(e.target.value)}
+                    className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 3: Image / Video / Document Evidence Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    3. Ground Evidence (Images &amp; Videos)
+                  </h4>
+                  <span className="text-[11px] font-mono text-slate-500">{selectedFiles.length} / 5 files</span>
+                </div>
+
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  multiple
+                  accept="image/*,video/*,.pdf"
+                  className="hidden"
+                />
+
+                {/* Drag and Drop Zone */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.dataTransfer.files) {
+                      addFiles(Array.from(e.dataTransfer.files));
+                    }
+                  }}
+                  className="border-2 border-dashed border-slate-300 hover:border-slate-500 rounded p-4 text-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-slate-50 group"
                 >
-                  {OFFICIAL_RESEARCH_DOMAINS.map((d, i) => (
-                    <option key={i} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                  <div className="w-9 h-9 rounded-full bg-slate-100 group-hover:bg-slate-200 text-slate-700 flex items-center justify-center mx-auto mb-2 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="font-bold text-slate-800 text-xs">
+                    Click to browse or drag &amp; drop photos or videos
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Supports JPG, PNG, WEBP, MP4, MOV, WebM, PDF (Max 15MB each, up to 5 files)
+                  </p>
+                </div>
+
+                {/* Selected Files Preview Grid */}
+                {filePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    {filePreviews.map((p, idx) => (
+                      <div key={idx} className="relative group border border-slate-200 rounded p-1.5 bg-white shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(idx)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] font-black z-10 shadow-sm cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                        {p.type === "image" && p.previewUrl ? (
+                          <div className="h-20 w-full rounded overflow-hidden bg-slate-100 flex items-center justify-center">
+                            <img src={p.previewUrl} alt={p.file.name} className="h-full w-full object-cover" />
+                          </div>
+                        ) : p.type === "video" ? (
+                          <div className="h-20 w-full rounded bg-slate-900 text-white flex flex-col items-center justify-center p-2 text-center">
+                            <svg className="w-6 h-6 text-purple-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-[10px] font-bold text-purple-200">Video Evidence</span>
+                          </div>
+                        ) : (
+                          <div className="h-20 w-full rounded bg-slate-100 text-slate-700 flex flex-col items-center justify-center p-2 text-center">
+                            <svg className="w-6 h-6 text-slate-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span className="text-[10px] font-bold text-slate-600">Document</span>
+                          </div>
+                        )}
+                        <div className="mt-1 px-0.5">
+                          <div className="text-[10px] font-bold text-slate-800 truncate" title={p.file.name}>
+                            {p.file.name}
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-mono">
+                            {(p.file.size / (1024 * 1024)).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Location / Gram Panchayat:</label>
-                <input
-                  type="text"
-                  value={locationPin}
-                  onChange={(e) => setLocationPin(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
-                />
+              {/* SECTION 4: Impact & Contact */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-slate-800 border-b border-slate-200 pb-1 uppercase tracking-wider">
+                  4. Impact &amp; Submitter Contact
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-700 font-bold mb-1">Estimated Affected Residents</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 250"
+                      value={affectedPopulation}
+                      onChange={(e) => setAffectedPopulation(e.target.value ? parseInt(e.target.value, 10) : "")}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
+                    />
+                  </div>
+                  
+                  {!isAnonymous && (
+                    <>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Contact Person</label>
+                        <input
+                          type="text"
+                          value={contactName}
+                          onChange={(e) => setContactName(e.target.value)}
+                          className="w-full p-2.5 rounded border border-slate-300 bg-slate-50 text-slate-900 outline-none focus:border-slate-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Contact Phone</label>
+                        <input
+                          type="text"
+                          value={contactPhone}
+                          onChange={(e) => setContactPhone(e.target.value)}
+                          className="w-full p-2.5 rounded border border-slate-300 bg-slate-50 text-slate-900 outline-none focus:border-slate-500"
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="sm:col-span-2 mt-1">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input 
+                        type="checkbox" 
+                        checked={isAnonymous}
+                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
+                      />
+                      <span className="text-slate-700 font-bold group-hover:text-slate-900 transition-colors">Submit Anonymously</span>
+                    </label>
+                    <p className="text-[10px] text-slate-500 ml-6 mt-0.5">Your name and contact phone will be kept confidential from researchers.</p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Detailed Description:</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Describe the issue, affected residents, and urgency..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900 outline-none focus:border-slate-500"
-                />
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="px-4 py-2.5 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                  disabled={isSubmitting || isDrafting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitToBackend(true)}
+                  disabled={isSubmitting || isDrafting}
+                  className="px-4 py-2.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isDrafting ? "Saving Draft..." : "Save as Draft"}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isDrafting}
+                  className="px-6 py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Uploading &amp; Submitting...
+                    </span>
+                  ) : (
+                    "Submit for Triage →"
+                  )}
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? "Submitting..." : "Submit to State AI Routing System →"}
-              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal: Inspect Submission Detail */}
+      {/* Modal: Inspect Submission Detail with Evidence & Location */}
       {selectedSubmission && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-md max-w-lg w-full p-6 shadow-2xl border border-slate-300 relative max-h-[90vh] overflow-y-auto text-xs space-y-4">
+          <div className="bg-white rounded-md max-w-xl w-full p-6 shadow-2xl border border-slate-300 relative max-h-[90vh] overflow-y-auto text-xs space-y-4">
             <button
               type="button"
               onClick={() => setSelectedSubmission(null)}
@@ -384,9 +1031,91 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
               <h3 className="text-base font-black text-slate-900">{selectedSubmission.title}</h3>
             </div>
 
-            <p className="text-slate-600 bg-slate-50 p-3 rounded border border-slate-100">
+            <p className="text-slate-600 bg-slate-50 p-3 rounded border border-slate-100 leading-relaxed">
               {selectedSubmission.description}
             </p>
+
+            {/* Location Details */}
+            <div className="bg-slate-50/80 p-3 rounded border border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ground Location &amp; Coordinates</span>
+                {selectedSubmission.latitude && selectedSubmission.longitude && (
+                  <a
+                    href={`https://www.google.com/maps?q=${selectedSubmission.latitude},${selectedSubmission.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <span>📍 View on Google Maps</span>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-slate-700">
+                <div><strong>District:</strong> {selectedSubmission.district}</div>
+                <div><strong>Block:</strong> {selectedSubmission.block || "N/A"}</div>
+                <div><strong>Village/Ward:</strong> {selectedSubmission.villageOrWard || "N/A"}</div>
+                <div>
+                  <strong>GPS:</strong>{" "}
+                  {selectedSubmission.latitude && selectedSubmission.longitude ? (
+                    <span className="font-mono text-emerald-700 font-bold">
+                      {selectedSubmission.latitude}, {selectedSubmission.longitude}
+                    </span>
+                  ) : (
+                    "Not recorded"
+                  )}
+                </div>
+              </div>
+              {selectedSubmission.addressDescription && (
+                <div className="text-slate-600 pt-1 border-t border-slate-200/60">
+                  <strong>Landmark / Address:</strong> {selectedSubmission.addressDescription}
+                </div>
+              )}
+            </div>
+
+            {/* Multimedia Evidence / Attachments */}
+            {selectedSubmission.attachments && selectedSubmission.attachments.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Ground Evidence ({selectedSubmission.attachments.length} files)
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {selectedSubmission.attachments.map((att, i) => (
+                    <a
+                      key={i}
+                      href={att.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="border border-slate-200 rounded p-2 bg-white hover:bg-slate-50 transition-colors block text-center group"
+                    >
+                      {att.fileType === "PHOTO" ? (
+                        <div className="h-16 w-full rounded overflow-hidden bg-slate-100 mb-1">
+                          <img src={att.fileUrl} alt={att.fileName} className="h-full w-full object-cover" />
+                        </div>
+                      ) : att.fileType === "VIDEO" ? (
+                        <div className="h-16 w-full rounded bg-slate-900 text-purple-300 flex items-center justify-center mb-1">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="h-16 w-full rounded bg-slate-100 text-slate-600 flex items-center justify-center mb-1">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="text-[10px] font-bold text-slate-800 group-hover:text-blue-700 truncate">
+                        {att.fileName}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
               <div>
@@ -402,7 +1131,7 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
             <button
               type="button"
               onClick={() => setSelectedSubmission(null)}
-              className="w-full py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold cursor-pointer"
+              className="w-full py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold cursor-pointer transition-colors"
             >
               Close
             </button>
