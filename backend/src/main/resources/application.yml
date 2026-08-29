@@ -6,6 +6,11 @@ server:
 spring:
   application:
     name: jharkhand-govt
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 15MB
+      max-request-size: 60MB
   datasource:
     url: ${DB_URL:jdbc:postgresql://db.twdhxcuxxznfqvqhtdmk.supabase.co:5432/postgres?sslmode=require}
     username: ${DB_USER:postgres}
@@ -30,6 +35,13 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
+
+minio:
+  endpoint: ${S3_ENDPOINT:https://1e4624d96732ff52dc64930a30201276.r2.cloudflarestorage.com}
+  access-key: ${S3_ACCESS_KEY:2e79907b064d41bd9068a748c4d6ab02}
+  secret-key: ${S3_SECRET_KEY:236bff2b3356abec299c32a30bcc1a0b669ed748330046298560b25d5d6fd9c4}
+  bucket-name: ${S3_BUCKET_NAME:public-issue}
+  region: ${S3_REGION:auto}
 
 app:
   jwt:

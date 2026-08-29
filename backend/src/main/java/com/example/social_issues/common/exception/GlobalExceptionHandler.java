@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -34,6 +35,24 @@ public class GlobalExceptionHandler {
                 .map(err -> err.getDefaultMessage())
                 .orElse("Validation failed. Please check your inputs.");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(AuthResponse.error(message, "VALIDATION_FAILED"));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<AuthResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(AuthResponse.error(
+                ex.getMessage(),
+                "RESOURCE_NOT_FOUND"
+        ));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<AuthResponse> handleNoResourceFound(NoResourceFoundException ex) {
+        log.warn("No route or static resource found: {}", ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(AuthResponse.error(
+                "Endpoint or resource not found: " + ex.getResourcePath(),
+                "NOT_FOUND"
+        ));
     }
 
     @ExceptionHandler(Exception.class)
