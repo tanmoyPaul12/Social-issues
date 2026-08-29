@@ -216,3 +216,7 @@ docker-compose.override.yml
 *.bak
 *.orig
 *.backup
+
+
+.env
+.obsidian
