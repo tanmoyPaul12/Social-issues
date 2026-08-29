@@ -11,12 +11,27 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:39i9?+fED6gwv!F}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 10
+      idle-timeout: 30000
+      max-lifetime: 120000
+      connection-timeout: 5000
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:jharkhand_innovation_portal_secure_jwt_secret_key_2026_very_long_secret}
+    expiration-ms: 604800000 # 7 days
