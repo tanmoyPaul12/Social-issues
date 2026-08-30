@@ -31,10 +31,10 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     title: "University (HEI) Portal",
     items: [
       { id: "overview", label: "Dashboard Overview" },
-      { id: "inbox", label: "Routed AI Challenges", badge: "3" },
-      { id: "projects", label: "Active Capstone Projects", badge: "3" },
+      { id: "inbox", label: "Routed AI Challenges" },
+      { id: "projects", label: "Active Capstone Projects" },
       { id: "teams", label: "Team & Faculty Allocator" },
-      { id: "industry", label: "Industry CSR Offers", badge: "2" },
+      { id: "industry", label: "Industry CSR Offers" },
       { id: "users", label: "Faculty & Student Accounts" },
     ],
   },
@@ -42,8 +42,8 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     title: "Industry & CSR Portal",
     items: [
       { id: "overview", label: "Dashboard Overview" },
-      { id: "marketplace", label: "University R&D Marketplace", badge: "4" },
-      { id: "engagements", label: "Active Co-Funded Projects", badge: "2" },
+      { id: "marketplace", label: "University R&D Marketplace" },
+      { id: "engagements", label: "Active Co-Funded Projects" },
       { id: "csr", label: "CSR Compliance & Ledger" },
       { id: "testbeds", label: "Field Testbed Deployments" },
     ],
@@ -54,7 +54,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
       { id: "overview", label: "Dashboard Overview" },
       { id: "districts", label: "District-Wise Ingestion" },
       { id: "heatmap", label: "Domain Analytics Heatmap" },
-      { id: "escalations", label: "Escalations & Approvals", badge: "2" },
+      { id: "escalations", label: "Escalations & Approvals" },
       { id: "reports", label: "State Cabinet Reports (PDF)" },
     ],
   },
@@ -62,7 +62,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     title: "Platform Administration",
     items: [
       { id: "overview", label: "Dashboard Overview" },
-      { id: "verifications", label: "HEI & CSR Verifications", badge: "3" },
+      { id: "verifications", label: "HEI & CSR Verifications" },
       { id: "taxonomy", label: "Research Domain Taxonomy" },
       { id: "moderation", label: "Content Moderation & Flags" },
       { id: "system", label: "System Health & SDC Audit" },
@@ -75,7 +75,7 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
   const roleConfig = SIDEBAR_CONFIG[activeRole];
 
   return (
-    <aside className="w-60 sm:w-64 bg-[#f8fafc] border-r border-slate-200 min-h-[calc(100vh-61px)] flex-shrink-0">
+    <aside className="w-60 sm:w-64 bg-[#f8fafc] border-r border-slate-200 h-full flex-shrink-0 flex flex-col justify-between overflow-y-auto select-none">
       {/* Sidebar navigation list */}
       <nav className="divide-y divide-slate-200/80">
         {roleConfig.items.map((item) => {

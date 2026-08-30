@@ -1,18 +1,19 @@
 package com.example.social_issues.industrypartnership.controller;
 
 import com.example.social_issues.auth.dto.UserSummaryDto;
-
 import com.example.social_issues.auth.service.AuthService;
-import com.example.social_issues.industrypartnership.dto.IndustryActivityDto;
-import com.example.social_issues.industrypartnership.dto.IndustryOverviewResponse;
+import com.example.social_issues.industrypartnership.dto.*;
 import com.example.social_issues.industrypartnership.service.IndustryDashboardService;
+import com.example.social_issues.industrypartnership.service.MarketplaceService;
 import com.example.social_issues.notifications.dto.NotificationEvent;
 import com.example.social_issues.notifications.service.NotificationEventPublisher;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -23,14 +24,17 @@ public class IndustryDashboardController {
     private final IndustryDashboardService dashboardService;
     private final AuthService authService;
     private final NotificationEventPublisher eventPublisher;
+    private final MarketplaceService marketplaceService;
 
     public IndustryDashboardController(
             IndustryDashboardService dashboardService,
             AuthService authService,
-            NotificationEventPublisher eventPublisher) {
+            NotificationEventPublisher eventPublisher,
+            MarketplaceService marketplaceService) {
         this.dashboardService = dashboardService;
         this.authService = authService;
         this.eventPublisher = eventPublisher;
+        this.marketplaceService = marketplaceService;
     }
 
     /**
@@ -125,6 +129,140 @@ public class IndustryDashboardController {
 
         eventPublisher.publishIndustryNotification(event);
         return ResponseEntity.ok(Map.of("success", true, "message", "Event published to Redis Pub/Sub successfully", "event", event));
+    }
+
+    // ==========================================
+    // Tab 2: University R&D Marketplace Endpoints
+    // ==========================================
+
+    /**
+     * Filter and search marketplace R&D projects with multi-criteria filters & sorting
+     */
+    @GetMapping("/marketplace/projects")
+    public ResponseEntity<?> searchMarketplaceProjects(
+            @RequestParam(value = "domain", required = false) String domain,
+            @RequestParam(value = "stage", required = false) String stage,
+            @RequestParam(value = "university", required = false) String university,
+            @RequestParam(value = "minFunding", required = false) BigDecimal minFunding,
+            @RequestParam(value = "maxFunding", required = false) BigDecimal maxFunding,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "sortBy", defaultValue = "NEWEST") String sortBy,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "12") int size
+    ) {
+        try {
+            Page<MarketplaceProjectDto> results = marketplaceService.searchProjects(
+                    domain, stage, university, minFunding, maxFunding, search, sortBy, page, size
+            );
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Get single project dossier
+     */
+    @GetMapping("/marketplace/projects/{id}")
+    public ResponseEntity<?> getMarketplaceProjectById(@PathVariable("id") Long id) {
+        try {
+            MarketplaceProjectDto project = marketplaceService.getProjectById(id);
+            return ResponseEntity.ok(project);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Action 1: Commit CSR co-funding to project
+     */
+    @PostMapping("/marketplace/projects/{id}/commit")
+    public ResponseEntity<?> commitCsrFunding(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CommitFundingRequest request
+    ) {
+        UserSummaryDto user = getAuthenticatedUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+        }
+
+        try {
+            Long userId = Long.parseLong(user.getId());
+            MarketplaceProjectDto updated = marketplaceService.commitFunding(userId, id, request);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "CSR Grant commitment registered successfully",
+                    "project", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Action 2: Offer corporate mentorship to research team
+     */
+    @PostMapping("/marketplace/projects/{id}/mentor")
+    public ResponseEntity<?> offerMentorship(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody OfferMentorshipRequest request
+    ) {
+        UserSummaryDto user = getAuthenticatedUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+        }
+
+        try {
+            Long userId = Long.parseLong(user.getId());
+            marketplaceService.offerMentorship(userId, id, request);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Corporate mentorship nomination dispatched to university team"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Action 3: Express letter of intent / interest
+     */
+    @PostMapping("/marketplace/projects/{id}/interest")
+    public ResponseEntity<?> expressInterest(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id,
+            @RequestBody ExpressInterestRequest request
+    ) {
+        UserSummaryDto user = getAuthenticatedUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+        }
+
+        try {
+            Long userId = Long.parseLong(user.getId());
+            marketplaceService.expressInterest(userId, id, request);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Letter of intent dispatched to research team"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Dynamic aggregate filter metadata (universities list, sector counts, stage counts)
+     */
+    @GetMapping("/marketplace/meta")
+    public ResponseEntity<?> getMarketplaceMeta() {
+        try {
+            MarketplaceMetaDto meta = marketplaceService.getMetadata();
+            return ResponseEntity.ok(meta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     private UserSummaryDto getAuthenticatedUser(String authHeader) {
