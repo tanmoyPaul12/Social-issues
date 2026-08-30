@@ -7,6 +7,8 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
     AuthResponse sendOtp(OtpSendRequest request);
     AuthResponse verifyOtp(OtpVerifyRequest request);
+    AuthResponse refreshToken(RefreshTokenRequest request);
     UserSummaryDto getCurrentUser(String token);
     void logout(String token);
+    void logout(String token, String refreshToken);
 }

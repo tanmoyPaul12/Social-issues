@@ -105,12 +105,16 @@ public class AuthServiceImpl implements AuthService {
         citizenProfileRepository.save(citizenProfile);
         user.setCitizenProfile(citizenProfile);
 
-        String token = jwtService.generateToken(user);
+        // Issue Access Token + Refresh Token pair
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
         UserSummaryDto userDto = UserSummaryDto.fromEntity(user);
-        redisSessionService.saveSession(token, userDto, Duration.ofDays(7));
+
+        redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+        redisSessionService.saveRefreshToken(refreshToken, user.getId(), user.getRole().name(), Duration.ofDays(7));
 
         log.info("Citizen account created in citizen_profiles for: [{}] ({})", user.getPhone(), user.getId());
-        return AuthResponse.success("Account registered successfully.", token, userDto);
+        return AuthResponse.success("Account registered successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
     }
 
     @Override
@@ -147,7 +151,6 @@ public class AuthServiceImpl implements AuthService {
                 if (rawPassword.isBlank()) {
                     return AuthResponse.error("Password is required.", "MISSING_PASSWORD");
                 }
-                // Try matching across candidates (supports clean login if multiple test accounts exist)
                 for (User u : candidates) {
                     if (u.getPasswordHash() != null && passwordEncoder.matches(rawPassword, u.getPasswordHash())) {
                         authenticatedUser = u;
@@ -187,13 +190,15 @@ public class AuthServiceImpl implements AuthService {
                 }
             }
 
-            String token = jwtService.generateToken(authenticatedUser, activeRole);
+            String accessToken = jwtService.generateAccessToken(authenticatedUser, activeRole);
+            String refreshToken = jwtService.generateRefreshToken(authenticatedUser, activeRole, request.isRememberMe());
             UserSummaryDto userDto = UserSummaryDto.fromEntity(authenticatedUser, activeRole);
 
-            Duration ttl = request.isRememberMe() ? Duration.ofDays(30) : Duration.ofDays(7);
-            redisSessionService.saveSession(token, userDto, ttl);
+            Duration refreshTtl = request.isRememberMe() ? Duration.ofDays(30) : Duration.ofDays(7);
+            redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+            redisSessionService.saveRefreshToken(refreshToken, authenticatedUser.getId(), activeRole.name(), refreshTtl);
 
-            return AuthResponse.success("Welcome back, " + authenticatedUser.getName() + "!", token, userDto);
+            return AuthResponse.success("Welcome back, " + authenticatedUser.getName() + "!", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
         } catch (Exception e) {
             log.error("Login exception: ", e);
             return AuthResponse.error("Authentication service encountered an issue. Please try again.", "SERVER_ERROR");
@@ -242,13 +247,65 @@ public class AuthServiceImpl implements AuthService {
         Optional<User> userOpt = userRepository.findFirstByPhoneOrderByIdDesc(phone);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            String token = jwtService.generateToken(user);
+            String accessToken = jwtService.generateAccessToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
             UserSummaryDto userDto = UserSummaryDto.fromEntity(user);
-            redisSessionService.saveSession(token, userDto, Duration.ofDays(7));
-            return AuthResponse.success("OTP verified successfully.", token, userDto);
+
+            redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+            redisSessionService.saveRefreshToken(refreshToken, user.getId(), user.getRole().name(), Duration.ofDays(7));
+
+            return AuthResponse.success("OTP verified successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
         }
 
         return AuthResponse.success("OTP verified. Please complete your registration.");
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        String rawToken = request != null && request.getRefreshToken() != null ? request.getRefreshToken().trim() : "";
+        if (rawToken.isBlank()) {
+            return AuthResponse.error("Refresh token is missing or empty.", "MISSING_REFRESH_TOKEN");
+        }
+
+        // 1. Verify token structure and expiration
+        if (!jwtService.validateRefreshToken(rawToken)) {
+            return AuthResponse.error("Refresh token is invalid or expired. Please sign in again.", "INVALID_REFRESH_TOKEN");
+        }
+
+        // 2. Verify existence in Redis
+        RedisSessionService.RefreshTokenData tokenData = redisSessionService.getRefreshTokenData(rawToken);
+        if (tokenData == null || tokenData.userId() == null) {
+            return AuthResponse.error("Refresh token has been revoked or expired. Please sign in again.", "REVOKED_REFRESH_TOKEN");
+        }
+
+        // 3. Look up user
+        Optional<User> userOpt = userRepository.findById(tokenData.userId());
+        if (userOpt.isEmpty()) {
+            return AuthResponse.error("Associated user account no longer exists.", "USER_NOT_FOUND");
+        }
+
+        User user = userOpt.get();
+        Role activeRole = user.getRole();
+        if (tokenData.role() != null) {
+            try {
+                activeRole = Role.valueOf(tokenData.role());
+            } catch (Exception ignored) {}
+        }
+
+        // 4. Token Rotation: Revoke the used refresh token immediately
+        redisSessionService.revokeRefreshToken(rawToken);
+
+        // 5. Issue new Access Token + new Refresh Token pair
+        String newAccessToken = jwtService.generateAccessToken(user, activeRole);
+        String newRefreshToken = jwtService.generateRefreshToken(user, activeRole, false);
+        UserSummaryDto userDto = UserSummaryDto.fromEntity(user, activeRole);
+
+        redisSessionService.saveSession(newAccessToken, userDto, Duration.ofMinutes(15));
+        redisSessionService.saveRefreshToken(newRefreshToken, user.getId(), activeRole.name(), Duration.ofDays(7));
+
+        log.info("Access and refresh tokens successfully rotated for user [{}]", user.getId());
+        return AuthResponse.success("Token refreshed successfully.", newAccessToken, newRefreshToken, jwtService.getAccessExpirationSeconds(), userDto);
     }
 
     @Override
@@ -258,7 +315,7 @@ public class AuthServiceImpl implements AuthService {
             return null;
         }
 
-        // Try fast in-memory or Redis cache
+        // Try fast session cache
         UserSummaryDto cachedUser = redisSessionService.getSession(token);
         if (cachedUser != null) {
             return cachedUser;
@@ -271,8 +328,15 @@ public class AuthServiceImpl implements AuthService {
                 Long userId = Long.parseLong(userIdStr);
                 Optional<User> userOpt = userRepository.findById(userId);
                 if (userOpt.isPresent()) {
-                    UserSummaryDto dto = UserSummaryDto.fromEntity(userOpt.get());
-                    redisSessionService.saveSession(token, dto, Duration.ofDays(7));
+                    String roleStr = jwtService.extractRole(token);
+                    Role activeRole = userOpt.get().getRole();
+                    if (roleStr != null) {
+                        try {
+                            activeRole = Role.valueOf(roleStr);
+                        } catch (Exception ignored) {}
+                    }
+                    UserSummaryDto dto = UserSummaryDto.fromEntity(userOpt.get(), activeRole);
+                    redisSessionService.saveSession(token, dto, Duration.ofMinutes(15));
                     return dto;
                 }
             } catch (NumberFormatException ignored) {
@@ -283,9 +347,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String tokenOrHeader) {
+        logout(tokenOrHeader, null);
+    }
+
+    @Override
+    public void logout(String tokenOrHeader, String refreshToken) {
         String token = cleanToken(tokenOrHeader);
         if (token != null && !token.isBlank()) {
             redisSessionService.deleteSession(token);
+        }
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            redisSessionService.revokeRefreshToken(refreshToken.trim());
         }
     }
 

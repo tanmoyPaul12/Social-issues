@@ -124,12 +124,15 @@ public class InstitutionalOnboardingService {
             universityProfileRepository.save(profile);
             user.setUniversityProfile(profile);
 
-            String token = jwtService.generateToken(user, Role.UNIVERSITY);
+            String accessToken = jwtService.generateAccessToken(user, Role.UNIVERSITY);
+            String refreshToken = jwtService.generateRefreshToken(user, Role.UNIVERSITY, false);
             UserSummaryDto userDto = UserSummaryDto.fromEntity(user, Role.UNIVERSITY);
-            redisSessionService.saveSession(token, userDto, Duration.ofDays(7));
+
+            redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+            redisSessionService.saveRefreshToken(refreshToken, user.getId(), Role.UNIVERSITY.name(), Duration.ofDays(7));
 
             log.info("University onboarded successfully into university_profiles: [{}] ({})", profile.getUnivName(), user.getReferenceId());
-            return AuthResponse.success("University registered successfully.", token, userDto);
+            return AuthResponse.success("University registered successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
         } catch (Exception e) {
             log.error("Error onboarding university: {}", e.getMessage(), e);
             return AuthResponse.error("University registration failed: " + (e.getMessage() != null ? e.getMessage() : "Unexpected error."));
@@ -218,12 +221,15 @@ public class InstitutionalOnboardingService {
             industryProfileRepository.save(profile);
             user.setIndustryProfile(profile);
 
-            String token = jwtService.generateToken(user, Role.INDUSTRY);
+            String accessToken = jwtService.generateAccessToken(user, Role.INDUSTRY);
+            String refreshToken = jwtService.generateRefreshToken(user, Role.INDUSTRY, false);
             UserSummaryDto userDto = UserSummaryDto.fromEntity(user, Role.INDUSTRY);
-            redisSessionService.saveSession(token, userDto, Duration.ofDays(7));
+
+            redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+            redisSessionService.saveRefreshToken(refreshToken, user.getId(), Role.INDUSTRY.name(), Duration.ofDays(7));
 
             log.info("Industry partner onboarded successfully into industry_profiles: [{}] ({})", profile.getCompanyName(), user.getReferenceId());
-            return AuthResponse.success("Corporate CSR partner registered successfully.", token, userDto);
+            return AuthResponse.success("Corporate CSR partner registered successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
         } catch (Exception e) {
             log.error("Error onboarding industry: {}", e.getMessage(), e);
             return AuthResponse.error("Industry registration failed: " + (e.getMessage() != null ? e.getMessage() : "Unexpected error."));
@@ -301,12 +307,15 @@ public class InstitutionalOnboardingService {
             governmentProfileRepository.save(profile);
             user.setGovernmentProfile(profile);
 
-            String token = jwtService.generateToken(user, Role.GOVERNMENT);
+            String accessToken = jwtService.generateAccessToken(user, Role.GOVERNMENT);
+            String refreshToken = jwtService.generateRefreshToken(user, Role.GOVERNMENT, false);
             UserSummaryDto userDto = UserSummaryDto.fromEntity(user, Role.GOVERNMENT);
-            redisSessionService.saveSession(token, userDto, Duration.ofDays(7));
+
+            redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
+            redisSessionService.saveRefreshToken(refreshToken, user.getId(), Role.GOVERNMENT.name(), Duration.ofDays(7));
 
             log.info("Government officer provisioned into government_profiles: [{}] ({})", profile.getDeptName(), user.getReferenceId());
-            return AuthResponse.success("Government officer provisioned successfully.", token, userDto);
+            return AuthResponse.success("Government officer provisioned successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
         } catch (Exception e) {
             log.error("Error provisioning government officer: {}", e.getMessage(), e);
             return AuthResponse.error("Government provisioning failed: " + (e.getMessage() != null ? e.getMessage() : "Unexpected error."));
