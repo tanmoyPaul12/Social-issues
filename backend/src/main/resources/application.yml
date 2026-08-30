@@ -12,8 +12,8 @@ spring:
       max-file-size: 15MB
       max-request-size: 60MB
   datasource:
-    url: ${DB_URL:jdbc:postgresql://db.twdhxcuxxznfqvqhtdmk.supabase.co:5432/postgres?sslmode=require}
-    username: ${DB_USER:postgres}
+    url: ${DB_URL:jdbc:postgresql://aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require}
+    username: ${DB_USER:postgres.twdhxcuxxznfqvqhtdmk}
     password: ${DB_PASSWORD:39i9?+fED6gwv!F}
     driver-class-name: org.postgresql.Driver
     hikari:
