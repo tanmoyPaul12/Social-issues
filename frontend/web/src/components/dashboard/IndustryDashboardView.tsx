@@ -8,6 +8,8 @@ import { toast } from "@/components/dashboard/ToastStack";
 import { IndustryOverviewTab } from "./industry/IndustryOverviewTab";
 import { IndustryMarketplaceTab } from "./industry/marketplace/IndustryMarketplaceTab";
 import { ActivePilotsTab } from "./industry/pilots/ActivePilotsTab";
+import { CsrComplianceTab } from "./industry/csr/CsrComplianceTab";
+import { CompanySettingsTab } from "./industry/settings/CompanySettingsTab";
 
 interface CoFundedEngagement {
   id: string;
@@ -104,13 +106,21 @@ export function IndustryDashboardView({
         </div>
 
         {/* Corporate Status Chip */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl shadow-2xs">
+        <button
+          type="button"
+          onClick={() => handleNavigate("settings")}
+          className="flex items-center gap-2.5 bg-white border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/80 px-3.5 py-2 rounded-xl shadow-2xs transition-all cursor-pointer text-left"
+          title="Click to view & edit Corporate Profile & Team Settings"
+        >
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <div className="text-right">
             <span className="text-xs font-bold text-slate-800 block leading-none">{companyName}</span>
             <span className="text-[10px] text-slate-400 font-mono">{corporateId}</span>
           </div>
-        </div>
+          <svg className="w-3.5 h-3.5 text-slate-400 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
 
       {/* Tab 1: Dashboard Overview */}
@@ -128,34 +138,14 @@ export function IndustryDashboardView({
         <ActivePilotsTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* CSR Compliance Tab */}
+      {/* Tab 4: CSR Compliance & Statutory Ledger */}
       {activeTab === "csr" && (
-        <div className="space-y-4 pt-2 max-w-2xl">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-            MCA Form CSR-1 Compliance &amp; Audit Trail
-          </h2>
+        <CsrComplianceTab onNavigateTab={handleNavigate} />
+      )}
 
-          <div className="bg-white border border-slate-200 rounded-sm p-4 space-y-3 text-xs">
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-500">Corporate Name:</span>
-              <strong className="text-slate-900">{companyName}</strong>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-500">Corporate Registration:</span>
-              <strong className="text-slate-900 font-mono">{corporateId}</strong>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-500">Eligible Head:</span>
-              <strong className="text-slate-900">Schedule VII Item (ix) - Public Funded Universities</strong>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Audited CSR Spend:</span>
-              <strong className="text-emerald-700 font-mono text-sm">
-                {engagements.length > 0 ? `₹${(engagements.length * 15.0).toFixed(1)} Lakhs Disbursed` : "₹0.0 Disbursed"}
-              </strong>
-            </div>
-          </div>
-        </div>
+      {/* Tab 7: Company Profile & Corporate Settings */}
+      {(activeTab === "settings" || activeTab === "profile") && (
+        <CompanySettingsTab onNavigateTab={handleNavigate} />
       )}
 
       {/* Modal: Commit Grant */}

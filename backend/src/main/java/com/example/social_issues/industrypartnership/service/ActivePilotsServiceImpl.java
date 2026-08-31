@@ -10,8 +10,7 @@ import com.example.social_issues.notifications.dto.NotificationEvent;
 import com.example.social_issues.notifications.service.NotificationEventPublisher;
 import com.example.social_issues.problemsubmission.service.FileStorageService;
 import jakarta.persistence.criteria.Predicate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,7 +27,7 @@ import java.util.List;
 @Service
 public class ActivePilotsServiceImpl implements ActivePilotsService {
 
-    private static final Logger log = LoggerFactory.getLogger(ActivePilotsServiceImpl.class);
+    
 
     private final IndustryProfileRepository industryProfileRepository;
     private final CoFundedPilotRepository pilotRepository;

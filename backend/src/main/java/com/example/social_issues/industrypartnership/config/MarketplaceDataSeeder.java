@@ -27,6 +27,11 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
     private final PilotDiscussionRepository discussionRepository;
     private final PilotDocumentRepository documentRepository;
     private final CsrCommitmentRepository csrCommitmentRepository;
+    private final CsrAnnualBudgetRepository csrAnnualBudgetRepository;
+    private final CsrUtilizationCertificateRepository csrUtilizationCertificateRepository;
+    private final CsrAuditTrailRepository csrAuditTrailRepository;
+    private final IndustryTeamMemberRepository industryTeamMemberRepository;
+    private final CorporateNotificationPreferenceRepository corporateNotificationPreferenceRepository;
 
     public MarketplaceDataSeeder(
             MarketplaceProjectRepository projectRepository,
@@ -36,7 +41,12 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
             PilotDisbursementRepository disbursementRepository,
             PilotDiscussionRepository discussionRepository,
             PilotDocumentRepository documentRepository,
-            CsrCommitmentRepository csrCommitmentRepository) {
+            CsrCommitmentRepository csrCommitmentRepository,
+            CsrAnnualBudgetRepository csrAnnualBudgetRepository,
+            CsrUtilizationCertificateRepository csrUtilizationCertificateRepository,
+            CsrAuditTrailRepository csrAuditTrailRepository,
+            IndustryTeamMemberRepository industryTeamMemberRepository,
+            CorporateNotificationPreferenceRepository corporateNotificationPreferenceRepository) {
         this.projectRepository = projectRepository;
         this.industryProfileRepository = industryProfileRepository;
         this.pilotRepository = pilotRepository;
@@ -45,6 +55,11 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
         this.discussionRepository = discussionRepository;
         this.documentRepository = documentRepository;
         this.csrCommitmentRepository = csrCommitmentRepository;
+        this.csrAnnualBudgetRepository = csrAnnualBudgetRepository;
+        this.csrUtilizationCertificateRepository = csrUtilizationCertificateRepository;
+        this.csrAuditTrailRepository = csrAuditTrailRepository;
+        this.industryTeamMemberRepository = industryTeamMemberRepository;
+        this.corporateNotificationPreferenceRepository = corporateNotificationPreferenceRepository;
     }
 
     @Override
@@ -398,6 +413,186 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
             csr2.setCsrProjectCode("CSR-PLT-" + pilot2.getId());
 
             csrCommitmentRepository.saveAll(List.of(csr1, csr2));
+
+            // Seed CSR Annual Statutory Budget (FY 2026-2027)
+            if (csrAnnualBudgetRepository.findByIndustryProfileIdAndFinancialYear(profile.getId(), "2026-2027").isEmpty()) {
+                CsrAnnualBudget budget = new CsrAnnualBudget();
+                budget.setIndustryProfile(profile);
+                budget.setFinancialYear("2026-2027");
+                budget.setMandatoryCsrObligation(new BigDecimal("25000000.00")); // 2.5 Crore 2% CSR obligation
+                budget.setEarmarkedForHeis(new BigDecimal("10000000.00"));       // 1.0 Crore earmarked for HEIs
+                budget.setTotalCommittedAmount(new BigDecimal("4300000.00"));    // 43 Lakhs total committed
+                budget.setTotalDisbursedAmount(new BigDecimal("1400000.00"));    // 14 Lakhs total disbursed
+                budget.setIsBoardApproved(true);
+                budget.setBoardApprovalDate(java.time.LocalDateTime.now().minusMonths(2));
+                csrAnnualBudgetRepository.save(budget);
+            }
+
+            // Seed Form GFR 12-A Utilization Certificate for Pilot 1 (Birsa Agricultural University)
+            if (csrUtilizationCertificateRepository.findByCertificateNumber("UC-2026-BAU-001").isEmpty()) {
+                CsrUtilizationCertificate uc1 = new CsrUtilizationCertificate();
+                uc1.setIndustryProfile(profile);
+                uc1.setPilot(pilot1);
+                uc1.setCertificateNumber("UC-2026-BAU-001");
+                uc1.setFormType("GFR_12A");
+                uc1.setFinancialYear("2026-2027");
+                uc1.setUniversityName("Birsa Agricultural University (BAU), Kanke");
+                uc1.setGrantSanctionOrderRef("TSL/CSR/RD/2026/041");
+                uc1.setCertifiedDisbursedAmount(new BigDecimal("800000.00"));
+                uc1.setCertifiedUtilizedAmount(new BigDecimal("785000.00"));
+                uc1.setUnspentBalanceAmount(new BigDecimal("15000.00"));
+                uc1.setCaAuditorName("CA Rajeshwar Jha & Associates");
+                uc1.setCaFirmName("Jha & Singhania Chartered Accountants");
+                uc1.setCaMembershipNumber("FCA-048123");
+                uc1.setUdinNumber("26048123ABCT9012");
+                uc1.setIssueDate(LocalDate.now().minusWeeks(1));
+                uc1.setCertificateDocUrl("/api/uploads/csr/uc_bau_tranche1.pdf");
+                uc1.setIsVerified(true);
+                uc1.setVerifiedAt(java.time.LocalDateTime.now().minusDays(3));
+                uc1.setVerificationRemarks("Verified against Bank of India CA A/C statement and expenditure vouchers.");
+                csrUtilizationCertificateRepository.save(uc1);
+            }
+
+            // Seed Initial Compliance Audit Trail
+            if (csrAuditTrailRepository.findByIndustryProfileIdOrderByTimestampDesc(profile.getId(), org.springframework.data.domain.PageRequest.of(0, 1)).isEmpty()) {
+                CsrAuditTrail a1 = new CsrAuditTrail();
+                a1.setIndustryProfile(profile);
+                a1.setFinancialYear("2026-2027");
+                a1.setActionType("SET_ANNUAL_BUDGET");
+                a1.setActionTitle("Board Resolution 42: Approved FY 2026-27 Mandatory CSR Obligation (₹2.50 Cr)");
+                a1.setDetailsJson("{\"mandatoryObligation\": 25000000, \"earmarkedForHeis\": 10000000}");
+                a1.setActorName("Tata Steel CSR Board Committee");
+                a1.setActorRole("BOARD_DIRECTOR");
+                a1.setEntityType("CsrAnnualBudget");
+                a1.setEntityId(1L);
+                a1.setPreviousHash("0000000000000000000000000000000000000000000000000000000000000000");
+                a1.setHashSha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+                a1.setTimestamp(java.time.LocalDateTime.now().minusMonths(2));
+
+                CsrAuditTrail a2 = new CsrAuditTrail();
+                a2.setIndustryProfile(profile);
+                a2.setFinancialYear("2026-2027");
+                a2.setActionType("DISBURSE_TRANCHE");
+                a2.setActionTitle("Released Tranche 1 (₹8.00 Lakhs) to Birsa Agricultural University");
+                a2.setDetailsJson("{\"disbursementRef\": \"TR-2026-BAU-01\", \"utr\": \"AXISN202604081921\", \"amount\": 800000}");
+                a2.setActorName("Finance & Treasury Operations");
+                a2.setActorRole("TREASURY_OFFICER");
+                a2.setEntityType("PilotDisbursement");
+                a2.setEntityId(1L);
+                a2.setPreviousHash("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+                a2.setHashSha256("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+                a2.setTimestamp(java.time.LocalDateTime.now().minusMonths(1));
+
+                CsrAuditTrail a3 = new CsrAuditTrail();
+                a3.setIndustryProfile(profile);
+                a3.setFinancialYear("2026-2027");
+                a3.setActionType("VERIFY_UTILIZATION_CERTIFICATE");
+                a3.setActionTitle("Statutory Verification: Form GFR 12-A UC-2026-BAU-001 Approved with UDIN 26048123ABCT9012");
+                a3.setDetailsJson("{\"ucNumber\": \"UC-2026-BAU-001\", \"ca\": \"CA Rajeshwar Jha\", \"isVerified\": true}");
+                a3.setActorName("CSR Compliance Officer");
+                a3.setActorRole("COMPLIANCE_OFFICER");
+                a3.setEntityType("CsrUtilizationCertificate");
+                a3.setEntityId(1L);
+                a3.setPreviousHash("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+                a3.setHashSha256("5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8");
+                a3.setTimestamp(java.time.LocalDateTime.now().minusDays(3));
+
+                csrAuditTrailRepository.saveAll(List.of(a1, a2, a3));
+            }
+
+            // Seed Corporate Team Members
+            if (industryTeamMemberRepository.findByIndustryProfileIdOrderByCreatedAtAsc(profile.getId()).isEmpty()) {
+                IndustryTeamMember m1 = new IndustryTeamMember(
+                        profile,
+                        profile.getUser(),
+                        profile.getSpocName() != null ? profile.getSpocName() : "Rajiv Mathur",
+                        profile.getContactEmail() != null ? profile.getContactEmail() : "rajiv.mathur@tatasteel.com",
+                        "+91 657 242 4242",
+                        "Chief General Manager & CSR Head",
+                        CorporateRole.CSR_ADMIN,
+                        TeamMemberStatus.ACTIVE,
+                        null,
+                        profile.getUser() != null ? profile.getUser().getId() : 1L,
+                        "System"
+                );
+                m1.setJoinedAt(java.time.LocalDateTime.now().minusMonths(6));
+
+                IndustryTeamMember m2 = new IndustryTeamMember(
+                        profile,
+                        null,
+                        "Anurag Sengupta",
+                        "anurag.sengupta@tatasteel.com",
+                        "+91 657 242 8819",
+                        "Head of Corporate Treasury & CSR Accounts",
+                        CorporateRole.FINANCE_APPROVER,
+                        TeamMemberStatus.ACTIVE,
+                        null,
+                        profile.getUser() != null ? profile.getUser().getId() : 1L,
+                        "Rajiv Mathur"
+                );
+                m2.setJoinedAt(java.time.LocalDateTime.now().minusMonths(4));
+
+                IndustryTeamMember m3 = new IndustryTeamMember(
+                        profile,
+                        null,
+                        "Dr. Meenakshi Roy",
+                        "meenakshi.roy@tatasteel.com",
+                        "+91 657 242 9012",
+                        "Senior Manager — Industry-Academia R&D",
+                        CorporateRole.PROJECT_MANAGER,
+                        TeamMemberStatus.ACTIVE,
+                        null,
+                        profile.getUser() != null ? profile.getUser().getId() : 1L,
+                        "Rajiv Mathur"
+                );
+                m3.setJoinedAt(java.time.LocalDateTime.now().minusMonths(3));
+
+                IndustryTeamMember m4 = new IndustryTeamMember(
+                        profile,
+                        null,
+                        "Siddharth Verma",
+                        "siddharth.verma@tatasteel.com",
+                        "+91 657 242 7731",
+                        "Statutory Auditor & CSR Compliance Officer",
+                        CorporateRole.CSR_VIEWER,
+                        TeamMemberStatus.ACTIVE,
+                        null,
+                        profile.getUser() != null ? profile.getUser().getId() : 1L,
+                        "Rajiv Mathur"
+                );
+                m4.setJoinedAt(java.time.LocalDateTime.now().minusMonths(2));
+
+                IndustryTeamMember m5 = new IndustryTeamMember(
+                        profile,
+                        null,
+                        "Vikramaditya Sharma",
+                        "vikram.sharma@tatasteel.com",
+                        "+91 657 242 6650",
+                        "Field Testbed & Commercialization Lead",
+                        CorporateRole.PROJECT_MANAGER,
+                        TeamMemberStatus.INVITED,
+                        java.util.UUID.randomUUID().toString(),
+                        profile.getUser() != null ? profile.getUser().getId() : 1L,
+                        "Rajiv Mathur"
+                );
+
+                industryTeamMemberRepository.saveAll(List.of(m1, m2, m3, m4, m5));
+            }
+
+            // Seed Notification Preferences
+            if (corporateNotificationPreferenceRepository.findByIndustryProfileId(profile.getId()).isEmpty()) {
+                CorporateNotificationPreference pref = new CorporateNotificationPreference(profile);
+                pref.setPreferredSectorsJson("[\"AGRICULTURE\",\"WATER\",\"ENVIRONMENT\",\"EDUCATION\",\"LIVELIHOOD\"]");
+                pref.setMinReadinessLevel("PROTOTYPING");
+                pref.setNotifyNewMatchingProjects(true);
+                pref.setNotifyMilestoneSubmissions(true);
+                pref.setNotifyDisbursementTrancheDue(true);
+                pref.setNotifyComplianceDeadlines(true);
+                pref.setNotifyDiscussionMessages(true);
+                pref.setEmailDigestFrequency(EmailDigestFrequency.INSTANT);
+                pref.setAlertEmail("csr.compliance@tatasteel.com");
+                corporateNotificationPreferenceRepository.save(pref);
+            }
         }
     }
 }

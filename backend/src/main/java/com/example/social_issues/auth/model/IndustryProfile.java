@@ -1,6 +1,7 @@
 package com.example.social_issues.auth.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,6 +32,36 @@ public class IndustryProfile {
     @Column(name = "csr_number", length = 50)
     private String csrNumber;
 
+    @Column(name = "pan_number", length = 30)
+    private String panNumber;
+
+    @Column(name = "registered_address", length = 500)
+    private String registeredAddress;
+
+    @Column(name = "state", length = 80)
+    private String state = "Jharkhand";
+
+    @Column(name = "pincode", length = 20)
+    private String pincode;
+
+    @Column(name = "website", length = 255)
+    private String website;
+
+    @Column(name = "contact_email", length = 150)
+    private String contactEmail;
+
+    @Column(name = "contact_phone", length = 30)
+    private String contactPhone;
+
+    @Column(name = "annual_csr_budget", precision = 19, scale = 2)
+    private BigDecimal annualCsrBudget;
+
+    @Column(name = "company_scale", length = 60)
+    private String companyScale = "Large Enterprise";
+
+    @Column(name = "about_company", length = 2000)
+    private String aboutCompany;
+
     @Column(name = "spoc_name")
     private String spocName;
 
@@ -42,6 +73,16 @@ public class IndustryProfile {
 
     @Column(name = "sectors", length = 800)
     private String sectors;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", length = 40)
+    private VerificationStatus verificationStatus = VerificationStatus.APPROVED;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "verified_by", length = 120)
+    private String verifiedBy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -77,6 +118,36 @@ public class IndustryProfile {
     public String getCsrNumber() { return csrNumber; }
     public void setCsrNumber(String csrNumber) { this.csrNumber = csrNumber; }
 
+    public String getPanNumber() { return panNumber; }
+    public void setPanNumber(String panNumber) { this.panNumber = panNumber; }
+
+    public String getRegisteredAddress() { return registeredAddress; }
+    public void setRegisteredAddress(String registeredAddress) { this.registeredAddress = registeredAddress; }
+
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
+
+    public String getPincode() { return pincode; }
+    public void setPincode(String pincode) { this.pincode = pincode; }
+
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
+
+    public String getContactEmail() { return contactEmail; }
+    public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
+
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+
+    public BigDecimal getAnnualCsrBudget() { return annualCsrBudget; }
+    public void setAnnualCsrBudget(BigDecimal annualCsrBudget) { this.annualCsrBudget = annualCsrBudget; }
+
+    public String getCompanyScale() { return companyScale; }
+    public void setCompanyScale(String companyScale) { this.companyScale = companyScale; }
+
+    public String getAboutCompany() { return aboutCompany; }
+    public void setAboutCompany(String aboutCompany) { this.aboutCompany = aboutCompany; }
+
     public String getSpocName() { return spocName; }
     public void setSpocName(String spocName) { this.spocName = spocName; }
 
@@ -88,6 +159,15 @@ public class IndustryProfile {
 
     public String getSectors() { return sectors; }
     public void setSectors(String sectors) { this.sectors = sectors; }
+
+    public VerificationStatus getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(VerificationStatus verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public LocalDateTime getVerifiedAt() { return verifiedAt; }
+    public void setVerifiedAt(LocalDateTime verifiedAt) { this.verifiedAt = verifiedAt; }
+
+    public String getVerifiedBy() { return verifiedBy; }
+    public void setVerifiedBy(String verifiedBy) { this.verifiedBy = verifiedBy; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -30,6 +30,9 @@ Auto-generated CSR-1 / CSR-2 report exports (PDF/Excel) for MCA filing
 Fund utilization certificates upload/download
 Audit trail (immutable log of all fund movements)
 Annual CSR budget vs. committed vs. utilized (visual breakdown)
+
+
+// TODO
 5. Field Testbed Deployments
 Map view of Jharkhand showing deployment locations (district-wise pins)
 Per deployment: which project, which district/block, deployment date, status (Planned/Live/Completed)
@@ -40,7 +43,9 @@ Tabs you're likely missing
 New matching projects in your domain of interest
 Milestone approvals needed from you
 Compliance deadline reminders
-7. Company Profile / Settings
+
+
+7. Company Profile / Settings // done
 Company details, GSTIN, CIN, sector expertise
 Team members (multiple people from same company can have accounts — need role management: who can approve funding vs. just view)
 Preferences (which domains to auto-notify on)

@@ -46,6 +46,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
       { id: "engagements", label: "Active Co-Funded Projects" },
       { id: "csr", label: "CSR Compliance & Ledger" },
       { id: "testbeds", label: "Field Testbed Deployments" },
+      { id: "settings", label: "Company Profile & Settings" },
     ],
   },
   government: {

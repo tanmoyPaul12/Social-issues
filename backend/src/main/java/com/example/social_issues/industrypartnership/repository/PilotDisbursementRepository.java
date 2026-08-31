@@ -23,4 +23,11 @@ public interface PilotDisbursementRepository extends JpaRepository<PilotDisburse
         WHERE d.pilot.id = :pilotId AND d.status = 'DISBURSED'
     """)
     BigDecimal sumDisbursedAmountByPilotId(@Param("pilotId") Long pilotId);
+
+    @Query("""
+        SELECT d FROM PilotDisbursement d
+        WHERE d.pilot.industryProfile.id = :profileId
+        ORDER BY d.id DESC
+    """)
+    List<PilotDisbursement> findByIndustryProfileId(@Param("profileId") Long profileId);
 }

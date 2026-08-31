@@ -15,6 +15,28 @@ public interface CsrCommitmentRepository extends JpaRepository<CsrCommitment, Lo
 
     List<CsrCommitment> findByIndustryProfileId(Long industryProfileId);
 
+    List<CsrCommitment> findByIndustryProfileIdAndFinancialYear(Long industryProfileId, String financialYear);
+
+    @Query("""
+        SELECT COALESCE(SUM(c.totalCommittedAmount), 0)
+        FROM CsrCommitment c
+        WHERE c.industryProfile.id = :profileId AND c.financialYear = :financialYear AND c.status <> 'CANCELLED'
+    """)
+    BigDecimal sumCommittedAmountByProfileIdAndFy(
+            @Param("profileId") Long profileId,
+            @Param("financialYear") String financialYear
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(c.totalDisbursedAmount), 0)
+        FROM CsrCommitment c
+        WHERE c.industryProfile.id = :profileId AND c.financialYear = :financialYear AND c.status <> 'CANCELLED'
+    """)
+    BigDecimal sumDisbursedAmountByProfileIdAndFy(
+            @Param("profileId") Long profileId,
+            @Param("financialYear") String financialYear
+    );
+
     @Query("""
         SELECT COALESCE(SUM(c.totalCommittedAmount), 0)
         FROM CsrCommitment c

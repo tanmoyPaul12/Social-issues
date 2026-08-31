@@ -119,7 +119,8 @@ public class JwtService {
     }
 
     public String extractPhone(String token) {
-        return extractClaim(token, Claims::getSubject);
+        Claims claims = extractAllClaims(token);
+        return claims != null ? claims.getSubject() : null;
     }
 
     public String extractUserId(String token) {
