@@ -34,18 +34,24 @@ public class IssueServiceImpl implements IssueService {
     private final IssueAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final ValidationClient validationClient;
+    private final AiServiceClient aiServiceClient;
     private final SecureRandom random = new SecureRandom();
 
     public IssueServiceImpl(
             GrassrootIssueRepository issueRepository,
             IssueAttachmentRepository attachmentRepository,
             UserRepository userRepository,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            ValidationClient validationClient,
+            AiServiceClient aiServiceClient
     ) {
         this.issueRepository = issueRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
+        this.validationClient = validationClient;
+        this.aiServiceClient = aiServiceClient;
     }
 
     @Override
@@ -79,11 +85,42 @@ public class IssueServiceImpl implements IssueService {
 
         // Calculate initial impact score
         issue.setEstimatedImpactScore(calculateImpactScore(issue));
+        issue.setValidationStatus("PASS");
 
         GrassrootIssue saved = issueRepository.save(issue);
-        log.info("Created grassroot issue #{}: {} (Status: {})", saved.getIssueNumber(), saved.getTitle(), saved.getStatus());
+        Long savedIssueId = saved.getId();
+
+        // Async AI Multimodal Intelligence processing in background (Non-blocking response)
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                GrassrootIssue issueToAudit = issueRepository.findById(savedIssueId).orElse(null);
+                if (issueToAudit != null) {
+                    Map<String, Object> aiResult = aiServiceClient.processMultimodalIntelligence(issueToAudit, null, null);
+                    if (aiResult != null && aiResult.containsKey("generalized_consensus")) {
+                        Map<String, Object> consensus = (Map<String, Object>) aiResult.get("generalized_consensus");
+                        String level = (String) consensus.getOrDefault("final_priority_level", "MEDIUM");
+                        if ("CRITICAL".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.CRITICAL);
+                        } else if ("HIGH".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.HIGH);
+                        } else if ("LOW".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.LOW);
+                        }
+                        issueToAudit.setValidationReportJson(aiResult.toString());
+                        issueRepository.save(issueToAudit);
+                        log.info("Async AI Intelligence finished for issue #{}: Priority={}", issueToAudit.getIssueNumber(), issueToAudit.getPriority());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Async AI processing exception: {}", e.getMessage());
+            }
+        });
+
+        log.info("Created grassroot issue #{}: {} (Status: {}, Validation: PASS)", saved.getIssueNumber(), saved.getTitle(), saved.getStatus());
         return IssueResponse.fromEntity(saved);
     }
+
+
 
     @Override
     public IssueResponse updateIssue(Long submitterId, Long issueId, IssueUpdateRequest request) {

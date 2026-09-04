@@ -1,3 +1,12 @@
+---
+id: feature_ticket_list
+title: "Feature Ticket List & Roadmap"
+tags:
+  - docs
+  - roadmap
+moc: [[MOC_System_Architecture]]
+---
+
 # Feature & Ticket Specification
 **Platform**: Societal Innovation Collaboration Portal — Jharkhand
 **Status**: Planning / Pre-Development

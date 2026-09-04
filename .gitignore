@@ -32,6 +32,8 @@ Desktop.ini
 *.swp
 *.swo
 *~
+.agents/
+.agents/skills/
 
 # ──────────────────────────────────────────────
 # ENVIRONMENT & SECRETS
@@ -218,5 +220,14 @@ docker-compose.override.yml
 *.backup
 
 
-.env
-.obsidian
+# ──────────────────────────────────────────────
+# OBSIDIAN & GRAPHIFY KNOWLEDGE BASE
+# ──────────────────────────────────────────────
+.obsidian/
+graphify-out/
+knowlegebase/entities/
+knowlegebase/LLM_CONTEXT_MAP.md
+knowlegebase/MOC_*.md
+.repowise/
+repowise/
+
