@@ -187,11 +187,11 @@ export default function UniversityOnboardingPage() {
       });
 
       if (res.success) {
-        const generated = res.user?.referenceId || `HEI-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
+        const generated = (res as any).referenceId || (res as any).user?.referenceId || `HEI-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
         setRefId(generated);
         setIsComplete(true);
       } else {
-        setServerError(res.message || "Failed to complete onboarding. Please check your details.");
+        setServerError((res as any).message || "Failed to complete onboarding. Please check your details.");
       }
     }
   };
