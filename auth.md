@@ -1,3 +1,13 @@
+---
+id: auth
+title: "Authentication & Session Management Specs"
+tags:
+  - docs
+  - security
+  - auth
+moc: [[MOC_System_Architecture]]
+---
+
 Step 1: Define your user roles first
 Role	Trust level needed	Verification
 Citizen	Low	Mobile OTP / email
