@@ -90,6 +90,12 @@ public class GrassrootIssue {
     @Column(name = "validation_report_json", columnDefinition = "TEXT")
     private String validationReportJson;
 
+    @Column(name = "assigned_hei", length = 200)
+    private String assignedHEI;
+
+    @Column(name = "recommended_heis_json", columnDefinition = "TEXT")
+    private String recommendedHeisJson;
+
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
 
@@ -177,6 +183,12 @@ public class GrassrootIssue {
 
     public String getValidationReportJson() { return validationReportJson; }
     public void setValidationReportJson(String validationReportJson) { this.validationReportJson = validationReportJson; }
+
+    public String getAssignedHEI() { return assignedHEI; }
+    public void setAssignedHEI(String assignedHEI) { this.assignedHEI = assignedHEI; }
+
+    public String getRecommendedHeisJson() { return recommendedHeisJson; }
+    public void setRecommendedHeisJson(String recommendedHeisJson) { this.recommendedHeisJson = recommendedHeisJson; }
 
     public String getReviewNotes() { return reviewNotes; }
     public void setReviewNotes(String reviewNotes) { this.reviewNotes = reviewNotes; }

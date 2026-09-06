@@ -37,6 +37,8 @@ public class IssueResponse {
     private String reviewNotes;
     private String validationStatus;
     private String validationReportJson;
+    private String assignedHEI;
+    private String recommendedHeisJson;
     private LocalDateTime resolvedAt;
     private List<AttachmentResponse> attachments = new ArrayList<>();
     private LocalDateTime createdAt;
@@ -79,6 +81,8 @@ public class IssueResponse {
         res.setReviewNotes(issue.getReviewNotes());
         res.setValidationStatus(issue.getValidationStatus());
         res.setValidationReportJson(issue.getValidationReportJson());
+        res.setAssignedHEI(issue.getAssignedHEI());
+        res.setRecommendedHeisJson(issue.getRecommendedHeisJson());
         res.setResolvedAt(issue.getResolvedAt());
         res.setCreatedAt(issue.getCreatedAt());
         res.setUpdatedAt(issue.getUpdatedAt());
@@ -167,6 +171,12 @@ public class IssueResponse {
 
     public String getValidationReportJson() { return validationReportJson; }
     public void setValidationReportJson(String validationReportJson) { this.validationReportJson = validationReportJson; }
+
+    public String getAssignedHEI() { return assignedHEI; }
+    public void setAssignedHEI(String assignedHEI) { this.assignedHEI = assignedHEI; }
+
+    public String getRecommendedHeisJson() { return recommendedHeisJson; }
+    public void setRecommendedHeisJson(String recommendedHeisJson) { this.recommendedHeisJson = recommendedHeisJson; }
 
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
