@@ -1,3 +1,13 @@
+---
+id: frontend_spec
+title: "Frontend Specification & Design System"
+tags:
+  - docs
+  - frontend
+  - ui-ux
+moc: [[MOC_Frontend_Next]]
+---
+
 # Frontend Application Specification
 **Platform**: Societal Innovation Collaboration Portal — Jharkhand
 **Status**: Planning / Pre-Development

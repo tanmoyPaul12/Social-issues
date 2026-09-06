@@ -84,6 +84,12 @@ public class GrassrootIssue {
     @Column(name = "is_anonymous")
     private Boolean isAnonymous = false;
 
+    @Column(name = "validation_status", length = 30)
+    private String validationStatus = "PASS";
+
+    @Column(name = "validation_report_json", columnDefinition = "TEXT")
+    private String validationReportJson;
+
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
 
@@ -165,6 +171,12 @@ public class GrassrootIssue {
 
     public Boolean getIsAnonymous() { return isAnonymous; }
     public void setIsAnonymous(Boolean anonymous) { isAnonymous = anonymous; }
+
+    public String getValidationStatus() { return validationStatus; }
+    public void setValidationStatus(String validationStatus) { this.validationStatus = validationStatus; }
+
+    public String getValidationReportJson() { return validationReportJson; }
+    public void setValidationReportJson(String validationReportJson) { this.validationReportJson = validationReportJson; }
 
     public String getReviewNotes() { return reviewNotes; }
     public void setReviewNotes(String reviewNotes) { this.reviewNotes = reviewNotes; }

@@ -35,6 +35,8 @@ public class IssueResponse {
     private String contactPhone;
     private Boolean isAnonymous;
     private String reviewNotes;
+    private String validationStatus;
+    private String validationReportJson;
     private LocalDateTime resolvedAt;
     private List<AttachmentResponse> attachments = new ArrayList<>();
     private LocalDateTime createdAt;
@@ -75,6 +77,8 @@ public class IssueResponse {
         res.setContactPhone(issue.getContactPhone());
         res.setIsAnonymous(issue.getIsAnonymous());
         res.setReviewNotes(issue.getReviewNotes());
+        res.setValidationStatus(issue.getValidationStatus());
+        res.setValidationReportJson(issue.getValidationReportJson());
         res.setResolvedAt(issue.getResolvedAt());
         res.setCreatedAt(issue.getCreatedAt());
         res.setUpdatedAt(issue.getUpdatedAt());
@@ -157,6 +161,12 @@ public class IssueResponse {
 
     public String getReviewNotes() { return reviewNotes; }
     public void setReviewNotes(String reviewNotes) { this.reviewNotes = reviewNotes; }
+
+    public String getValidationStatus() { return validationStatus; }
+    public void setValidationStatus(String validationStatus) { this.validationStatus = validationStatus; }
+
+    public String getValidationReportJson() { return validationReportJson; }
+    public void setValidationReportJson(String validationReportJson) { this.validationReportJson = validationReportJson; }
 
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }

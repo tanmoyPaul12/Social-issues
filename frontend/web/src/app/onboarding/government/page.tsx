@@ -65,7 +65,7 @@ export default function GovernmentOnboardingPage() {
         govtDepartment,
         serviceCode: serviceCode || "JH-IAS-4029",
       });
-      const generated = res.user?.referenceId || `GOV-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
+      const generated = (res as any).referenceId || (res as any).user?.referenceId || `GOV-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
       setRefId(generated);
       setIsComplete(true);
     }

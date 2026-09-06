@@ -300,6 +300,27 @@ public class IssueController {
         return ResponseEntity.ok(stats);
     }
 
+    /**
+     * Get 4-Modality AI Audit Breakdown for Nodal & Department Officers
+     */
+    @GetMapping("/{id}/ai-audit")
+    public ResponseEntity<?> getAiAuditReport(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id
+    ) {
+        try {
+            IssueResponse response = issueService.getIssueById(id);
+            return ResponseEntity.ok(Map.of(
+                "issue_id", response.getIssueNumber(),
+                "validation_status", response.getValidationStatus() != null ? response.getValidationStatus() : "PASS",
+                "validation_report", response.getValidationReportJson() != null ? response.getValidationReportJson() : "{}"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
     private UserSummaryDto getAuthenticatedUser(String authHeader) {
         if (authHeader == null || authHeader.isBlank()) {
             return null;

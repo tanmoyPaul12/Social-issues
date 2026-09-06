@@ -129,12 +129,12 @@ export default function IndustryOnboardingPage() {
       });
 
       if (res.success) {
-        const generated = res.user?.referenceId || `CSR-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
+        const generated = (res as any).referenceId || (res as any).user?.referenceId || `CSR-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
         setRefId(generated);
         setIsComplete(true);
         toast.success("Corporate CSR partner registered successfully!");
       } else {
-        const err = res.message || "Onboarding failed. Please review your details and try again.";
+        const err = (res as any).message || "Onboarding failed. Please review your details and try again.";
         setErrorMessage(err);
         toast.error(err);
       }

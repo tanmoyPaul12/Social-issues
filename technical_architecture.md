@@ -1,3 +1,13 @@
+---
+id: technical_architecture
+title: "Technical Architecture Specification"
+tags:
+  - docs
+  - architecture
+  - system-design
+moc: [[MOC_System_Architecture]]
+---
+
 # Technical Architecture Specification
 **Platform**: Societal Innovation Collaboration Portal — Jharkhand
 **Status**: Planning / Pre-Development

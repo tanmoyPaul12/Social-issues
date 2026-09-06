@@ -1,3 +1,13 @@
+---
+id: security_access
+title: "Security & Role-Based Access Control"
+tags:
+  - docs
+  - security
+  - rbac
+moc: [[MOC_System_Architecture]]
+---
+
 # Security & Access Control Specification
 **Platform**: Societal Innovation Collaboration Portal — Jharkhand
 **Status**: Planning / Pre-Development
