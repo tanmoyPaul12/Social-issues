@@ -28,6 +28,17 @@ public class UniversityProjectResponse {
     private BigDecimal grantFunded;
     private String csrPartner;
     private String milestoneDesc;
+    private String citizenVerificationStatus;
+    private Double citizenRating;
+    private String citizenFeedback;
+    private String citizenProofImageUrl;
+    private String verifiedByCitizenName;
+    private Boolean isSeekingCsrGrant;
+    private BigDecimal requestedCsrAmount;
+    private String csrPitchDescription;
+    private String csrMentorNeeds;
+    private BigDecimal csrFundedAmount;
+    private String csrSponsorCompany;
     private List<TeamMemberDto> teamMembers = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -53,6 +64,17 @@ public class UniversityProjectResponse {
         res.setGrantFunded(entity.getAllocatedGrant());
         res.setCsrPartner(entity.getCsrPartner());
         res.setMilestoneDesc(entity.getCurrentMilestone());
+        res.setCitizenVerificationStatus(entity.getCitizenVerificationStatus());
+        res.setCitizenRating(entity.getCitizenRating());
+        res.setCitizenFeedback(entity.getCitizenFeedback());
+        res.setCitizenProofImageUrl(entity.getCitizenProofImageUrl());
+        res.setVerifiedByCitizenName(entity.getVerifiedByCitizenName());
+        res.setIsSeekingCsrGrant(entity.getIsSeekingCsrGrant());
+        res.setRequestedCsrAmount(entity.getRequestedCsrAmount());
+        res.setCsrPitchDescription(entity.getCsrPitchDescription());
+        res.setCsrMentorNeeds(entity.getCsrMentorNeeds());
+        res.setCsrFundedAmount(entity.getCsrFundedAmount());
+        res.setCsrSponsorCompany(entity.getCsrSponsorCompany());
         res.setCreatedAt(entity.getCreatedAt());
         res.setUpdatedAt(entity.getUpdatedAt());
 
@@ -126,6 +148,39 @@ public class UniversityProjectResponse {
 
     public String getMilestoneDesc() { return milestoneDesc; }
     public void setMilestoneDesc(String milestoneDesc) { this.milestoneDesc = milestoneDesc; }
+
+    public String getCitizenVerificationStatus() { return citizenVerificationStatus; }
+    public void setCitizenVerificationStatus(String citizenVerificationStatus) { this.citizenVerificationStatus = citizenVerificationStatus; }
+
+    public Double getCitizenRating() { return citizenRating; }
+    public void setCitizenRating(Double citizenRating) { this.citizenRating = citizenRating; }
+
+    public String getCitizenFeedback() { return citizenFeedback; }
+    public void setCitizenFeedback(String citizenFeedback) { this.citizenFeedback = citizenFeedback; }
+
+    public String getCitizenProofImageUrl() { return citizenProofImageUrl; }
+    public void setCitizenProofImageUrl(String citizenProofImageUrl) { this.citizenProofImageUrl = citizenProofImageUrl; }
+
+    public String getVerifiedByCitizenName() { return verifiedByCitizenName; }
+    public void setVerifiedByCitizenName(String verifiedByCitizenName) { this.verifiedByCitizenName = verifiedByCitizenName; }
+
+    public Boolean getIsSeekingCsrGrant() { return isSeekingCsrGrant; }
+    public void setIsSeekingCsrGrant(Boolean isSeekingCsrGrant) { this.isSeekingCsrGrant = isSeekingCsrGrant; }
+
+    public BigDecimal getRequestedCsrAmount() { return requestedCsrAmount; }
+    public void setRequestedCsrAmount(BigDecimal requestedCsrAmount) { this.requestedCsrAmount = requestedCsrAmount; }
+
+    public String getCsrPitchDescription() { return csrPitchDescription; }
+    public void setCsrPitchDescription(String csrPitchDescription) { this.csrPitchDescription = csrPitchDescription; }
+
+    public String getCsrMentorNeeds() { return csrMentorNeeds; }
+    public void setCsrMentorNeeds(String csrMentorNeeds) { this.csrMentorNeeds = csrMentorNeeds; }
+
+    public BigDecimal getCsrFundedAmount() { return csrFundedAmount; }
+    public void setCsrFundedAmount(BigDecimal csrFundedAmount) { this.csrFundedAmount = csrFundedAmount; }
+
+    public String getCsrSponsorCompany() { return csrSponsorCompany; }
+    public void setCsrSponsorCompany(String csrSponsorCompany) { this.csrSponsorCompany = csrSponsorCompany; }
 
     public List<TeamMemberDto> getTeamMembers() { return teamMembers; }
     public void setTeamMembers(List<TeamMemberDto> teamMembers) { this.teamMembers = teamMembers; }

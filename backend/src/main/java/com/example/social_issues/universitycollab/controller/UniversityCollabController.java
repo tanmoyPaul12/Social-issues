@@ -141,4 +141,39 @@ public class UniversityCollabController {
             @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
         return ResponseEntity.ok(collabService.getIndustryOffers(aisheCode));
     }
+
+    /**
+     * 12. Submit Industry CSR Grant / Mentorship Pitch for a project.
+     * POST /api/university/projects/{id}/csr-pitch
+     */
+    @PostMapping("/projects/{id}/csr-pitch")
+    public ResponseEntity<UniversityProjectResponse> submitCsrPitch(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CsrPitchRequest request) {
+        log.info("API: submitCsrPitch for project ID: {}", id);
+        return ResponseEntity.ok(collabService.submitCsrPitch(id, request));
+    }
+
+    /**
+     * 13. Citizen Field Verification & Resolution Signoff.
+     * POST /api/university/projects/{id}/verify-citizen
+     */
+    @PostMapping("/projects/{id}/verify-citizen")
+    public ResponseEntity<UniversityProjectResponse> recordCitizenVerification(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CitizenVerificationRequest request) {
+        log.info("API: recordCitizenVerification for project ID: {} with rating: {}", id, request.getCitizenRating());
+        return ResponseEntity.ok(collabService.recordCitizenVerification(id, request));
+    }
+
+    /**
+     * 14. Generate NAAC / NIRF Accreditation & NEP 2020 Report Card.
+     * GET /api/university/accreditation/metrics?aisheCode=U-0012
+     */
+    @GetMapping("/accreditation/metrics")
+    public ResponseEntity<AccreditationReportDto> getAccreditationSummary(
+            @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
+        log.info("API: getAccreditationSummary for AISHE: {}", aisheCode);
+        return ResponseEntity.ok(collabService.getAccreditationSummary(aisheCode));
+    }
 }

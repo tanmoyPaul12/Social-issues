@@ -152,4 +152,53 @@ export const universityApi = {
     if (!res.ok) throw new Error("Failed to fetch industry offers");
     return res.json();
   },
+
+  /**
+   * 10. Pitch for Industry CSR Grant & Lab Mentorship
+   */
+  async submitCsrPitch(
+    projectId: number,
+    data: import("../types").CsrPitchRequest,
+    token?: string | null
+  ): Promise<UniversityProject> {
+    const res = await fetch(`${API_BASE_URL}/university/projects/${projectId}/csr-pitch`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to submit CSR grant pitch");
+    return res.json();
+  },
+
+  /**
+   * 11. Record Citizen Field Verification & Rating
+   */
+  async recordCitizenVerification(
+    projectId: number,
+    data: import("../types").CitizenVerificationRequest,
+    token?: string | null
+  ): Promise<UniversityProject> {
+    const res = await fetch(`${API_BASE_URL}/university/projects/${projectId}/verify-citizen`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to record citizen verification");
+    return res.json();
+  },
+
+  /**
+   * 12. Fetch NAAC Criteria 3.6 / NIRF & NEP 2020 Accreditation Metrics
+   */
+  async getAccreditationMetrics(
+    aisheCode: string,
+    token?: string | null
+  ): Promise<import("../types").AccreditationReport> {
+    const res = await fetch(`${API_BASE_URL}/university/accreditation/metrics?aisheCode=${encodeURIComponent(aisheCode)}`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Failed to fetch accreditation metrics");
+    return res.json();
+  },
 };
+

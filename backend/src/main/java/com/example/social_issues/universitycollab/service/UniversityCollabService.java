@@ -27,4 +27,10 @@ public interface UniversityCollabService {
     void removeTeamMember(Long projectId, Long memberId);
 
     List<IndustryOfferDto> getIndustryOffers(String aisheCode);
+
+    UniversityProjectResponse submitCsrPitch(Long projectId, CsrPitchRequest request);
+
+    UniversityProjectResponse recordCitizenVerification(Long projectId, CitizenVerificationRequest request);
+
+    AccreditationReportDto getAccreditationSummary(String aisheCode);
 }

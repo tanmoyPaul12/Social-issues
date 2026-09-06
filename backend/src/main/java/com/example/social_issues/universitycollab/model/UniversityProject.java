@@ -70,6 +70,41 @@ public class UniversityProject {
     @Column(name = "current_milestone", length = 400)
     private String currentMilestone = "Project team formed; preparing technical prototype roadmap.";
 
+    // Citizen & Municipal Field Verification Loop
+    @Column(name = "citizen_verification_status", length = 60)
+    private String citizenVerificationStatus = "AWAITING_DEPLOYMENT"; // AWAITING_DEPLOYMENT, PENDING_VERIFICATION, VERIFIED, REVISION_REQUESTED
+
+    @Column(name = "citizen_rating")
+    private Double citizenRating;
+
+    @Column(name = "citizen_feedback", columnDefinition = "TEXT")
+    private String citizenFeedback;
+
+    @Column(name = "citizen_proof_image_url", length = 500)
+    private String citizenProofImageUrl;
+
+    @Column(name = "verified_by_citizen_name", length = 150)
+    private String verifiedByCitizenName;
+
+    // Industry CSR Sponsorship & Mentorship Hub
+    @Column(name = "is_seeking_csr_grant")
+    private Boolean isSeekingCsrGrant = false;
+
+    @Column(name = "requested_csr_amount", precision = 15, scale = 2)
+    private BigDecimal requestedCsrAmount;
+
+    @Column(name = "csr_pitch_description", columnDefinition = "TEXT")
+    private String csrPitchDescription;
+
+    @Column(name = "csr_mentor_needs", length = 300)
+    private String csrMentorNeeds;
+
+    @Column(name = "csr_funded_amount", precision = 15, scale = 2)
+    private BigDecimal csrFundedAmount = BigDecimal.ZERO;
+
+    @Column(name = "csr_sponsor_company", length = 200)
+    private String csrSponsorCompany;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<UniversityTeamMember> teamMembers = new ArrayList<>();
 
@@ -136,6 +171,39 @@ public class UniversityProject {
 
     public String getCurrentMilestone() { return currentMilestone; }
     public void setCurrentMilestone(String currentMilestone) { this.currentMilestone = currentMilestone; }
+
+    public String getCitizenVerificationStatus() { return citizenVerificationStatus; }
+    public void setCitizenVerificationStatus(String citizenVerificationStatus) { this.citizenVerificationStatus = citizenVerificationStatus; }
+
+    public Double getCitizenRating() { return citizenRating; }
+    public void setCitizenRating(Double citizenRating) { this.citizenRating = citizenRating; }
+
+    public String getCitizenFeedback() { return citizenFeedback; }
+    public void setCitizenFeedback(String citizenFeedback) { this.citizenFeedback = citizenFeedback; }
+
+    public String getCitizenProofImageUrl() { return citizenProofImageUrl; }
+    public void setCitizenProofImageUrl(String citizenProofImageUrl) { this.citizenProofImageUrl = citizenProofImageUrl; }
+
+    public String getVerifiedByCitizenName() { return verifiedByCitizenName; }
+    public void setVerifiedByCitizenName(String verifiedByCitizenName) { this.verifiedByCitizenName = verifiedByCitizenName; }
+
+    public Boolean getIsSeekingCsrGrant() { return isSeekingCsrGrant; }
+    public void setIsSeekingCsrGrant(Boolean isSeekingCsrGrant) { this.isSeekingCsrGrant = isSeekingCsrGrant; }
+
+    public BigDecimal getRequestedCsrAmount() { return requestedCsrAmount; }
+    public void setRequestedCsrAmount(BigDecimal requestedCsrAmount) { this.requestedCsrAmount = requestedCsrAmount; }
+
+    public String getCsrPitchDescription() { return csrPitchDescription; }
+    public void setCsrPitchDescription(String csrPitchDescription) { this.csrPitchDescription = csrPitchDescription; }
+
+    public String getCsrMentorNeeds() { return csrMentorNeeds; }
+    public void setCsrMentorNeeds(String csrMentorNeeds) { this.csrMentorNeeds = csrMentorNeeds; }
+
+    public BigDecimal getCsrFundedAmount() { return csrFundedAmount; }
+    public void setCsrFundedAmount(BigDecimal csrFundedAmount) { this.csrFundedAmount = csrFundedAmount; }
+
+    public String getCsrSponsorCompany() { return csrSponsorCompany; }
+    public void setCsrSponsorCompany(String csrSponsorCompany) { this.csrSponsorCompany = csrSponsorCompany; }
 
     public List<UniversityTeamMember> getTeamMembers() { return teamMembers; }
     public void setTeamMembers(List<UniversityTeamMember> teamMembers) { this.teamMembers = teamMembers; }

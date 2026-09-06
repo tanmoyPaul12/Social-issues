@@ -7,6 +7,7 @@ export type UniversityProjectStage =
 
 export type TeamMemberRole =
   | "FACULTY_MENTOR"
+  | "CO_FACULTY_GUIDE"
   | "STUDENT_INNOVATOR"
   | "DEPARTMENT_HEAD"
   | "LAB_TECHNICIAN";
@@ -42,6 +43,22 @@ export interface UniversityProject {
   grantFunded?: number;
   csrPartner?: string;
   milestoneDesc?: string;
+  
+  // Citizen & Municipal Field Verification Loop
+  citizenVerificationStatus?: "AWAITING_DEPLOYMENT" | "PENDING_VERIFICATION" | "VERIFIED" | "REVISION_REQUESTED";
+  citizenRating?: number;
+  citizenFeedback?: string;
+  citizenProofImageUrl?: string;
+  verifiedByCitizenName?: string;
+
+  // Industry CSR Sponsorship & Mentorship Hub
+  isSeekingCsrGrant?: boolean;
+  requestedCsrAmount?: number;
+  csrPitchDescription?: string;
+  csrMentorNeeds?: string;
+  csrFundedAmount?: number;
+  csrSponsorCompany?: string;
+
   teamMembers?: TeamMember[];
   createdAt: string;
   updatedAt: string;
@@ -105,4 +122,45 @@ export interface IndustryOffer {
   status: string;
   messageNotes?: string;
   createdAt?: string;
+}
+
+export interface CsrPitchRequest {
+  requestedAmount: number;
+  pitchDescription: string;
+  mentorNeeds?: string;
+  targetSponsorCompany?: string;
+}
+
+export interface CitizenVerificationRequest {
+  citizenRating: number;
+  feedback: string;
+  proofImageUrl?: string;
+  verifiedByCitizenName?: string;
+}
+
+export interface AccreditationReport {
+  institutionName: string;
+  aisheCode: string;
+  totalProjects: number;
+  completedDeployments: number;
+  activePrototypes: number;
+  totalCommunityHours: number;
+  totalAbcCreditsDisbursed: number;
+  totalCitizenBeneficiaries: number;
+  participatingStudentsCount: number;
+  participatingFacultyCount: number;
+  naacCriteriaScore: string;
+  nirfRankContribution: string;
+  sdgBreakdown: Record<string, number>;
+}
+
+export interface LiveNotificationEvent {
+  eventId: string;
+  eventType: string;
+  title: string;
+  message: string;
+  recipientUserId?: string;
+  severity: "INFO" | "SUCCESS" | "WARNING" | "URGENT";
+  actionUrl?: string;
+  timestamp: string;
 }
