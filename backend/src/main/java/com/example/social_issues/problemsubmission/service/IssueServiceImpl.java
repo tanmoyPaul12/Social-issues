@@ -107,9 +107,24 @@ public class IssueServiceImpl implements IssueService {
                             issueToAudit.setPriority(IssuePriority.LOW);
                         }
                         issueToAudit.setValidationReportJson(aiResult.toString());
-                        issueRepository.save(issueToAudit);
-                        log.info("Async AI Intelligence finished for issue #{}: Priority={}", issueToAudit.getIssueNumber(), issueToAudit.getPriority());
                     }
+
+                    // Route challenge to matching university HEIs via AI engine
+                    Map<String, Object> routeResult = aiServiceClient.routeChallengeToHEIs(issueToAudit);
+                    if (routeResult != null && routeResult.containsKey("recommended_heis")) {
+                        List<Map<String, Object>> recs = (List<Map<String, Object>>) routeResult.get("recommended_heis");
+                        if (!recs.isEmpty()) {
+                            Map<String, Object> topMatch = recs.get(0);
+                            String topHeiName = (String) topMatch.get("hei_name");
+                            issueToAudit.setAssignedHEI(topHeiName);
+                            issueToAudit.setRecommendedHeisJson(recs.toString());
+                            log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
+                        }
+                    }
+
+                    issueRepository.save(issueToAudit);
+                    log.info("Async AI Intelligence & HEI Routing finished for issue #{}: Priority={}, AssignedHEI={}",
+                            issueToAudit.getIssueNumber(), issueToAudit.getPriority(), issueToAudit.getAssignedHEI());
                 }
             } catch (Exception e) {
                 log.warn("Async AI processing exception: {}", e.getMessage());

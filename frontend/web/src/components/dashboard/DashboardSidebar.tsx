@@ -31,7 +31,8 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     title: "University (HEI) Portal",
     items: [
       { id: "overview", label: "Dashboard Overview" },
-      { id: "inbox", label: "Routed AI Challenges" },
+      { id: "inbox", label: "AI-Routed Challenges" },
+      { id: "challenges", label: "Statewide Challenge Pool" },
       { id: "projects", label: "Active Capstone Projects" },
       { id: "teams", label: "Team & Faculty Allocator" },
       { id: "industry", label: "Industry CSR Offers" },
