@@ -1,0 +1,103 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  cloud:
+    gateway:
+      # Unified CORS configuration at edge
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns:
+              - "http://localhost:[*]"
+              - "http://127.0.0.1:[*]"
+              - "*"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+              - HEAD
+            allowed-headers:
+              - Origin
+              - Content-Type
+              - Accept
+              - Authorization
+              - X-Requested-With
+              - X-Correlation-Id
+              - "*"
+            exposed-headers:
+              - Authorization
+              - Content-Disposition
+              - X-Correlation-Id
+            allow-credentials: true
+            max-age: 3600
+
+      # Dynamic Route Definitions
+      routes:
+        # 1. Notification Microservice Routes (SSE Streaming & History)
+        - id: notification-service-direct
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/notifications/**
+          filters:
+            - PreserveHostHeader
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+        - id: notification-service-prefixed
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - RewritePath=/api/notifications(?<segment>/?.*), /notifications$\{segment}
+            - PreserveHostHeader
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+        # 2. AI Microservice Routes
+        - id: ai-service
+          uri: ${AI_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - PreserveHostHeader
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+        # 3. Core Backend Service Routes (Auth, Issues, Onboarding, Industry, Projects, etc.)
+        - id: core-backend-service
+          uri: ${BACKEND_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/**
+          filters:
+            - PreserveHostHeader
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:jharkhand_innovation_portal_secure_jwt_secret_key_2026_very_long_secret}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    com.example.apigateway: DEBUG

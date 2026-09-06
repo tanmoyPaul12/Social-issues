@@ -66,7 +66,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#090e1a] flex flex-col font-sans selection:bg-slate-200 selection:text-slate-900">
+    <div className="h-screen bg-[#f8fafc] text-[#090e1a] flex flex-col font-sans selection:bg-slate-200 selection:text-slate-900 overflow-hidden">
       {/* Top Command Center Header */}
       <DashboardHeader activeRole={activeRole} />
 
@@ -74,7 +74,7 @@ function DashboardContent() {
       <ToastStack />
 
       {/* Main Workspace Layout: Left Sidebar + Right Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden h-[calc(100vh-61px)]">
         {/* Left Vertical Sidebar */}
         <DashboardSidebar
           activeRole={activeRole}
@@ -83,10 +83,15 @@ function DashboardContent() {
         />
 
         {/* Right Main Content Panel */}
-        <main className="flex-1 bg-white min-h-[calc(100vh-61px)] overflow-y-auto">
+        <main className="flex-1 bg-white h-full overflow-y-auto">
           {activeRole === "citizen" && <CitizenDashboardView activeTab={activeSidebarItem} />}
           {activeRole === "university" && <UniversityDashboardView activeTab={activeSidebarItem} />}
-          {activeRole === "industry" && <IndustryDashboardView activeTab={activeSidebarItem} />}
+          {activeRole === "industry" && (
+            <IndustryDashboardView
+              activeTab={activeSidebarItem}
+              onNavigateTab={setActiveSidebarItem}
+            />
+          )}
           {activeRole === "government" && <GovernmentDashboardView activeTab={activeSidebarItem} />}
           {activeRole === "admin" && <PlatformAdminDashboardView activeTab={activeSidebarItem} />}
         </main>

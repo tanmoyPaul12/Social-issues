@@ -11,5 +11,10 @@ public enum IssueSector {
     LIVELIHOOD,
     ENVIRONMENT,
     GOVERNANCE,
-    OTHER
+    OTHER;
+
+    public String getDisplayName() {
+        String n = name();
+        return n.substring(0, 1).toUpperCase() + n.substring(1).toLowerCase();
+    }
 }
