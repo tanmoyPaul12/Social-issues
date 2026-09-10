@@ -392,8 +392,12 @@ public class IssueServiceImpl implements IssueService {
     public IssueStatsResponse getIssueStats() {
         IssueStatsResponse stats = new IssueStatsResponse();
         stats.setTotalIssues(issueRepository.count());
+        stats.setDraftIssues(issueRepository.countByStatus(IssueStatus.DRAFT));
         stats.setSubmittedIssues(issueRepository.countByStatus(IssueStatus.SUBMITTED));
         stats.setUnderReviewIssues(issueRepository.countByStatus(IssueStatus.UNDER_REVIEW));
+        stats.setTriagedIssues(issueRepository.countByStatus(IssueStatus.TRIAGED));
+        stats.setAssignedHeiIssues(issueRepository.countByStatus(IssueStatus.ASSIGNED_HEI));
+        stats.setInProgressIssues(issueRepository.countByStatus(IssueStatus.IN_PROGRESS));
         stats.setEscalatedIssues(issueRepository.countByStatus(IssueStatus.ESCALATED));
         stats.setResolvedIssues(issueRepository.countByStatus(IssueStatus.RESOLVED));
         stats.setRejectedIssues(issueRepository.countByStatus(IssueStatus.REJECTED));

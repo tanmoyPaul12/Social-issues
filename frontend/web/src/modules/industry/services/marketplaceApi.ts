@@ -7,6 +7,7 @@ import {
   ExpressInterestPayload,
 } from "../types/marketplace";
 import { PageResponse } from "../types/industryDashboard";
+import { extractApiErrorMessage } from "@/lib/api/apiErrorHelper";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -83,7 +84,7 @@ export async function fetchMarketplaceProjects(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Failed to fetch marketplace projects (Status ${response.status})`);
+    throw new Error(extractApiErrorMessage(err, `Failed to fetch marketplace projects (Status ${response.status})`));
   }
 
   return response.json();
@@ -102,7 +103,8 @@ export async function fetchProjectDossier(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to load project dossier (Status ${response.status})`);
+    const err = await response.json().catch(() => ({}));
+    throw new Error(extractApiErrorMessage(err, `Failed to load project dossier (Status ${response.status})`));
   }
 
   return response.json();
@@ -124,7 +126,7 @@ export async function commitCsrGrant(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to submit CSR grant commitment");
+    throw new Error(extractApiErrorMessage(err, "Failed to submit CSR grant commitment"));
   }
 
   return response.json();
@@ -146,7 +148,7 @@ export async function submitMentorshipOffer(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to submit mentorship nomination");
+    throw new Error(extractApiErrorMessage(err, "Failed to submit mentorship nomination"));
   }
 
   return response.json();
@@ -168,7 +170,7 @@ export async function expressProjectInterest(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to dispatch expression of interest");
+    throw new Error(extractApiErrorMessage(err, "Failed to dispatch expression of interest"));
   }
 
   return response.json();

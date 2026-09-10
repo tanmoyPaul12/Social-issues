@@ -33,11 +33,11 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
         WHERE (:status IS NULL OR i.status = :status)
           AND (:sector IS NULL OR i.sector = :sector)
           AND (:priority IS NULL OR i.priority = :priority)
-          AND (:district IS NULL OR LOWER(i.district) = LOWER(:district))
-          AND (:block IS NULL OR LOWER(i.block) = LOWER(:block))
-          AND (:search IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                                OR LOWER(i.description) LIKE LOWER(CONCAT('%', :search, '%'))
-                                OR LOWER(i.issueNumber) LIKE LOWER(CONCAT('%', :search, '%')))
+          AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))
+          AND (CAST(:block AS string) IS NULL OR LOWER(i.block) = LOWER(CAST(:block AS string)))
+          AND (CAST(:search AS string) IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                                OR LOWER(i.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                                OR LOWER(i.issueNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
     """)
     Page<GrassrootIssue> findWithFilters(
             @Param("status") IssueStatus status,
@@ -56,4 +56,10 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
 
     @Query("SELECT i.district, COUNT(i) FROM GrassrootIssue i WHERE i.district IS NOT NULL GROUP BY i.district")
     List<Object[]> countGroupByDistrict();
+
+    @Query("SELECT i.priority, COUNT(i) FROM GrassrootIssue i GROUP BY i.priority")
+    List<Object[]> countGroupByPriority();
+
+    @Query("SELECT FUNCTION('TO_CHAR', i.createdAt, 'YYYY-MM'), COUNT(i) FROM GrassrootIssue i GROUP BY FUNCTION('TO_CHAR', i.createdAt, 'YYYY-MM') ORDER BY 1")
+    List<Object[]> countGroupByMonth();
 }

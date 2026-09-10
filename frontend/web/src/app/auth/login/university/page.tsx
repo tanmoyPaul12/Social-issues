@@ -51,7 +51,7 @@ export default function UniversityLoginPage() {
     });
 
     if (res.success) {
-      router.push("/dashboard");
+      router.push("/dashboard?role=university");
     }
   };
 

@@ -26,12 +26,15 @@ function getRoleFromUser(userRole?: string): DashboardRole {
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated, isLoading, _hasHydrated } = useAuthStore();
+  const { user, isAuthenticated, isLoading, _hasHydrated, checkSession } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (_hasHydrated && isAuthenticated) {
+      checkSession();
+    }
+  }, [_hasHydrated, isAuthenticated, checkSession]);
 
   const [activeSidebarItem, setActiveSidebarItem] = useState("overview");
 
@@ -84,16 +87,36 @@ function DashboardContent() {
 
         {/* Right Main Content Panel */}
         <main className="flex-1 bg-white h-full overflow-y-auto">
-          {activeRole === "citizen" && <CitizenDashboardView activeTab={activeSidebarItem} />}
-          {activeRole === "university" && <UniversityDashboardView activeTab={activeSidebarItem} />}
+          {activeRole === "citizen" && (
+            <CitizenDashboardView
+              activeTab={activeSidebarItem}
+              onNavigateTab={setActiveSidebarItem}
+            />
+          )}
+          {activeRole === "university" && (
+            <UniversityDashboardView
+              activeTab={activeSidebarItem}
+              onNavigateTab={setActiveSidebarItem}
+            />
+          )}
           {activeRole === "industry" && (
             <IndustryDashboardView
               activeTab={activeSidebarItem}
               onNavigateTab={setActiveSidebarItem}
             />
           )}
-          {activeRole === "government" && <GovernmentDashboardView activeTab={activeSidebarItem} />}
-          {activeRole === "admin" && <PlatformAdminDashboardView activeTab={activeSidebarItem} />}
+          {activeRole === "government" && (
+            <GovernmentDashboardView
+              activeTab={activeSidebarItem}
+              onNavigateTab={setActiveSidebarItem}
+            />
+          )}
+          {activeRole === "admin" && (
+            <PlatformAdminDashboardView
+              activeTab={activeSidebarItem}
+              onNavigateTab={setActiveSidebarItem}
+            />
+          )}
         </main>
       </div>
     </div>

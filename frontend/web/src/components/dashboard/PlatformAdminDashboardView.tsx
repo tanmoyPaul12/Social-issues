@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { OFFICIAL_RESEARCH_DOMAINS } from "@/app/page";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 interface PendingVerification {
   id: string;
@@ -17,9 +18,13 @@ interface PendingVerification {
 
 interface PlatformAdminDashboardViewProps {
   activeTab?: string;
+  onNavigateTab?: (tabId: string) => void;
 }
 
-export function PlatformAdminDashboardView({ activeTab = "overview" }: PlatformAdminDashboardViewProps) {
+export function PlatformAdminDashboardView({
+  activeTab = "overview",
+  onNavigateTab,
+}: PlatformAdminDashboardViewProps) {
   const { user } = useAuthStore();
   const adminName = user?.name || "Super Administrator";
 
@@ -203,10 +208,10 @@ export function PlatformAdminDashboardView({ activeTab = "overview" }: PlatformA
       )}
 
       {/* System Health / SDC */}
-      {(activeTab === "system" || activeTab === "sessions") && (
+      {activeTab === "system" && (
         <div className="space-y-4 pt-2">
           <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-            State Data Centre (SDC) Telemetry &amp; Sessions
+            State Data Centre (SDC) Telemetry &amp; Infrastructure
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -228,6 +233,42 @@ export function PlatformAdminDashboardView({ activeTab = "overview" }: PlatformA
             ))}
           </div>
         </div>
+      )}
+
+      {/* Session Management Tab */}
+      {activeTab === "sessions" && (
+        <WorkspacePlaceholderTab
+          title="Session & Security Governance"
+          subtitle="Real-time JWT & e-Pramaan SSO Session Monitoring"
+          description="Manage active administrative tokens, revoke compromised logins, and inspect role-based access logs across universities, corporates, and government nodal officers."
+          role="admin"
+          tabId="sessions"
+          features={[
+            "Live SSO & Refresh Token Invalidation Gateway",
+            "Multi-Factor Authentication (MFA) Compliance Audit",
+            "IP Geolocation & Rate-Limit Anomaly Tracker",
+            "State Data Centre Immutable Security Log Export",
+          ]}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* Catch-all fallback for unrecognized admin tabs */}
+      {![
+        "overview",
+        "verifications",
+        "taxonomy",
+        "moderation",
+        "system",
+        "sessions",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="Platform Administration Module"
+          description="This administrative module is being provisioned according to platform specifications."
+          role="admin"
+          tabId={activeTab}
+          onNavigateTab={onNavigateTab}
+        />
       )}
     </div>
   );

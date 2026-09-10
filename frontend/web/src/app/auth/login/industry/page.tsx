@@ -50,7 +50,7 @@ export default function IndustryLoginPage() {
     });
 
     if (res.success) {
-      router.push("/dashboard");
+      router.push("/dashboard?role=industry");
     }
   };
 

@@ -10,6 +10,7 @@ import { IndustryMarketplaceTab } from "./industry/marketplace/IndustryMarketpla
 import { ActivePilotsTab } from "./industry/pilots/ActivePilotsTab";
 import { CsrComplianceTab } from "./industry/csr/CsrComplianceTab";
 import { CompanySettingsTab } from "./industry/settings/CompanySettingsTab";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 interface CoFundedEngagement {
   id: string;
@@ -123,29 +124,117 @@ export function IndustryDashboardView({
         </button>
       </div>
 
-      {/* Tab 1: Dashboard Overview */}
+      {/* Tab 1: Overview */}
       {activeTab === "overview" && (
         <IndustryOverviewTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 2: University R&D Marketplace */}
-      {activeTab === "marketplace" && (
+      {/* Tab 2: Explore Challenges */}
+      {(activeTab === "challenges" || activeTab === "marketplace") && (
         <IndustryMarketplaceTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 3: Active Co-Funded Projects & Testbeds */}
-      {(activeTab === "engagements" || activeTab === "testbeds") && (
+      {/* Tab 3: My Collaborations */}
+      {(activeTab === "collaborations" || activeTab === "engagements") && (
         <ActivePilotsTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 4: CSR Compliance & Statutory Ledger */}
-      {activeTab === "csr" && (
+      {/* Tab 4: Mentorship & Funding */}
+      {(activeTab === "funding" || activeTab === "csr" || activeTab === "mentorship") && (
         <CsrComplianceTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 7: Company Profile & Corporate Settings */}
+      {/* Tab 5: Prototyping & Testing */}
+      {(activeTab === "prototyping" || activeTab === "testbeds") && (
+        <ActivePilotsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 6: IP & Technology Transfer */}
+      {(activeTab === "ip" || activeTab === "ip_transfer") && (
+        <WorkspacePlaceholderTab
+          title="IP & Technology Transfer Workspace"
+          subtitle="Intellectual Property Lifecycle & Institutional MOUs"
+          description="Track patents filed, IP co-ownership agreements, licensing terms, and technology transfer requests between industry partners and university research incubation centres."
+          role="industry"
+          tabId="ip"
+          features={[
+            "Tripartite IP Ownership & Patent Assignment Tracking",
+            "Technology Readiness Level (TRL 4 to TRL 9) Milestones",
+            "Standard MCA & Higher Education Department MOU Repository",
+            "Commercial Licensing & Royalty Disbursement Records",
+          ]}
+          onNavigateTab={handleNavigate}
+        />
+      )}
+
+      {/* Tab 7: Analytics */}
+      {activeTab === "analytics" && (
+        <WorkspacePlaceholderTab
+          title="Impact & Engagement Analytics"
+          subtitle="Real-time CSR Impact Metrics & Deployment Telemetry"
+          description="Deep-dive analytics on domain-wise corporate capital deployment, university project completion rates, time-to-market metrics, and rural beneficiary reach across Jharkhand districts."
+          role="industry"
+          tabId="analytics"
+          features={[
+            "District-wise Community Beneficiary Reach Analysis",
+            "Schedule VII CSR Expenditure vs. Milestone ROI",
+            "University Faculty & Student Cohort Performance Index",
+            "Automated State Cabinet & MCA Audit Export Engine",
+          ]}
+          onNavigateTab={handleNavigate}
+        />
+      )}
+
+      {/* Tab 8: Communication */}
+      {(activeTab === "communication" || activeTab === "messages") && (
+        <WorkspacePlaceholderTab
+          title="Communication & Review Workspace"
+          subtitle="Direct Stakeholder Threads & Review Meeting Scheduler"
+          description="Unified messaging channel connecting corporate CSR SPOCs, university Principal Investigators (PIs), student teams, and government district nodal officers."
+          role="industry"
+          tabId="communication"
+          features={[
+            "Direct Secure Messaging Threads with University Research Teams",
+            "Automated Milestone Review Call & Demonstration Scheduler",
+            "Government Nodal Officer Escalation & Clarification Channel",
+            "Centralized Document & Compliance Attachment Thread",
+          ]}
+          onNavigateTab={handleNavigate}
+        />
+      )}
+
+      {/* Tab 9: Profile & Capabilities */}
       {(activeTab === "settings" || activeTab === "profile") && (
         <CompanySettingsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Catch-all fallback for any unrecognized tabs */}
+      {![
+        "overview",
+        "challenges",
+        "marketplace",
+        "collaborations",
+        "engagements",
+        "funding",
+        "csr",
+        "mentorship",
+        "prototyping",
+        "testbeds",
+        "ip",
+        "ip_transfer",
+        "analytics",
+        "communication",
+        "messages",
+        "settings",
+        "profile",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="Industry Workspace Module"
+          description="This module workspace is being provisioned according to platform specifications."
+          role="industry"
+          tabId={activeTab}
+          onNavigateTab={handleNavigate}
+        />
       )}
 
       {/* Modal: Commit Grant */}

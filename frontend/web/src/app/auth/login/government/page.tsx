@@ -51,7 +51,7 @@ export default function GovernmentLoginPage() {
     });
 
     if (res.success) {
-      router.push("/dashboard");
+      router.push("/dashboard?role=government");
     }
   };
 

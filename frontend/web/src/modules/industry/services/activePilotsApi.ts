@@ -14,6 +14,7 @@ import {
   UpdatePilotHealthPayload,
 } from "../types/activePilots";
 import { PageResponse } from "../types/industryDashboard";
+import { extractApiErrorMessage } from "@/lib/api/apiErrorHelper";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -80,7 +81,7 @@ export async function fetchActivePilots(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Failed to load active pilots (Status ${response.status})`);
+    throw new Error(extractApiErrorMessage(err, `Failed to load active pilots (Status ${response.status})`));
   }
 
   return response.json();
@@ -128,7 +129,7 @@ export async function fetchPilotDetail(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Failed to load project dossier (Status ${response.status})`);
+    throw new Error(extractApiErrorMessage(err, `Failed to load project dossier (Status ${response.status})`));
   }
 
   return response.json();
@@ -150,7 +151,7 @@ export async function updatePilotHealth(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to update pilot health status");
+    throw new Error(extractApiErrorMessage(err, "Failed to update pilot health status"));
   }
 
   return response.json();
@@ -176,7 +177,7 @@ export async function reviewMilestone(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to submit milestone review");
+    throw new Error(extractApiErrorMessage(err, "Failed to submit milestone review"));
   }
 
   return response.json();
@@ -201,7 +202,7 @@ export async function releaseDisbursement(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to record tranche release");
+    throw new Error(extractApiErrorMessage(err, "Failed to record tranche release"));
   }
 
   return response.json();
@@ -242,7 +243,7 @@ export async function postDiscussion(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to post discussion message");
+    throw new Error(extractApiErrorMessage(err, "Failed to post discussion message"));
   }
 
   return response.json();
@@ -299,7 +300,7 @@ export async function uploadDocument(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to upload project document");
+    throw new Error(extractApiErrorMessage(err, "Failed to upload project document"));
   }
 
   return response.json();
@@ -323,7 +324,7 @@ export async function deleteDocument(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to delete project document");
+    throw new Error(extractApiErrorMessage(err, "Failed to delete project document"));
   }
 
   return response.json();

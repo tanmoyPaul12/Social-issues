@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { useUniversity } from "@/modules/university/hooks/useUniversity";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 import {
   RoutedChallenge,
   UniversityProject,
@@ -15,6 +16,7 @@ import {
 
 interface UniversityDashboardViewProps {
   activeTab?: string;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 export interface OnboardedIndustryPartner {
@@ -246,7 +248,10 @@ const STAGE_PROGRESS: Record<UniversityProjectStage, number> = {
   COMPLETED: 100
 };
 
-export function UniversityDashboardView({ activeTab = "overview" }: UniversityDashboardViewProps) {
+export function UniversityDashboardView({
+  activeTab = "overview",
+  onNavigateTab,
+}: UniversityDashboardViewProps) {
   const { user, token } = useAuthStore();
   const aisheCode = user?.aisheCode || "U-0205";
   const institutionName = user?.orgName || "Birla Institute of Technology, Mesra";
@@ -1574,6 +1579,26 @@ export function UniversityDashboardView({ activeTab = "overview" }: UniversityDa
             </table>
           </div>
         </div>
+      )}
+
+      {/* Catch-all fallback for unrecognized university tabs */}
+      {![
+        "overview",
+        "inbox",
+        "challenges",
+        "projects",
+        "accreditation",
+        "teams",
+        "users",
+        "industry",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="University Workspace Module"
+          description="This institutional module is being provisioned according to platform specifications."
+          role="university"
+          tabId={activeTab}
+          onNavigateTab={onNavigateTab}
+        />
       )}
 
       {/* MODAL 1: ACCEPT CHALLENGE & ASSIGN TEAM */}

@@ -6,6 +6,8 @@ import { useAuthStore } from "@/lib/store/useAuthStore";
 import { useIssueStore, GrassrootIssueRecord } from "@/lib/store/useIssueStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { NodalAiAuditCard } from "@/components/dashboard/NodalAiAuditCard";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
+import { GovernmentAnalyticsOverview } from "./government/GovernmentAnalyticsOverview";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -21,6 +23,7 @@ interface EscalationItem {
 
 interface GovernmentDashboardViewProps {
   activeTab?: string;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 const sectorToDomainMap: Record<string, string> = {
@@ -62,7 +65,10 @@ const inferPriority = (rawPriority: string, title: string, description: string):
   return rawPriority || "MEDIUM";
 };
 
-export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDashboardViewProps) {
+export function GovernmentDashboardView({
+  activeTab = "overview",
+  onNavigateTab,
+}: GovernmentDashboardViewProps) {
   const { user, token } = useAuthStore();
   const { issues: storeIssues, setIssues: setStoreIssues } = useIssueStore();
   const departmentName = user?.orgName || "Department of Higher & Technical Education";
@@ -80,7 +86,7 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
 
   const fetchIssues = async () => {
     try {
-      let url = `${API_BASE_URL}/issues?page=0&size=50`;
+      let url = `${API_BASE_URL}/issues?page=0&size=200`;
       if (selectedDistrict !== "All 24 Districts") {
         url += `&district=${encodeURIComponent(selectedDistrict)}`;
       }
@@ -106,12 +112,12 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
               description: description,
               sector: sector,
               domain: domain,
-              district: item.district || "Bokaro",
+              district: item.district || "Ranchi",
               block: item.block,
               priority: priority,
               status: item.status || "SUBMITTED",
               validationStatus: item.validationStatus || "PASS",
-              assignedHEI: item.assignedHEI || "BIT Mesra - Hydraulics Lab",
+              assignedHEI: item.assignedHEI || undefined,
               createdAt: item.createdAt || new Date().toISOString(),
               attachmentCount: item.attachmentCount || 1,
               validationReportJson: item.validationReportJson,
@@ -121,9 +127,9 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
           const combinedMap = new Map<string, GrassrootIssueRecord>();
           // Also auto-correct any existing store issues if sector was OTHER
           storeIssues.forEach((i) => {
-            const sec = inferSector(i.sector, i.title, i.description);
+            const sec = inferSector(i.sector || "OTHER", i.title || "", i.description || "");
             const dom = sectorToDomainMap[sec] || i.domain || sec;
-            const prio = inferPriority(i.priority, i.title, i.description);
+            const prio = inferPriority(i.priority || "MEDIUM", i.title || "", i.description || "") as any;
             combinedMap.set(i.id, {
               ...i,
               sector: sec,
@@ -173,23 +179,18 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
         </div>
       </div>
 
-      {/* Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Grassroots Ingestions", value: filteredIssues.length.toString() },
-          { label: "Critical Priority Issues", value: `${criticalCount} Urgent` },
-          { label: "Assigned HEI Labs", value: `${assignedCount} Labs` },
-          { label: "Average Resolution SLA", value: "2.4 Days" },
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white border border-slate-300/80 p-5 rounded-sm shadow-2xs">
-            <div className="text-xs font-bold text-slate-700">{stat.label}</div>
-            <div className="text-3xl font-black text-slate-900 mt-2 font-mono">{stat.value}</div>
-          </div>
-        ))}
-      </div>
+      {/* ── TAB 1: EXECUTIVE ANALYTICS OVERVIEW (CHART.JS) ── */}
+      {activeTab === "overview" && (
+        <GovernmentAnalyticsOverview
+          issues={storeIssues}
+          selectedDistrict={selectedDistrict}
+          onSelectDistrict={setSelectedDistrict}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
 
-      {/* Main Content Area based on activeTab */}
-      {(activeTab === "overview" || activeTab === "districts") && (
+      {/* ── TAB 2: DISTRICT INGESTION & REGISTRY TABLE ── */}
+      {activeTab === "districts" && (
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
             <div>
@@ -201,7 +202,7 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="p-1.5 rounded border border-slate-300 bg-white text-xs font-bold text-slate-800 outline-none"
+              className="p-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 outline-none shadow-xs"
             >
               <option>All 24 Districts</option>
               {["Ranchi", "Dhanbad", "Dumka", "East Singhbhum", "West Singhbhum", "Bokaro", "Hazaribagh", "Deoghar", "Giridih", "Ramgarh"].map((d) => (
@@ -211,7 +212,7 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
           </div>
 
           {filteredIssues.length === 0 ? (
-            <div className="p-10 text-center bg-white border border-slate-200 rounded-sm shadow-2xs">
+            <div className="p-10 text-center bg-white border border-slate-200 rounded-2xl shadow-xs">
               <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -223,10 +224,10 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
               </p>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-sm shadow-2xs overflow-x-auto">
+            <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                  <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
                     <th className="py-3 px-4">Ticket ID</th>
                     <th className="py-3 px-4">Title & Description</th>
                     <th className="py-3 px-4">Sector & District</th>
@@ -268,7 +269,7 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
                       <td className="py-3.5 px-4">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                          <span>🟢 AI VERIFIED</span>
+                          <span>AI VERIFIED</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -289,18 +290,25 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
         </div>
       )}
 
-      {/* Heatmap Tab */}
-      {(activeTab === "heatmap" || activeTab === "overview") && (
-        <div className="space-y-4 pt-4 border-t border-slate-200">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-            10 Official Research Domains: Ingestion Heatmap
-          </h2>
+      {/* ── TAB 3: DOMAIN HEATMAP ── */}
+      {activeTab === "heatmap" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                10 Official Research Domains: Ingestion Heatmap
+              </h2>
+              <p className="text-xs text-slate-500">
+                Live domain intensity &amp; CSR co-funding allocation benchmarks across Jharkhand
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {OFFICIAL_RESEARCH_DOMAINS.map((dom) => (
-              <div key={dom} className="p-3 bg-white border border-slate-200 rounded-sm space-y-1 text-xs">
+              <div key={dom} className="p-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs space-y-1 text-xs hover:border-blue-300 transition-all">
                 <span className="font-bold text-slate-900 block truncate">{dom}</span>
-                <span className="text-lg font-black text-blue-700 font-mono block">
+                <span className="text-2xl font-black text-blue-700 font-mono block">
                   {filteredIssues.filter((i) => 
                     i.domain === dom || 
                     i.sector === dom || 
@@ -308,11 +316,64 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
                     (i.sector && i.sector.toLowerCase().includes(dom.split(" ")[0].toLowerCase()))
                   ).length}
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">₹2.5L CSR</span>
+                <span className="text-[10px] text-slate-400 font-mono">₹2.5L CSR Baseline</span>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Escalations & Approvals Tab */}
+      {activeTab === "escalations" && (
+        <WorkspacePlaceholderTab
+          title="Government Escalations & Approvals"
+          subtitle="Inter-Departmental Clearances & Bottleneck Triage"
+          description="Review flagged citizen grievances requiring inter-departmental permissions, land clearances, or emergency funding sign-offs."
+          role="government"
+          tabId="escalations"
+          features={[
+            "Multi-Department Jurisdictional Escalation Matrix",
+            "Expedited Statutory Clearances for Pilot Projects",
+            "District Magistrate & Nodal Officer Direct Action Log",
+            "Emergency Disaster Mitigation Protocol Dispatch",
+          ]}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* State Cabinet Reports Tab */}
+      {activeTab === "reports" && (
+        <WorkspacePlaceholderTab
+          title="State Cabinet Reports & Analytics Dossiers"
+          subtitle="Official Legislative & Administrative PDF Exports"
+          description="Generate compiled state-level innovation performance reports, district-wise grievance resolution audits, and university research outcomes for cabinet review."
+          role="government"
+          tabId="reports"
+          features={[
+            "Automated State Cabinet Monthly Digest (PDF Generation)",
+            "District Collectorate Innovation Benchmark Index",
+            "Statewide CSR Utilization vs. Budget Allocations",
+            "NEP 2020 Institutional Performance & Outcome Ledger",
+          ]}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* Catch-all fallback for unrecognized government tabs */}
+      {![
+        "overview",
+        "districts",
+        "heatmap",
+        "escalations",
+        "reports",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="Government Oversight Module"
+          description="This module workspace is being provisioned according to platform specifications."
+          role="government"
+          tabId={activeTab}
+          onNavigateTab={onNavigateTab}
+        />
       )}
 
       {/* Modal: Inspect AI Audit Breakdown Card */}
@@ -322,8 +383,8 @@ export function GovernmentDashboardView({ activeTab = "overview" }: GovernmentDa
             <NodalAiAuditCard
               issueId={selectedAuditIssue.id}
               issue={selectedAuditIssue}
-              modalityBreakdown={selectedAuditIssue.modalityBreakdown}
-              generalizedConsensus={selectedAuditIssue.generalizedConsensus}
+              modalityBreakdown={selectedAuditIssue.modalityBreakdown as any}
+              generalizedConsensus={selectedAuditIssue.generalizedConsensus as any}
               onClose={() => setSelectedAuditIssue(null)}
             />
           </div>

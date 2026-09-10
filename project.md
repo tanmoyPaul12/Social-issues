@@ -58,6 +58,7 @@ Based on the industry partnership module in your problem statement, here's a tab
 **1. Home / overview**
 - Quick stats: open challenges available for collaboration, active projects, funding committed, mentors engaged
 - Notifications feed (new challenge matches, milestone requests, approvals pending)
+..
 
 **2. Explore challenges**
 - Browse university-validated challenges filtered by domain (agri, health, water, energy, etc.)
