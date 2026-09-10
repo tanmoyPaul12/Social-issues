@@ -34,7 +34,6 @@ public class IssueServiceImpl implements IssueService {
     private final IssueAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
-    private final ValidationClient validationClient;
     private final AiServiceClient aiServiceClient;
     private final SecureRandom random = new SecureRandom();
 
@@ -43,14 +42,12 @@ public class IssueServiceImpl implements IssueService {
             IssueAttachmentRepository attachmentRepository,
             UserRepository userRepository,
             FileStorageService fileStorageService,
-            ValidationClient validationClient,
             AiServiceClient aiServiceClient
     ) {
         this.issueRepository = issueRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
-        this.validationClient = validationClient;
         this.aiServiceClient = aiServiceClient;
     }
 
@@ -96,9 +93,9 @@ public class IssueServiceImpl implements IssueService {
                 GrassrootIssue issueToAudit = issueRepository.findById(savedIssueId).orElse(null);
                 if (issueToAudit != null) {
                     Map<String, Object> aiResult = aiServiceClient.processMultimodalIntelligence(issueToAudit, null, null);
-                    if (aiResult != null && aiResult.containsKey("generalized_consensus")) {
-                        Map<String, Object> consensus = (Map<String, Object>) aiResult.get("generalized_consensus");
-                        String level = (String) consensus.getOrDefault("final_priority_level", "MEDIUM");
+                    if (aiResult != null && aiResult.get("generalized_consensus") instanceof Map<?, ?> consensus) {
+                        Object levelObj = consensus.get("final_priority_level");
+                        String level = levelObj instanceof String str ? str : "MEDIUM";
                         if ("CRITICAL".equalsIgnoreCase(level)) {
                             issueToAudit.setPriority(IssuePriority.CRITICAL);
                         } else if ("HIGH".equalsIgnoreCase(level)) {

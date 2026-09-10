@@ -63,34 +63,60 @@ export function SiteNavbar() {
     return "/dashboard?role=citizen";
   };
 
-  const opportunitiesItems: DropdownItem[] = [
-    { label: "College & University (HEI) Sign In", href: "/auth/login/university", hasArrow: true, isFirstActive: true },
-    { label: "Register College / University (AISHE)", href: "/onboarding/university", hasArrow: true },
-    { label: "Student Capstone Grants", href: "/onboarding/university", hasArrow: true },
-    { label: "Faculty & Lab R&D Funding", href: "/onboarding/university", hasArrow: true },
-    { label: "Government Opportunities & POC", href: "/onboarding/government", hasArrow: true },
-    { label: "CSR Co-Funding Marketplace", href: "/onboarding/industry", hasArrow: true },
-    { label: "State STI Innovation Challenges", href: "/#opportunities", hasArrow: false },
-    { label: "Patent & IPR Filing Support", href: "/#opportunities", hasArrow: false },
-  ];
+  const opportunitiesItems: DropdownItem[] = isAuthenticated
+    ? [
+        { label: "Student Capstone Grants", href: "/#opportunities", hasArrow: true, isFirstActive: true },
+        { label: "Faculty & Lab R&D Funding", href: "/#opportunities", hasArrow: true },
+        { label: "State STI Innovation Challenges", href: "/#opportunities", hasArrow: true },
+        { label: "Patent & IPR Filing Support", href: "/#opportunities", hasArrow: false },
+        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true },
+        { label: "District Pilot Opportunities", href: "/#opportunities", hasArrow: false },
+      ]
+    : [
+        { label: "College & University (HEI) Sign In", href: "/auth/login/university", hasArrow: true, isFirstActive: true },
+        { label: "Register College / University (AISHE)", href: "/onboarding/university", hasArrow: true },
+        { label: "Student Capstone Grants", href: "/onboarding/university", hasArrow: true },
+        { label: "Faculty & Lab R&D Funding", href: "/onboarding/university", hasArrow: true },
+        { label: "Government Opportunities & POC", href: "/onboarding/government", hasArrow: true },
+        { label: "CSR Co-Funding Marketplace", href: "/onboarding/industry", hasArrow: true },
+        { label: "State STI Innovation Challenges", href: "/#opportunities", hasArrow: false },
+        { label: "Patent & IPR Filing Support", href: "/#opportunities", hasArrow: false },
+      ];
 
-  const industryItems: DropdownItem[] = [
-    { label: "Industry & CSR Sign In", href: "/auth/login/industry", hasArrow: true, isFirstActive: true },
-    { label: "Register Corporate / CSR Partner", href: "/onboarding/industry", hasArrow: true },
-    { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true },
-    { label: "Lab Technology Licensing & POCs", href: "/onboarding/industry", hasArrow: true },
-    { label: "Industry R&D Portal Overview", href: "/industry-rd", hasArrow: false },
-  ];
+  const industryItems: DropdownItem[] = isAuthenticated
+    ? [
+        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true, isFirstActive: true },
+        { label: "Industry R&D Portal Overview", href: "/industry-rd", hasArrow: false },
+        { label: "Lab Technology Licensing & POCs", href: "/industry-rd#licensing", hasArrow: true },
+        { label: "Active District Pilot Projects", href: "/dashboard?role=industry", hasArrow: true },
+      ]
+    : [
+        { label: "Industry & CSR Sign In", href: "/auth/login/industry", hasArrow: true, isFirstActive: true },
+        { label: "Register Corporate / CSR Partner", href: "/onboarding/industry", hasArrow: true },
+        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true },
+        { label: "Lab Technology Licensing & POCs", href: "/onboarding/industry", hasArrow: true },
+        { label: "Industry R&D Portal Overview", href: "/industry-rd", hasArrow: false },
+      ];
 
-  const segmentsItems: DropdownItem[] = [
-    { label: "Government Opportunities and POC", href: "/onboarding/government", hasArrow: true, isFirstActive: true },
-    { label: "International Partnerships", href: "/#international", hasArrow: false },
-    { label: "Women in STEM", href: "/#women-stem", hasArrow: false },
-    { label: "School Innovation", href: "/#school-innovation", hasArrow: true },
-    { label: "AMRIT - RuTAGe Smart Village Centres", href: "/#rsvc-amrit", hasArrow: true },
-    { label: "Impact Assessment Partners", href: "/#impact", hasArrow: false },
-    { label: "City STI Clusters", href: "/#clusters", hasArrow: false },
-  ];
+  const segmentsItems: DropdownItem[] = isAuthenticated
+    ? [
+        { label: "Government Opportunities & POC", href: "/#segments", hasArrow: true, isFirstActive: true },
+        { label: "International Partnerships", href: "/#international", hasArrow: false },
+        { label: "Women in STEM", href: "/#women-stem", hasArrow: false },
+        { label: "School Innovation", href: "/#school-innovation", hasArrow: true },
+        { label: "AMRIT - RuTAGe Smart Village Centres", href: "/#rsvc-amrit", hasArrow: true },
+        { label: "Impact Assessment Partners", href: "/#impact", hasArrow: false },
+        { label: "City STI Clusters", href: "/#clusters", hasArrow: false },
+      ]
+    : [
+        { label: "Government Opportunities and POC", href: "/onboarding/government", hasArrow: true, isFirstActive: true },
+        { label: "International Partnerships", href: "/#international", hasArrow: false },
+        { label: "Women in STEM", href: "/#women-stem", hasArrow: false },
+        { label: "School Innovation", href: "/#school-innovation", hasArrow: true },
+        { label: "AMRIT - RuTAGe Smart Village Centres", href: "/#rsvc-amrit", hasArrow: true },
+        { label: "Impact Assessment Partners", href: "/#impact", hasArrow: false },
+        { label: "City STI Clusters", href: "/#clusters", hasArrow: false },
+      ];
 
   const eventsItems: DropdownItem[] = [
     { label: "Jharkhand Innovation Hackathon 2026", href: "/#events", hasArrow: true, isFirstActive: true },

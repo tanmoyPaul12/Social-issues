@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 interface RoleHubItem {
   id: string;
@@ -108,7 +109,8 @@ const ROLE_HUB_ITEMS: RoleHubItem[] = [
 
 export default function OnboardingHubPage() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#090e1a] flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
+    <GuestOnlyGuard>
+      <div className="min-h-screen bg-[#f8fafc] text-[#090e1a] flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Top Header */}
       <header className="bg-white border-b border-slate-200/90 px-4 sm:px-8 py-3.5 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/95">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -268,5 +270,6 @@ export default function OnboardingHubPage() {
         </div>
       </footer>
     </div>
+  </GuestOnlyGuard>
   );
 }

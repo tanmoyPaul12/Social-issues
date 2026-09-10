@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { OnboardingFormWrapper } from "@/components/onboarding/OnboardingFormWrapper";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 const KNOWN_UNIVERSITIES = [
   "Birla Institute of Technology (BIT) Mesra, Ranchi",
@@ -234,8 +235,9 @@ export default function UniversityOnboardingPage() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <OnboardingFormWrapper
-      roleTitle="College & University (HEI) Onboarding"
+    <GuestOnlyGuard>
+      <OnboardingFormWrapper
+        roleTitle="College &amp; University (HEI) Onboarding"
       roleTagline="Register your institution to receive routed grassroots challenges, form student capstone teams, and access NEP 2020 Capstone R&D Grants."
       roleBadge="Academic Lab Grants"
       trustBadge="Institutional Review"
@@ -742,5 +744,6 @@ export default function UniversityOnboardingPage() {
         </div>
       )}
     </OnboardingFormWrapper>
+  </GuestOnlyGuard>
   );
 }

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingFormWrapper } from "@/components/onboarding/OnboardingFormWrapper";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 const JHARKHAND_DISTRICTS = [
   "Dumka",
@@ -80,8 +81,9 @@ export default function GovernmentOnboardingPage() {
   };
 
   return (
-    <OnboardingFormWrapper
-      roleTitle="Government & Nodal Official Onboarding"
+    <GuestOnlyGuard>
+      <OnboardingFormWrapper
+        roleTitle="Government &amp; Nodal Official Onboarding"
       roleTagline="Access administrative intake queues, review AI problem categorization, and route validated challenges to regional universities."
       roleBadge="Administrative Triage Console"
       trustBadge="Government Provisioned"
@@ -251,5 +253,6 @@ export default function GovernmentOnboardingPage() {
         </div>
       )}
     </OnboardingFormWrapper>
+  </GuestOnlyGuard>
   );
 }

@@ -121,6 +121,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
+    @SuppressWarnings("null")
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status, String code, String message) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(status);

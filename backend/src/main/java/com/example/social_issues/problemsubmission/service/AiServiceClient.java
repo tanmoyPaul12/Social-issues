@@ -4,9 +4,12 @@ import com.example.social_issues.problemsubmission.model.GrassrootIssue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -66,10 +69,18 @@ public class AiServiceClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
-            Map<String, Object> response = restTemplate.postForObject(endpoint, requestEntity, Map.class);
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> response = responseEntity.getBody();
             
-            if (response != null && response.containsKey("data")) {
-                return (Map<String, Object>) response.get("data");
+            if (response != null && response.get("data") instanceof Map<?, ?> dataMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) dataMap;
+                return data;
             }
             return response;
         } catch (Exception e) {

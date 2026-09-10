@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { OnboardingFormWrapper } from "@/components/onboarding/OnboardingFormWrapper";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 const JHARKHAND_DISTRICTS = [
   "East Singhbhum (Jamshedpur)",
@@ -152,8 +153,9 @@ export default function IndustryOnboardingPage() {
   };
 
   return (
-    <OnboardingFormWrapper
-      roleTitle="Industry, Startup & CSR Partner Onboarding"
+    <GuestOnlyGuard>
+      <OnboardingFormWrapper
+        roleTitle="Industry, Startup & CSR Partner Onboarding"
       roleTagline="Partner with university research labs across Jharkhand to co-fund prototypes, sponsor rural pilots, and scale social impact."
       roleBadge="CSR Co-Funding & Pilots"
       trustBadge="Corporate KYC"
@@ -493,5 +495,6 @@ export default function IndustryOnboardingPage() {
         </div>
       )}
     </OnboardingFormWrapper>
+  </GuestOnlyGuard>
   );
 }

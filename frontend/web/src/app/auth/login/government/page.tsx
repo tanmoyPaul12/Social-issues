@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 export default function GovernmentLoginPage() {
   const router = useRouter();
@@ -55,8 +56,9 @@ export default function GovernmentLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-100">
-      <SiteNavbar />
+    <GuestOnlyGuard>
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-100">
+        <SiteNavbar />
 
       <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-10">
         {/* Government Identity Header */}
@@ -269,5 +271,6 @@ export default function GovernmentLoginPage() {
         </div>
       </main>
     </div>
+  </GuestOnlyGuard>
   );
 }
