@@ -19,3 +19,7 @@ numpy>=1.26.0
 
 # Logging & Utilities
 loguru>=0.7.2
+
+# High-Speed gRPC Inter-Service Communication
+grpcio>=1.62.0
+grpcio-tools>=1.62.0

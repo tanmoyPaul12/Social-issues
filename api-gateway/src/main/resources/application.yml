@@ -69,6 +69,7 @@ spring:
           predicates:
             - Path=/api/ai/**
           filters:
+            - RewritePath=/api/ai(?<segment>/?.*), /api$\{segment}
             - PreserveHostHeader
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
 

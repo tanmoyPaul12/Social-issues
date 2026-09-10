@@ -13,7 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -107,5 +109,86 @@ public class AiServiceClient {
             "consensus_reason", "Fallback deterministic rule applied (AI service unreachable)."
         ));
         return fallback;
+    }
+
+    /**
+     * Calls AI Matchmaking Engine to recommend top 3 Higher Education Institutions (HEIs) for this challenge.
+     */
+    public Map<String, Object> routeChallengeToHEIs(GrassrootIssue issue) {
+        try {
+            String endpoint = aiServiceUrl + "/api/v1/route";
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("challenge_id", issue.getIssueNumber());
+            payload.put("title", issue.getTitle() != null ? issue.getTitle() : "");
+            payload.put("description", issue.getDescription() != null ? issue.getDescription() : "");
+            payload.put("district", issue.getDistrict() != null ? issue.getDistrict() : "Ranchi");
+            payload.put("block", issue.getBlock() != null ? issue.getBlock() : "");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+            Map<String, Object> response = restTemplate.postForObject(endpoint, requestEntity, Map.class);
+            if (response != null && response.containsKey("recommended_heis")) {
+                return response;
+            }
+        } catch (Exception e) {
+            log.warn("AI Service routing failed for issue #{}: {}. Applying deterministic HEI matcher fallback.", issue.getIssueNumber(), e.getMessage());
+        }
+
+        return generateFallbackRouting(issue);
+    }
+
+    private Map<String, Object> generateFallbackRouting(GrassrootIssue issue) {
+        String sec = issue.getSector() != null ? issue.getSector().name() : "OTHER";
+        String dist = issue.getDistrict() != null ? issue.getDistrict() : "Ranchi";
+
+        List<Map<String, Object>> matches = new ArrayList<>();
+
+        if ("AGRICULTURE".equalsIgnoreCase(sec) || "LIVELIHOOD".equalsIgnoreCase(sec)) {
+            matches.add(Map.of(
+                "hei_id", "BAU_RANCHI",
+                "hei_name", "Birsa Agricultural University (BAU), Kanke",
+                "match_score", 0.96,
+                "rationale", "Primary state agricultural research university with specialized Agronomy and Plant Pathology labs."
+            ));
+            matches.add(Map.of(
+                "hei_id", "BIT_MESRA",
+                "hei_name", "Birla Institute of Technology (BIT) Mesra, Ranchi",
+                "match_score", 0.82,
+                "rationale", "Strong engineering capabilities for agro-tech automation."
+            ));
+        } else if ("ENVIRONMENT".equalsIgnoreCase(sec) || "ELECTRICITY".equalsIgnoreCase(sec) || "Dhanbad".equalsIgnoreCase(dist)) {
+            matches.add(Map.of(
+                "hei_id", "IIT_ISM_DHANBAD",
+                "hei_name", "IIT (ISM) Dhanbad",
+                "match_score", 0.95,
+                "rationale", "National institute of excellence in environmental engineering, mining, and clean energy systems."
+            ));
+            matches.add(Map.of(
+                "hei_id", "BIT_MESRA",
+                "hei_name", "Birla Institute of Technology (BIT) Mesra, Ranchi",
+                "match_score", 0.85,
+                "rationale", "Comprehensive environmental and energy research facilities."
+            ));
+        } else {
+            matches.add(Map.of(
+                "hei_id", "BIT_MESRA",
+                "hei_name", "Birla Institute of Technology (BIT) Mesra, Ranchi",
+                "match_score", 0.94,
+                "rationale", "Premier state technical institution with multidisciplinary engineering & robotics labs."
+            ));
+            matches.add(Map.of(
+                "hei_id", "NIT_JAMSHEDPUR",
+                "hei_name", "National Institute of Technology (NIT) Jamshedpur",
+                "match_score", 0.88,
+                "rationale", "Advanced civil infrastructure and water management facilities."
+            ));
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("recommended_heis", matches);
+        return result;
     }
 }
