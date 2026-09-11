@@ -34,6 +34,13 @@ export interface MarketplaceProject {
   proposalPdfUrl?: string;
   prototypeImageUrl?: string;
   status: "PUBLISHED" | "UNDER_REVIEW" | "FULLY_FUNDED" | "CLOSED";
+  mentorName?: string;
+  mentorDesignation?: string;
+  mentorEmail?: string;
+  mentorshipStatus?: "PENDING_ACCEPTANCE" | "ACTIVE" | "PAUSED" | "COMPLETED";
+  mentorshipSessionCount?: number;
+  mentorshipNextSession?: string;
+  mentorshipMeetingLink?: string;
   closingDate?: string;
   createdAt: string;
 }

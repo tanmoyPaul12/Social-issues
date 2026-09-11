@@ -153,7 +153,17 @@ public class InstitutionalOnboardingService {
 
             String gstin = req.getGstin() != null ? req.getGstin().trim() : "";
             if (gstin.isBlank()) {
-                return AuthResponse.error("GSTIN or Corporate Identifier is required.");
+                if (req.getDpiitRecognitionNumber() != null && !req.getDpiitRecognitionNumber().isBlank()) {
+                    gstin = req.getDpiitRecognitionNumber().trim();
+                } else if (req.getUdyamRegistrationNumber() != null && !req.getUdyamRegistrationNumber().isBlank()) {
+                    gstin = req.getUdyamRegistrationNumber().trim();
+                } else if (req.getTaxExemptionNumber() != null && !req.getTaxExemptionNumber().isBlank()) {
+                    gstin = req.getTaxExemptionNumber().trim();
+                } else if (req.getInstitutionRegNumber() != null && !req.getInstitutionRegNumber().isBlank()) {
+                    gstin = req.getInstitutionRegNumber().trim();
+                } else {
+                    return AuthResponse.error("Statutory Registration Identifier (GSTIN, DPIIT, Udyam, 12A/80G, or Institution ID) is required.");
+                }
             }
 
             String name = req.getName() != null ? req.getName().trim() : "";
@@ -207,6 +217,13 @@ public class InstitutionalOnboardingService {
             }
             profile.setCompanyName(companyName);
             profile.setCompanyType(req.getCompanyType());
+            if (req.getPartnerCategory() != null) {
+                profile.setPartnerCategory(req.getPartnerCategory());
+            }
+            profile.setDpiitRecognitionNumber(req.getDpiitRecognitionNumber());
+            profile.setUdyamRegistrationNumber(req.getUdyamRegistrationNumber());
+            profile.setTaxExemptionNumber(req.getTaxExemptionNumber());
+            profile.setInstitutionRegNumber(req.getInstitutionRegNumber());
             profile.setGstin(gstin);
             profile.setCinNumber(req.getCinNumber());
             profile.setCsrNumber(req.getCsrNumber());

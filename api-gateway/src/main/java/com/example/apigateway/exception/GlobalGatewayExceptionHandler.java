@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
@@ -29,7 +30,9 @@ public class GlobalGatewayExceptionHandler implements ErrorWebExceptionHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
+    @NonNull
+    @SuppressWarnings("null")
+    public Mono<Void> handle(@NonNull ServerWebExchange exchange, @NonNull Throwable ex) {
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
 

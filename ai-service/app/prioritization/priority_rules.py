@@ -2,7 +2,7 @@
 Priority Rules & Urgency Scoring Matrix.
 Computes base domain weights, emergency signals, and scale multipliers.
 """
-from typing import Dict
+from typing import Dict, Any, Optional
 
 # Base severity score by domain sector (0.0 to 1.0)
 DOMAIN_BASE_WEIGHTS: Dict[str, float] = {

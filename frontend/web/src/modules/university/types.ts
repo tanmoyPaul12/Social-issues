@@ -164,3 +164,227 @@ export interface LiveNotificationEvent {
   actionUrl?: string;
   timestamp: string;
 }
+
+// ==========================================
+// Project Lifecycle Management Types
+// ==========================================
+
+export type DeliverableType =
+  | "DOCUMENT"
+  | "CAD_DESIGN"
+  | "SOURCE_CODE"
+  | "TEST_BENCH_DATA"
+  | "FIELD_TRIAL_REPORT"
+  | "PATENT_DRAFT"
+  | "USER_FEEDBACK_SIGN_OFF"
+  | "VIDEO_DEMO";
+
+export type MilestoneStatus =
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "APPROVED"
+  | "REVISION_REQUESTED";
+
+export interface DeliverableDto {
+  id: number;
+  milestoneId: number;
+  title: string;
+  deliverableType: DeliverableType;
+  fileUrl?: string;
+  fileSizeBytes?: number;
+  notes?: string;
+  submittedBy?: string;
+  submittedAt: string;
+  isVerified: boolean;
+}
+
+export interface MilestoneDto {
+  id: number;
+  projectId: number;
+  stageOrder: number;
+  title: string;
+  description: string;
+  targetTrl: number;
+  status: MilestoneStatus;
+  targetDueDate?: string;
+  completedDate?: string;
+  reviewNotes?: string;
+  reviewedBy?: string;
+  deliverables: DeliverableDto[];
+}
+
+export interface CreateMilestoneRequest {
+  stageOrder: number;
+  title: string;
+  description?: string;
+  targetTrl?: number;
+  targetDueDate?: string;
+}
+
+export interface SubmitDeliverableRequest {
+  title: string;
+  deliverableType: DeliverableType;
+  fileUrl: string;
+  fileSizeBytes?: number;
+  notes?: string;
+  submittedBy?: string;
+}
+
+export interface ReviewMilestoneRequest {
+  status: MilestoneStatus;
+  reviewNotes?: string;
+  reviewedBy?: string;
+}
+
+export type TestType =
+  | "SIMULATION"
+  | "BENCH_TEST"
+  | "FIELD_TRIAL"
+  | "USER_STUDY"
+  | "SAFETY_CERTIFICATION";
+
+export type TestPassStatus =
+  | "PASSED"
+  | "FAILED"
+  | "INCONCLUSIVE"
+  | "CONDITIONAL_PASS";
+
+export interface TestResultDto {
+  id: number;
+  projectId: number;
+  testType: TestType;
+  title: string;
+  trlLevel: number;
+  status: TestPassStatus;
+  quantitativeMetrics?: string;
+  evidenceDocumentUrl?: string;
+  testedLocation?: string;
+  testedAt: string;
+  testedBy?: string;
+}
+
+export interface RecordTestResultRequest {
+  testType: TestType;
+  title: string;
+  trlLevel: number;
+  status: TestPassStatus;
+  quantitativeMetrics?: string;
+  evidenceDocumentUrl?: string;
+  testedLocation?: string;
+  testedBy?: string;
+}
+
+export type ApprovalStage =
+  | "LAB_PROTOTYPE_SIGN_OFF"
+  | "FIELD_TEST_SIGN_OFF"
+  | "MOU_APPROVAL"
+  | "FINAL_RESOLUTION";
+
+export type ApproverRole =
+  | "CITIZEN_REPORTER"
+  | "NODAL_GOVT_OFFICER"
+  | "FACULTY_MENTOR"
+  | "INDUSTRY_SPONSOR";
+
+export type ApprovalStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "REQUESTED_CHANGES";
+
+export interface ApprovalSignoffDto {
+  id: number;
+  projectId: number;
+  stage: ApprovalStage;
+  approverRole: ApproverRole;
+  approverName: string;
+  approverDesignation?: string;
+  approverEntity?: string;
+  status: ApprovalStatus;
+  digitalSignatureHash?: string;
+  satisfactionRating?: number;
+  feedbackNotes?: string;
+  signedAt: string;
+}
+
+export interface SubmitSignoffRequest {
+  stage: ApprovalStage;
+  approverRole: ApproverRole;
+  approverName: string;
+  approverDesignation?: string;
+  approverEntity?: string;
+  status: ApprovalStatus;
+  satisfactionRating?: number;
+  feedbackNotes?: string;
+}
+
+export interface DualClosedLoopStatusDto {
+  projectId: number;
+  issueId?: number;
+  citizenSigned: boolean;
+  citizenSignedAt?: string;
+  citizenSignerName?: string;
+  citizenRating?: number;
+  govtSigned: boolean;
+  govtSignedAt?: string;
+  govtSignerName?: string;
+  govtDesignation?: string;
+  isFullyResolved: boolean;
+  resolutionCertificateId?: string;
+}
+
+export type IpType =
+  | "SHARED_PATENT"
+  | "OPEN_SOURCE"
+  | "COMMERCIAL_LICENSE"
+  | "COPYRIGHT_SOFTWARE";
+
+export type IpStatus =
+  | "IDEA_DISCLOSURE"
+  | "PRIOR_ART_SEARCH"
+  | "PROVISIONAL_FILED"
+  | "COMPLETE_SPEC_FILED"
+  | "PUBLISHED"
+  | "EXAMINATION"
+  | "GRANTED"
+  | "COMMERCIALLY_LICENSED";
+
+export interface IpRecordDto {
+  id: number;
+  projectId: number;
+  title: string;
+  abstractDescription?: string;
+  ipType: IpType;
+  patentApplicationNumber?: string;
+  filingDate?: string;
+  grantDate?: string;
+  patentOffice?: string;
+  status: IpStatus;
+  heiOwnershipShare: number;
+  studentInnovatorsShare: number;
+  industryPartnerShare: number;
+  inventorsList?: string;
+  commercialPartnerName?: string;
+  mouDocumentUrl?: string;
+  royaltyTerms?: string;
+  createdAt: string;
+}
+
+export interface CreateIpRecordRequest {
+  title: string;
+  abstractDescription?: string;
+  ipType: IpType;
+  patentApplicationNumber?: string;
+  filingDate?: string;
+  patentOffice?: string;
+  status?: IpStatus;
+  heiOwnershipShare?: number;
+  studentInnovatorsShare?: number;
+  industryPartnerShare?: number;
+  inventorsList?: string;
+  commercialPartnerName?: string;
+  mouDocumentUrl?: string;
+  royaltyTerms?: string;
+}
+

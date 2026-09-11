@@ -7,6 +7,7 @@ import { useIssueStore } from "@/lib/store/useIssueStore";
 import { toast } from "@/components/dashboard/ToastStack";
 
 import { GoogleMapPicker, JHARKHAND_DISTRICT_COORDINATES } from "@/components/common/GoogleMapPicker";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 // Constants for backend communication
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
@@ -138,9 +139,13 @@ interface CommunityChallenge {
 
 interface CitizenDashboardViewProps {
   activeTab?: string;
+  onNavigateTab?: (tabId: string) => void;
 }
 
-export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboardViewProps) {
+export function CitizenDashboardView({
+  activeTab = "overview",
+  onNavigateTab,
+}: CitizenDashboardViewProps) {
   const { user, token } = useAuthStore();
   const { addIssue } = useIssueStore();
   const citizenDistrict = user?.district || "Your District";
@@ -443,8 +448,8 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
         assignedHEI: "AI Triage In Progress",
         createdAt: new Date().toISOString(),
         citizenEmail: user?.email || "citizen.jharkhand@gov.in",
-        citizenName: user?.fullName || (user as any)?.name || "Registered Citizen",
-        citizenPhone: (user as any)?.phone || "+91 94311 00000",
+        citizenName: user?.name || "Registered Citizen",
+        citizenPhone: user?.phone || "+91 94311 00000",
         imageUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?auto=format&fit=crop&w=1200&q=80",
         pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         pdfFileName: selectedFiles.find(f => f.type.includes('pdf'))?.name || "Citizen_Panchayat_Petition.pdf",
@@ -506,8 +511,8 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
         assignedHEI: "BIT Mesra - Regional Research Lab",
         createdAt: new Date().toISOString(),
         citizenEmail: user?.email || "citizen.jharkhand@gov.in",
-        citizenName: user?.fullName || (user as any)?.name || "Registered Citizen",
-        citizenPhone: (user as any)?.phone || "+91 94311 00000",
+        citizenName: user?.name || "Registered Citizen",
+        citizenPhone: user?.phone || "+91 94311 00000",
         imageUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?auto=format&fit=crop&w=1200&q=80",
         pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         pdfFileName: selectedFiles.find(f => f.type.includes('pdf'))?.name || "Citizen_Panchayat_Petition.pdf",
@@ -714,7 +719,7 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
                             {sub.status}
                           </span>
                           <span
-                            className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                               sub.validationStatus === "FLAG" || sub.validationStatus === "MISMATCH"
                                 ? "bg-amber-50 text-amber-800 border-amber-300"
                                 : sub.validationStatus === "REJECT" || sub.validationStatus === "OUT_OF_BOUNDS"
@@ -722,11 +727,28 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
                                 : "bg-emerald-50 text-emerald-800 border-emerald-300"
                             }`}
                           >
-                            {sub.validationStatus === "FLAG" || sub.validationStatus === "MISMATCH"
-                              ? "🟡 FLAGGED REVIEW"
-                              : sub.validationStatus === "REJECT" || sub.validationStatus === "OUT_OF_BOUNDS"
-                              ? "🔴 REJECTED INPUT"
-                              : "🟢 VALID PASS"}
+                            {sub.validationStatus === "FLAG" || sub.validationStatus === "MISMATCH" ? (
+                              <>
+                                <svg className="w-3 h-3 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span>FLAGGED REVIEW</span>
+                              </>
+                            ) : sub.validationStatus === "REJECT" || sub.validationStatus === "OUT_OF_BOUNDS" ? (
+                              <>
+                                <svg className="w-3 h-3 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>REJECTED INPUT</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>VALID PASS</span>
+                              </>
+                            )}
                           </span>
                         </div>
                       </td>
@@ -799,6 +821,85 @@ export function CitizenDashboardView({ activeTab = "overview" }: CitizenDashboar
             </div>
           )}
         </div>
+      )}
+
+      {/* Report Tab Direct Trigger */}
+      {activeTab === "report" && (
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-2xs space-y-4 max-w-2xl mx-auto my-6">
+          <div className="w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center mx-auto shadow-sm">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-slate-900">Report a New Grassroots Challenge</h2>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Submit a civic, agricultural, water, or public service problem in your district with Google Maps coordinates and photo/video evidence.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs inline-flex items-center gap-2 cursor-pointer shadow-sm transition-all"
+          >
+            <span>Open Problem Submission Form</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Alerts & Notifications Tab */}
+      {activeTab === "alerts" && (
+        <WorkspacePlaceholderTab
+          title="Citizen Alerts & Notifications"
+          subtitle="Real-time SMS Pings & Institutional Assignment Feeds"
+          description="Track status updates, AI triage verifications, and university milestone pings related to your submitted grassroots challenges."
+          role="citizen"
+          tabId="alerts"
+          features={[
+            "Automated AI Triage & University Routing SMS Alerts",
+            "Field Verification Schedule & Nodal Officer Updates",
+            "Community Upvote Milestone Notifications",
+            "Solution Deployment & Civic Impact Reports",
+          ]}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* Profile Tab */}
+      {activeTab === "profile" && (
+        <WorkspacePlaceholderTab
+          title="Citizen Profile & Verification"
+          subtitle="Civic Identity & Verified Community Badges"
+          description="Manage your citizen account credentials, residential district preference, e-Pramaan SSO linkage, and civic contribution history."
+          role="citizen"
+          tabId="profile"
+          features={[
+            "e-Pramaan & Mobile Number Verification Record",
+            "Panchayat / Urban Local Body (ULB) Linkage",
+            "Civic Impact Score & Community Upvote History",
+            "Language & SMS Notification Delivery Preferences",
+          ]}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* Catch-all fallback for unrecognized citizen tabs */}
+      {![
+        "overview",
+        "submissions",
+        "report",
+        "community",
+        "alerts",
+        "profile",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="Citizen Workspace Module"
+          description="This module workspace is being provisioned according to platform specifications."
+          role="citizen"
+          tabId={activeTab}
+          onNavigateTab={onNavigateTab}
+        />
       )}
 
       {/* Modal: Report New Challenge with Google Maps & Media Upload */}

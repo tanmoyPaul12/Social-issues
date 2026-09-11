@@ -10,6 +10,12 @@ import { IndustryMarketplaceTab } from "./industry/marketplace/IndustryMarketpla
 import { ActivePilotsTab } from "./industry/pilots/ActivePilotsTab";
 import { CsrComplianceTab } from "./industry/csr/CsrComplianceTab";
 import { CompanySettingsTab } from "./industry/settings/CompanySettingsTab";
+import { IndustryIpTransferTab } from "./industry/IndustryIpTransferTab";
+import { FieldTestbedDeploymentTab } from "./industry/testbeds/FieldTestbedDeploymentTab";
+import { IndustryAnalyticsTab } from "./industry/analytics/IndustryAnalyticsTab";
+import { IndustryNotificationsTab } from "./industry/notifications/IndustryNotificationsTab";
+import { IndustryCommunicationTab } from "./industry/communication/IndustryCommunicationTab";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 interface CoFundedEngagement {
   id: string;
@@ -123,29 +129,86 @@ export function IndustryDashboardView({
         </button>
       </div>
 
-      {/* Tab 1: Dashboard Overview */}
+      {/* Tab 1: Overview */}
       {activeTab === "overview" && (
         <IndustryOverviewTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 2: University R&D Marketplace */}
-      {activeTab === "marketplace" && (
+      {/* Tab 2: Explore Challenges */}
+      {(activeTab === "challenges" || activeTab === "marketplace") && (
         <IndustryMarketplaceTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 3: Active Co-Funded Projects & Testbeds */}
-      {(activeTab === "engagements" || activeTab === "testbeds") && (
+      {/* Tab 3: My Collaborations */}
+      {(activeTab === "collaborations" || activeTab === "engagements") && (
         <ActivePilotsTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 4: CSR Compliance & Statutory Ledger */}
-      {activeTab === "csr" && (
+      {/* Tab 4: Mentorship & Funding */}
+      {(activeTab === "funding" || activeTab === "csr" || activeTab === "mentorship") && (
         <CsrComplianceTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 7: Company Profile & Corporate Settings */}
+      {/* Tab 5: Prototyping & Testing (Field Testbeds) */}
+      {(activeTab === "prototyping" || activeTab === "testbeds") && (
+        <FieldTestbedDeploymentTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 6: IP & Technology Transfer */}
+      {(activeTab === "ip" || activeTab === "ip_transfer") && (
+        <IndustryIpTransferTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 7: Analytics */}
+      {(activeTab === "analytics" || activeTab === "reports") && (
+        <IndustryAnalyticsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 8: Communication */}
+      {(activeTab === "communication" || activeTab === "messages") && (
+        <IndustryCommunicationTab />
+      )}
+
+      {/* Tab 9: Notifications & Compliance Alerts */}
+      {(activeTab === "notifications" || activeTab === "alerts") && (
+        <IndustryNotificationsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 10: Profile & Capabilities */}
       {(activeTab === "settings" || activeTab === "profile") && (
         <CompanySettingsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Catch-all fallback for any unrecognized tabs */}
+      {![
+        "overview",
+        "challenges",
+        "marketplace",
+        "collaborations",
+        "engagements",
+        "funding",
+        "csr",
+        "mentorship",
+        "prototyping",
+        "testbeds",
+        "ip",
+        "ip_transfer",
+        "analytics",
+        "reports",
+        "communication",
+        "messages",
+        "notifications",
+        "alerts",
+        "settings",
+        "profile",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="Industry Workspace Module"
+          description="This module workspace is being provisioned according to platform specifications."
+          role="industry"
+          tabId={activeTab}
+          onNavigateTab={handleNavigate}
+        />
       )}
 
       {/* Modal: Commit Grant */}

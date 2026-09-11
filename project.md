@@ -37,3 +37,63 @@ A comprehensive Societal Innovation Collaboration Portal comprising the followin
 • A project lifecycle management system for monitoring milestones, deliverables, approvals, documentation, testing outcomes, intellectual property generation, and implementation status.
 • A visual analytics dashboard providing real-time insights on challenge submissions, university participation, industry collaborations, thematic trends, project completion rates,innovation outcomes, patents, startups created, and community impact across districts and sectors.
 • A notification and communication system enabling seamless interaction among citizens,universities, industry partners, mentors, and government departments throughout the project lifecycle. tell me the like features and system flow dont give code and all like onboarding and everything in well documented 
+
+
+
+
+How many dashboards — 5 role-based dashboards
+Citizen/Public Dashboard – submit challenges, track status, view assigned university/outcome, receive notifications
+University (HEI) Dashboard – view assigned challenges, form student-faculty teams, manage proposals, track project milestones
+Industry/Startup/CSR Dashboard – browse university projects open for collaboration, offer mentorship/funding, track co-development and prototyping status
+Government Department Dashboard – domain-wise analytics, district-wise challenge volume, institutional/industry participation, project progress, social impact metrics
+Super Admin / Platform Dashboard – manage the AI categorization rules, oversee routing logic, user/role management, system health, override manual allocations
+
+
+
+
+
+
+Based on the industry partnership module in your problem statement, here's a tab structure for the **Industry/Startup/CSR dashboard** that's demo-ready for a hackathon:
+
+**1. Home / overview**
+- Quick stats: open challenges available for collaboration, active projects, funding committed, mentors engaged
+- Notifications feed (new challenge matches, milestone requests, approvals pending)
+..
+
+**2. Explore challenges**
+- Browse university-validated challenges filtered by domain (agri, health, water, energy, etc.)
+- Filter by district, technology readiness level, and university/incubation centre
+- "Express interest" / "Request collaboration" action button
+
+**3. My collaborations**
+- List of projects the industry partner is currently involved in
+- Status tags: proposed → under mentorship → prototyping → piloting → deployed
+- Linked university team and faculty mentor contact
+
+**4. Mentorship & funding**
+- Log mentorship sessions (hours, notes, deliverables reviewed)
+- Track funding/grants disbursed vs. milestones met
+- CSR fund allocation tracker (if applicable)
+
+**5. Prototyping & testing**
+- Upload test results, pilot data, and prototype iterations
+- Approve/reject milestone submissions from university teams
+- Document sharing (specs, compliance checklists)
+
+**6. IP & technology transfer**
+- Track patents filed, IP ownership agreements, licensing status
+- Technology transfer requests and MOU status
+
+**7. Analytics**
+- Domain-wise engagement (where this partner is most active)
+- Project success rate, time-to-deployment metrics
+- Social impact snapshot (beneficiaries reached, districts covered)
+
+**8. Communication**
+- Direct messaging/threads with university teams and government nodal officers
+- Meeting scheduler for review calls
+
+**9. Profile & capabilities**
+- Company/startup profile: sectors of expertise, past collaborations, certifications
+- Editable "areas of interest" to improve AI-based challenge matching
+

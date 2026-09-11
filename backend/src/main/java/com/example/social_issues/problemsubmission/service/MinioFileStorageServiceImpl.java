@@ -1,7 +1,9 @@
 package com.example.social_issues.problemsubmission.service;
 
+import com.example.social_issues.common.security.FileEncryptionService;
 import com.example.social_issues.problemsubmission.model.AttachmentType;
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -13,12 +15,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -28,6 +30,7 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
     private static final Logger log = LoggerFactory.getLogger(MinioFileStorageServiceImpl.class);
 
     private final MinioClient minioClient;
+    private final FileEncryptionService encryptionService;
 
     @Value("${minio.endpoint:http://localhost:9000}")
     private String endpoint;
@@ -38,8 +41,9 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
     private boolean isMinioAvailable = false;
     private final Path localFallbackDir = Paths.get("uploads").toAbsolutePath().normalize();
 
-    public MinioFileStorageServiceImpl(MinioClient minioClient) {
+    public MinioFileStorageServiceImpl(MinioClient minioClient, FileEncryptionService encryptionService) {
         this.minioClient = minioClient;
+        this.encryptionService = encryptionService;
     }
 
     @PostConstruct
@@ -84,49 +88,127 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
 
         String mimeType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
         AttachmentType attachmentType = resolveAttachmentType(mimeType, extension);
-        long size = file.getSize();
+        long originalSize = file.getSize();
 
-        // 1. Try MinIO upload
+        // 1. Apply Application-Level AES-256-GCM Envelope Encryption
+        FileEncryptionService.EncryptedPayload encryptedPayload;
+        try (InputStream is = file.getInputStream()) {
+            encryptedPayload = encryptionService.encryptInputStream(is, originalSize);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read and encrypt incoming file: " + e.getMessage(), e);
+        }
+
+        // 2. Try MinIO / Cloudflare R2 upload with encrypted bytes
         try {
             ensureBucketReady();
-            try (InputStream is = file.getInputStream()) {
+            try (InputStream uploadStream = new ByteArrayInputStream(encryptedPayload.data())) {
                 minioClient.putObject(
                         PutObjectArgs.builder()
                                 .bucket(bucketName)
                                 .object(storageKey)
-                                .stream(is, size, -1)
-                                .contentType(mimeType)
+                                .stream(uploadStream, encryptedPayload.sizeBytes(), -1)
+                                .contentType("application/octet-stream") // Stored as encrypted binary envelope
                                 .build()
                 );
+
+                // Verification & cleanup: Ensure zero leftover local disk copies when R2 upload succeeds
+                cleanUpLocalFileIfExists(folder, uniqueId + "-" + cleanName);
+
                 String fileUrl = endpoint + "/" + bucketName + "/" + storageKey;
-                log.info("Stored file in MinIO: {} ({})", storageKey, fileUrl);
-                return new StoredFile(fileUrl, storageKey, originalName, mimeType, size, attachmentType);
+                log.info("Stored AES-256 encrypted file in MinIO/R2: {} ({} bytes)", storageKey, encryptedPayload.sizeBytes());
+                return new StoredFile(fileUrl, storageKey, originalName, mimeType, originalSize, attachmentType, true);
             }
         } catch (Exception ex) {
-            log.warn("MinIO upload failed ({}). Storing file in local filesystem fallback.", ex.getMessage());
+            log.warn("MinIO upload failed ({}). Storing encrypted file in local filesystem fallback.", ex.getMessage());
             isMinioAvailable = false;
-            return storeInLocalStorage(file, folder, uniqueId, cleanName, originalName, mimeType, size, attachmentType);
+            return storeInLocalStorage(encryptedPayload.data(), folder, uniqueId, cleanName, originalName, mimeType, originalSize, attachmentType);
         }
     }
 
-    private StoredFile storeInLocalStorage(MultipartFile file, String folder, String uniqueId, String cleanName,
-                                          String originalName, String mimeType, long size, AttachmentType attachmentType) {
+    private StoredFile storeInLocalStorage(byte[] encryptedBytes, String folder, String uniqueId, String cleanName,
+                                          String originalName, String mimeType, long originalSize, AttachmentType attachmentType) {
         try {
             Path targetFolder = localFallbackDir.resolve(folder);
             Files.createDirectories(targetFolder);
 
             String localFileName = uniqueId + "-" + cleanName;
             Path destination = targetFolder.resolve(localFileName);
-            try (InputStream is = file.getInputStream()) {
-                Files.copy(is, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
+            
+            // Write AES-256-GCM encrypted bytes to local disk (never plaintext)
+            Files.write(destination, encryptedBytes);
 
             String storageKey = "local:" + folder + "/" + localFileName;
             String fileUrl = "/api/uploads/" + folder + "/" + localFileName;
-            log.info("Stored file locally at: {}", destination);
-            return new StoredFile(fileUrl, storageKey, originalName, mimeType, size, attachmentType);
+            log.info("Stored AES-256 encrypted file locally at: {} ({} bytes)", destination, encryptedBytes.length);
+            return new StoredFile(fileUrl, storageKey, originalName, mimeType, originalSize, attachmentType, true);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to store file in local storage fallback: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to store encrypted file in local storage fallback: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public InputStream loadDecryptedStream(String storageKey) {
+        if (storageKey == null || storageKey.isBlank()) {
+            throw new IllegalArgumentException("Storage key cannot be blank");
+        }
+
+        try {
+            InputStream rawStream;
+            if (storageKey.startsWith("local:")) {
+                String subPath = storageKey.substring(6);
+                Path path = localFallbackDir.resolve(subPath);
+                if (!Files.exists(path)) {
+                    throw new FileNotFoundException("Local file not found at: " + path);
+                }
+                rawStream = Files.newInputStream(path);
+            } else {
+                rawStream = minioClient.getObject(
+                        GetObjectArgs.builder()
+                                .bucket(bucketName)
+                                .object(storageKey)
+                                .build()
+                );
+            }
+
+            // Adaptive decryption: handles both ENC1 encrypted envelopes and legacy plaintext streams
+            return encryptionService.decryptAdaptiveStream(rawStream);
+        } catch (Exception e) {
+            log.error("Failed to load and decrypt file stream for key '{}': {}", storageKey, e.getMessage());
+            throw new RuntimeException("Error loading decrypted file: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public byte[] loadDecryptedBytes(String storageKey) {
+        if (storageKey == null || storageKey.isBlank()) {
+            throw new IllegalArgumentException("Storage key cannot be blank");
+        }
+
+        try {
+            byte[] rawBytes;
+            if (storageKey.startsWith("local:")) {
+                String subPath = storageKey.substring(6);
+                Path path = localFallbackDir.resolve(subPath);
+                if (!Files.exists(path)) {
+                    throw new FileNotFoundException("Local file not found at: " + path);
+                }
+                rawBytes = Files.readAllBytes(path);
+            } else {
+                try (InputStream is = minioClient.getObject(
+                        GetObjectArgs.builder()
+                                .bucket(bucketName)
+                                .object(storageKey)
+                                .build()
+                )) {
+                    rawBytes = is.readAllBytes();
+                }
+            }
+
+            // Adaptive decryption: returns decrypted bytes or legacy plaintext bytes
+            return encryptionService.decryptAdaptiveBytes(rawBytes);
+        } catch (Exception e) {
+            log.error("Failed to load and decrypt bytes for key '{}': {}", storageKey, e.getMessage());
+            throw new RuntimeException("Error loading decrypted file bytes: " + e.getMessage(), e);
         }
     }
 
@@ -156,6 +238,16 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
                 log.warn("Failed to delete MinIO object {}: {}", storageKey, e.getMessage());
             }
         }
+    }
+
+    private void cleanUpLocalFileIfExists(String folder, String localFileName) {
+        try {
+            Path path = localFallbackDir.resolve(folder).resolve(localFileName);
+            if (Files.exists(path)) {
+                Files.delete(path);
+                log.info("Cleaned up temporary local fallback copy: {}", path);
+            }
+        } catch (Exception ignored) {}
     }
 
     private void ensureBucketReady() {
@@ -194,3 +286,4 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
         return dot > 0 ? fileName.substring(dot + 1) : "";
     }
 }
+

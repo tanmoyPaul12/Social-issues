@@ -71,11 +71,10 @@ function PublicLoginForm() {
       {/* Error Banner */}
       {error && (
         <div
-          className={`mb-5 p-3.5 rounded-xl border text-xs ${
-            errorCode === "ACCOUNT_NOT_FOUND"
+          className={`mb-5 p-3.5 rounded-xl border text-xs ${errorCode === "ACCOUNT_NOT_FOUND"
               ? "bg-amber-50/90 border-amber-200 text-amber-900"
               : "bg-red-50 border-red-200 text-red-700"
-          }`}
+            }`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2">
@@ -190,11 +189,10 @@ function PublicLoginForm() {
           >
             <div className="flex items-center gap-3">
               <div
-                className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
-                  captchaChecked
+                className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${captchaChecked
                     ? "bg-blue-600 border-blue-600 text-white"
                     : "border-slate-400 bg-white"
-                }`}
+                  }`}
               >
                 {captchaVerifying ? (
                   <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />

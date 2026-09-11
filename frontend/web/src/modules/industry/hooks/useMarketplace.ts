@@ -39,7 +39,7 @@ const DEFAULT_META: MarketplaceMeta = {
 };
 
 export function useMarketplace() {
-  const { token, user } = useAuthStore();
+  const { token, user, refreshAccessToken } = useAuthStore();
   const [filters, setFilters] = useState<MarketplaceFilterState>(DEFAULT_FILTERS);
   const [projects, setProjects] = useState<MarketplaceProject[]>([]);
   const [totalElements, setTotalElements] = useState<number>(0);
@@ -81,11 +81,37 @@ export function useMarketplace() {
           setTotalPages(res.totalPages || 0);
         }
       } catch (err: any) {
+        const isAuthError =
+          err.message?.includes("401") ||
+          err.message?.includes("Unauthorized") ||
+          err.message?.includes("UNAUTHORIZED") ||
+          err.message?.includes("expired") ||
+          err.message?.includes("Invalid or expired JWT") ||
+          err.message?.includes("token");
+
+        if (isAuthError) {
+          const refreshed = await refreshAccessToken();
+          if (refreshed) {
+            const freshToken = useAuthStore.getState().token;
+            try {
+              const res = await fetchMarketplaceProjects(freshToken, filters);
+              if (isMountedRef.current) {
+                setProjects(res.content || []);
+                setTotalElements(res.totalElements || 0);
+                setTotalPages(res.totalPages || 0);
+                return;
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+
         if (isMountedRef.current) {
           setProjects([]);
           setTotalElements(0);
           setTotalPages(0);
-          if (!err.message?.includes("401") && !err.message?.includes("Authentication")) {
+          if (!isAuthError) {
             setError(err.message || "Failed to load marketplace listings");
           }
         }
@@ -96,7 +122,7 @@ export function useMarketplace() {
         }
       }
     },
-    [token, filters]
+    [token, filters, refreshAccessToken]
   );
 
   useEffect(() => {

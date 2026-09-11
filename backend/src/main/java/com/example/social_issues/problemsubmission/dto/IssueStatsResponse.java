@@ -5,8 +5,12 @@ import java.util.Map;
 public class IssueStatsResponse {
 
     private long totalIssues;
+    private long draftIssues;
     private long submittedIssues;
     private long underReviewIssues;
+    private long triagedIssues;
+    private long assignedHeiIssues;
+    private long inProgressIssues;
     private long escalatedIssues;
     private long resolvedIssues;
     private long rejectedIssues;
@@ -18,11 +22,23 @@ public class IssueStatsResponse {
     public long getTotalIssues() { return totalIssues; }
     public void setTotalIssues(long totalIssues) { this.totalIssues = totalIssues; }
 
+    public long getDraftIssues() { return draftIssues; }
+    public void setDraftIssues(long draftIssues) { this.draftIssues = draftIssues; }
+
     public long getSubmittedIssues() { return submittedIssues; }
     public void setSubmittedIssues(long submittedIssues) { this.submittedIssues = submittedIssues; }
 
     public long getUnderReviewIssues() { return underReviewIssues; }
     public void setUnderReviewIssues(long underReviewIssues) { this.underReviewIssues = underReviewIssues; }
+
+    public long getTriagedIssues() { return triagedIssues; }
+    public void setTriagedIssues(long triagedIssues) { this.triagedIssues = triagedIssues; }
+
+    public long getAssignedHeiIssues() { return assignedHeiIssues; }
+    public void setAssignedHeiIssues(long assignedHeiIssues) { this.assignedHeiIssues = assignedHeiIssues; }
+
+    public long getInProgressIssues() { return inProgressIssues; }
+    public void setInProgressIssues(long inProgressIssues) { this.inProgressIssues = inProgressIssues; }
 
     public long getEscalatedIssues() { return escalatedIssues; }
     public void setEscalatedIssues(long escalatedIssues) { this.escalatedIssues = escalatedIssues; }

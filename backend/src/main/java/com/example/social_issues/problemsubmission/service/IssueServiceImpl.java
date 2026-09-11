@@ -34,7 +34,6 @@ public class IssueServiceImpl implements IssueService {
     private final IssueAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
-    private final ValidationClient validationClient;
     private final AiServiceClient aiServiceClient;
     private final SecureRandom random = new SecureRandom();
 
@@ -43,14 +42,12 @@ public class IssueServiceImpl implements IssueService {
             IssueAttachmentRepository attachmentRepository,
             UserRepository userRepository,
             FileStorageService fileStorageService,
-            ValidationClient validationClient,
             AiServiceClient aiServiceClient
     ) {
         this.issueRepository = issueRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
-        this.validationClient = validationClient;
         this.aiServiceClient = aiServiceClient;
     }
 
@@ -96,9 +93,9 @@ public class IssueServiceImpl implements IssueService {
                 GrassrootIssue issueToAudit = issueRepository.findById(savedIssueId).orElse(null);
                 if (issueToAudit != null) {
                     Map<String, Object> aiResult = aiServiceClient.processMultimodalIntelligence(issueToAudit, null, null);
-                    if (aiResult != null && aiResult.containsKey("generalized_consensus")) {
-                        Map<String, Object> consensus = (Map<String, Object>) aiResult.get("generalized_consensus");
-                        String level = (String) consensus.getOrDefault("final_priority_level", "MEDIUM");
+                    if (aiResult != null && aiResult.get("generalized_consensus") instanceof Map<?, ?> consensus) {
+                        Object levelObj = consensus.get("final_priority_level");
+                        String level = levelObj instanceof String str ? str : "MEDIUM";
                         if ("CRITICAL".equalsIgnoreCase(level)) {
                             issueToAudit.setPriority(IssuePriority.CRITICAL);
                         } else if ("HIGH".equalsIgnoreCase(level)) {
@@ -111,15 +108,13 @@ public class IssueServiceImpl implements IssueService {
 
                     // Route challenge to matching university HEIs via AI engine
                     Map<String, Object> routeResult = aiServiceClient.routeChallengeToHEIs(issueToAudit);
-                    if (routeResult != null && routeResult.containsKey("recommended_heis")) {
-                        List<Map<String, Object>> recs = (List<Map<String, Object>>) routeResult.get("recommended_heis");
-                        if (!recs.isEmpty()) {
-                            Map<String, Object> topMatch = recs.get(0);
-                            String topHeiName = (String) topMatch.get("hei_name");
+                    if (routeResult != null && routeResult.get("recommended_heis") instanceof List<?> recsList && !recsList.isEmpty()) {
+                        Object firstItem = recsList.get(0);
+                        if (firstItem instanceof Map<?, ?> topMatch && topMatch.get("hei_name") instanceof String topHeiName) {
                             issueToAudit.setAssignedHEI(topHeiName);
-                            issueToAudit.setRecommendedHeisJson(recs.toString());
                             log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
                         }
+                        issueToAudit.setRecommendedHeisJson(recsList.toString());
                     }
 
                     issueRepository.save(issueToAudit);
@@ -395,8 +390,12 @@ public class IssueServiceImpl implements IssueService {
     public IssueStatsResponse getIssueStats() {
         IssueStatsResponse stats = new IssueStatsResponse();
         stats.setTotalIssues(issueRepository.count());
+        stats.setDraftIssues(issueRepository.countByStatus(IssueStatus.DRAFT));
         stats.setSubmittedIssues(issueRepository.countByStatus(IssueStatus.SUBMITTED));
         stats.setUnderReviewIssues(issueRepository.countByStatus(IssueStatus.UNDER_REVIEW));
+        stats.setTriagedIssues(issueRepository.countByStatus(IssueStatus.TRIAGED));
+        stats.setAssignedHeiIssues(issueRepository.countByStatus(IssueStatus.ASSIGNED_HEI));
+        stats.setInProgressIssues(issueRepository.countByStatus(IssueStatus.IN_PROGRESS));
         stats.setEscalatedIssues(issueRepository.countByStatus(IssueStatus.ESCALATED));
         stats.setResolvedIssues(issueRepository.countByStatus(IssueStatus.RESOLVED));
         stats.setRejectedIssues(issueRepository.countByStatus(IssueStatus.REJECTED));

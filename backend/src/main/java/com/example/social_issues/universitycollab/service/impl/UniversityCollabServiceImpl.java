@@ -44,7 +44,6 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
     private final GrassrootIssueRepository issueRepository;
     private final UniversityProfileRepository universityProfileRepository;
     private final MarketplaceEngagementRepository engagementRepository;
-    private final MarketplaceProjectRepository marketplaceProjectRepository;
     private final NotificationDispatcherService notificationDispatcher;
 
     public UniversityCollabServiceImpl(
@@ -62,7 +61,6 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
         this.issueRepository = issueRepository;
         this.universityProfileRepository = universityProfileRepository;
         this.engagementRepository = engagementRepository;
-        this.marketplaceProjectRepository = marketplaceProjectRepository;
         this.notificationDispatcher = notificationDispatcher;
     }
 
@@ -71,8 +69,8 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
     public List<RoutedChallengeDto> getRoutedChallenges(String aisheCode) {
         log.info("Fetching AI-routed challenges for university AISHE: {}", aisheCode);
         Optional<UniversityProfile> profileOpt = universityProfileRepository.findByAisheCode(aisheCode);
-        String univName = profileOpt.map(UniversityProfile::getUnivName).orElse(null);
-        String district = profileOpt.map(UniversityProfile::getDistrict).orElse(null);
+        String univName = profileOpt.map(p -> p.getUnivName()).orElse(null);
+        String district = profileOpt.map(p -> p.getDistrict()).orElse(null);
 
         if (univName == null || univName.isBlank() || "University".equalsIgnoreCase(univName)) {
             if ("U-0205".equalsIgnoreCase(aisheCode) || aisheCode == null || aisheCode.isBlank()) {
@@ -475,7 +473,7 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
 
         AccreditationReportDto report = new AccreditationReportDto();
         report.setAisheCode(aisheCode);
-        report.setInstitutionName(profileOpt.map(UniversityProfile::getUnivName).orElse("Birla Institute of Technology (BIT) Mesra"));
+        report.setInstitutionName(profileOpt.map(p -> p.getUnivName()).orElse("Birla Institute of Technology (BIT) Mesra"));
         report.setTotalProjects(projects.size());
 
         int completed = 0;

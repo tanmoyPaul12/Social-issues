@@ -3,6 +3,7 @@ import {
   IndustryActivity,
   PageResponse,
 } from "../types/industryDashboard";
+import { extractApiErrorMessage } from "@/lib/api/apiErrorHelper";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -42,9 +43,10 @@ export async function fetchIndustryOverview(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
-      errorData.error ||
-        errorData.message ||
+      extractApiErrorMessage(
+        errorData,
         `Failed to fetch industry overview (Status ${response.status})`
+      )
     );
   }
 

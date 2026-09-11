@@ -13,6 +13,10 @@ public interface TestbedSponsorshipRepository extends JpaRepository<TestbedSpons
 
     List<TestbedSponsorship> findByIndustryProfileId(Long industryProfileId);
 
+    List<TestbedSponsorship> findByIndustryProfileIdOrderByCreatedAtDesc(Long industryProfileId);
+
+    java.util.Optional<TestbedSponsorship> findByIdAndIndustryProfileId(Long id, Long industryProfileId);
+
     int countByIndustryProfileId(Long industryProfileId);
 
     @Query("SELECT COUNT(DISTINCT t.district) FROM TestbedSponsorship t WHERE t.industryProfile.id = :profileId")

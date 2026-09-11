@@ -126,6 +126,66 @@ export function ProjectDossierModal({
           </div>
         </div>
 
+        {/* Section 2.5: Mentorship Lifecycle & Advisory Status */}
+        {project.mentorName || project.mentorshipStatus ? (
+          <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                <h4 className="text-xs font-bold uppercase text-indigo-950 tracking-wider">
+                  Corporate Mentorship &amp; Advisory Tracking
+                </h4>
+              </div>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  project.mentorshipStatus === "ACTIVE"
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : project.mentorshipStatus === "COMPLETED"
+                    ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                    : "bg-amber-100 text-amber-800 border border-amber-200"
+                }`}
+              >
+                {(project.mentorshipStatus || "ACTIVE").replace(/_/g, " ")}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="bg-white p-2.5 rounded-lg border border-indigo-100">
+                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Designated Mentor</span>
+                <strong className="text-slate-900 text-xs">{project.mentorName || "Designated Industry SPOC"}</strong>
+                <span className="text-[11px] text-slate-500 block truncate">{project.mentorDesignation || "Technical Advisor"}</span>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-lg border border-indigo-100">
+                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Sessions Completed</span>
+                <strong className="text-indigo-700 text-sm font-mono block">
+                  {project.mentorshipSessionCount || 1} Sessions
+                </strong>
+                <span className="text-[10px] text-slate-400">Bi-weekly technical advisory</span>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-lg border border-indigo-100">
+                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Next Advisory Call</span>
+                <strong className="text-slate-900 text-xs block truncate">
+                  {project.mentorshipNextSession || "Scheduled with PI"}
+                </strong>
+                {project.mentorshipMeetingLink ? (
+                  <a
+                    href={project.mentorshipMeetingLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-indigo-600 font-bold hover:underline truncate block"
+                  >
+                    Join Virtual Room →
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-slate-400">Google Meet / Teams</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Section 3: Technical Deliverables & Attachments */}
         <div className="space-y-3">
           <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">

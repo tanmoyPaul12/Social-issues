@@ -19,9 +19,14 @@ public class InstitutionalOnboardingRequest {
     private String[] disciplines;
     private Boolean hasIncubationCenter;
 
-    // Industry Fields
+    // Industry / Ecosystem Partner Fields
     private String companyName;
     private String companyType;
+    private com.example.social_issues.industrypartnership.model.PartnerCategory partnerCategory;
+    private String dpiitRecognitionNumber;
+    private String udyamRegistrationNumber;
+    private String taxExemptionNumber;
+    private String institutionRegNumber;
     private String gstin;
     private String cinNumber;
     private String csrNumber;
@@ -145,6 +150,46 @@ public class InstitutionalOnboardingRequest {
 
     public void setCompanyType(String companyType) {
         this.companyType = companyType;
+    }
+
+    public com.example.social_issues.industrypartnership.model.PartnerCategory getPartnerCategory() {
+        return partnerCategory;
+    }
+
+    public void setPartnerCategory(com.example.social_issues.industrypartnership.model.PartnerCategory partnerCategory) {
+        this.partnerCategory = partnerCategory;
+    }
+
+    public String getDpiitRecognitionNumber() {
+        return dpiitRecognitionNumber;
+    }
+
+    public void setDpiitRecognitionNumber(String dpiitRecognitionNumber) {
+        this.dpiitRecognitionNumber = dpiitRecognitionNumber;
+    }
+
+    public String getUdyamRegistrationNumber() {
+        return udyamRegistrationNumber;
+    }
+
+    public void setUdyamRegistrationNumber(String udyamRegistrationNumber) {
+        this.udyamRegistrationNumber = udyamRegistrationNumber;
+    }
+
+    public String getTaxExemptionNumber() {
+        return taxExemptionNumber;
+    }
+
+    public void setTaxExemptionNumber(String taxExemptionNumber) {
+        this.taxExemptionNumber = taxExemptionNumber;
+    }
+
+    public String getInstitutionRegNumber() {
+        return institutionRegNumber;
+    }
+
+    public void setInstitutionRegNumber(String institutionRegNumber) {
+        this.institutionRegNumber = institutionRegNumber;
     }
 
     public String getGstin() {

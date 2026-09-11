@@ -39,8 +39,27 @@ public class TestbedSponsorship {
     @Column(name = "beneficiaries_impacted")
     private Long beneficiariesImpacted = 0L;
 
+    @Column(name = "beneficiary_count")
+    private Integer beneficiaryCount = 0;
+
     @Column(name = "status", length = 50)
     private String status = "ACTIVE_TRIAL";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "deployment_status", length = 40)
+    private DeploymentStatus deploymentStatus = DeploymentStatus.PLANNED;
+
+    @Column(name = "evidence_photo_urls", columnDefinition = "TEXT")
+    private String evidencePhotoUrls;
+
+    @Column(name = "live_data_feed_url", length = 500)
+    private String liveDataFeedUrl;
+
+    @Column(name = "project_name", length = 250)
+    private String projectName;
+
+    @Column(name = "pilot_phase", length = 80)
+    private String pilotPhase;
 
     @Column(name = "started_at")
     private LocalDate startedAt;
@@ -77,8 +96,26 @@ public class TestbedSponsorship {
     public Long getBeneficiariesImpacted() { return beneficiariesImpacted; }
     public void setBeneficiariesImpacted(Long beneficiariesImpacted) { this.beneficiariesImpacted = beneficiariesImpacted; }
 
+    public Integer getBeneficiaryCount() { return beneficiaryCount; }
+    public void setBeneficiaryCount(Integer beneficiaryCount) { this.beneficiaryCount = beneficiaryCount; }
+
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public DeploymentStatus getDeploymentStatus() { return deploymentStatus; }
+    public void setDeploymentStatus(DeploymentStatus deploymentStatus) { this.deploymentStatus = deploymentStatus; }
+
+    public String getEvidencePhotoUrls() { return evidencePhotoUrls; }
+    public void setEvidencePhotoUrls(String evidencePhotoUrls) { this.evidencePhotoUrls = evidencePhotoUrls; }
+
+    public String getLiveDataFeedUrl() { return liveDataFeedUrl; }
+    public void setLiveDataFeedUrl(String liveDataFeedUrl) { this.liveDataFeedUrl = liveDataFeedUrl; }
+
+    public String getProjectName() { return projectName; }
+    public void setProjectName(String projectName) { this.projectName = projectName; }
+
+    public String getPilotPhase() { return pilotPhase; }
+    public void setPilotPhase(String pilotPhase) { this.pilotPhase = pilotPhase; }
 
     public LocalDate getStartedAt() { return startedAt; }
     public void setStartedAt(LocalDate startedAt) { this.startedAt = startedAt; }

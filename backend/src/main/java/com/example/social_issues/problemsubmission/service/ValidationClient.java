@@ -2,9 +2,12 @@ package com.example.social_issues.problemsubmission.service;
 
 import com.example.social_issues.problemsubmission.model.GrassrootIssue;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,8 +44,13 @@ public class ValidationClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
-            Map<String, Object> response = restTemplate.postForObject(endpoint, requestEntity, Map.class);
-            return response;
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            return responseEntity.getBody();
         } catch (Exception e) {
             // Fallback gracefully if AI service is offline
             Map<String, Object> fallback = new HashMap<>();

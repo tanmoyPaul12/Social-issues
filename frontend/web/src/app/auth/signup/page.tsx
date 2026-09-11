@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
 const JHARKHAND_DISTRICTS = [
   "Ranchi", "Dhanbad", "Dumka", "East Singhbhum (Jamshedpur)", "Bokaro", "Hazaribagh",
@@ -94,33 +95,30 @@ function PublicSignupForm() {
           <button
             type="button"
             onClick={() => setEntityType("INDIVIDUAL")}
-            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              entityType === "INDIVIDUAL"
+            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${entityType === "INDIVIDUAL"
                 ? "bg-blue-50 border-blue-600 text-blue-700 shadow-2xs"
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
+              }`}
           >
             Individual
           </button>
           <button
             type="button"
             onClick={() => setEntityType("GROUP")}
-            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              entityType === "GROUP"
+            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${entityType === "GROUP"
                 ? "bg-blue-50 border-blue-600 text-blue-700 shadow-2xs"
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
+              }`}
           >
             SHG / Group
           </button>
           <button
             type="button"
             onClick={() => setEntityType("ORGANIZATION")}
-            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              entityType === "ORGANIZATION"
+            className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${entityType === "ORGANIZATION"
                 ? "bg-blue-50 border-blue-600 text-blue-700 shadow-2xs"
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
+              }`}
           >
             Panchayat / Org
           </button>
@@ -276,11 +274,10 @@ function PublicSignupForm() {
           >
             <div className="flex items-center gap-3">
               <div
-                className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
-                  captchaChecked
+                className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${captchaChecked
                     ? "bg-blue-600 border-blue-600 text-white"
                     : "border-slate-400 bg-white"
-                }`}
+                  }`}
               >
                 {captchaVerifying ? (
                   <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -379,14 +376,16 @@ function PublicSignupForm() {
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-100">
-      <SiteNavbar />
+    <GuestOnlyGuard>
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-100">
+        <SiteNavbar />
 
-      <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-10">
-        <Suspense fallback={<div className="text-xs text-slate-400">Loading registration...</div>}>
-          <PublicSignupForm />
-        </Suspense>
-      </main>
-    </div>
+        <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-10">
+          <Suspense fallback={<div className="text-xs text-slate-400">Loading registration...</div>}>
+            <PublicSignupForm />
+          </Suspense>
+        </main>
+      </div>
+    </GuestOnlyGuard>
   );
 }

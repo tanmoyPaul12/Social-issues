@@ -47,7 +47,7 @@ const EMPTY_OVERVIEW: IndustryOverviewResponse = {
 };
 
 export function useIndustryOverview() {
-  const { token, user } = useAuthStore();
+  const { token, user, refreshAccessToken } = useAuthStore();
   const [financialYear, setFinancialYear] = useState<string>("2026-2027");
   const [overview, setOverview] = useState<IndustryOverviewResponse>(EMPTY_OVERVIEW);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -78,6 +78,36 @@ export function useIndustryOverview() {
           setOverview(enriched);
         }
       } catch (err: any) {
+        const isAuthError =
+          err.message?.includes("401") ||
+          err.message?.includes("Unauthorized") ||
+          err.message?.includes("UNAUTHORIZED") ||
+          err.message?.includes("expired") ||
+          err.message?.includes("Invalid or expired JWT") ||
+          err.message?.includes("token");
+
+        if (isAuthError) {
+          const refreshed = await refreshAccessToken();
+          if (refreshed) {
+            const freshToken = useAuthStore.getState().token;
+            try {
+              const data = await fetchIndustryOverview(freshToken, financialYear);
+              if (isMountedRef.current) {
+                const enriched: IndustryOverviewResponse = {
+                  ...data,
+                  companyName: user?.orgName || data.companyName || user?.name || "Corporate CSR Partner",
+                  cinNumber: user?.cinNumber || data.cinNumber || "",
+                  csr1RegistrationNumber: user?.csrNumber || data.csr1RegistrationNumber || "",
+                };
+                setOverview(enriched);
+                return;
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+
         if (isMountedRef.current) {
           // Fall back gracefully with clean empty structure
           setOverview((prev) => ({
@@ -87,7 +117,7 @@ export function useIndustryOverview() {
             csr1RegistrationNumber: user?.csrNumber || prev.csr1RegistrationNumber || "",
           }));
           // Only show non-auth error banners
-          if (!err.message?.includes("401") && !err.message?.includes("Authentication")) {
+          if (!isAuthError) {
             setError(err.message || "Failed to load live overview");
           }
         }
@@ -98,7 +128,7 @@ export function useIndustryOverview() {
         }
       }
     },
-    [token, financialYear, user]
+    [token, financialYear, user, refreshAccessToken]
   );
 
   useEffect(() => {

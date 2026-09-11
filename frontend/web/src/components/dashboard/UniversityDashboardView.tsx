@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { useUniversity } from "@/modules/university/hooks/useUniversity";
+import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 import {
   RoutedChallenge,
   UniversityProject,
@@ -12,9 +13,11 @@ import {
   UniversityProjectStage,
   IndustryOffer,
 } from "@/modules/university/types";
+import { ProjectMilestoneTimeline } from "./university/ProjectMilestoneTimeline";
 
 interface UniversityDashboardViewProps {
   activeTab?: string;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 export interface OnboardedIndustryPartner {
@@ -246,7 +249,10 @@ const STAGE_PROGRESS: Record<UniversityProjectStage, number> = {
   COMPLETED: 100
 };
 
-export function UniversityDashboardView({ activeTab = "overview" }: UniversityDashboardViewProps) {
+export function UniversityDashboardView({
+  activeTab = "overview",
+  onNavigateTab,
+}: UniversityDashboardViewProps) {
   const { user, token } = useAuthStore();
   const aisheCode = user?.aisheCode || "U-0205";
   const institutionName = user?.orgName || "Birla Institute of Technology, Mesra";
@@ -812,9 +818,9 @@ export function UniversityDashboardView({ activeTab = "overview" }: UniversityDa
                         <button
                           type="button"
                           onClick={() => setSelectedProjectForDetail(proj)}
-                          className="px-2.5 py-1 text-slate-800 hover:bg-slate-100 border border-slate-300 rounded font-medium text-xs cursor-pointer"
+                          className="px-2.5 py-1 text-slate-800 hover:bg-slate-100 border border-slate-300 rounded font-bold text-xs cursor-pointer shadow-2xs"
                         >
-                          View Progress
+                          Lifecycle &amp; Milestones →
                         </button>
                       </td>
                     </tr>
@@ -1031,9 +1037,9 @@ export function UniversityDashboardView({ activeTab = "overview" }: UniversityDa
                       <button
                         type="button"
                         onClick={() => setSelectedProjectForDetail(proj)}
-                        className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-800 rounded font-medium text-xs cursor-pointer"
+                        className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-900 rounded font-bold text-xs cursor-pointer shadow-2xs"
                       >
-                        View Full History
+                        Milestones, TRL &amp; Deliverables →
                       </button>
 
                       {proj.stage !== "COMPLETED" && (
@@ -1576,6 +1582,26 @@ export function UniversityDashboardView({ activeTab = "overview" }: UniversityDa
         </div>
       )}
 
+      {/* Catch-all fallback for unrecognized university tabs */}
+      {![
+        "overview",
+        "inbox",
+        "challenges",
+        "projects",
+        "accreditation",
+        "teams",
+        "users",
+        "industry",
+      ].includes(activeTab) && (
+        <WorkspacePlaceholderTab
+          title="University Workspace Module"
+          description="This institutional module is being provisioned according to platform specifications."
+          role="university"
+          tabId={activeTab}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
       {/* MODAL 1: ACCEPT CHALLENGE & ASSIGN TEAM */}
       {selectedChallengeForAccept && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
@@ -1750,103 +1776,17 @@ export function UniversityDashboardView({ activeTab = "overview" }: UniversityDa
         </div>
       )}
 
-      {/* MODAL 3: PROJECT PROGRESS & WHAT HAS BEEN DONE TILL NOW */}
+      {/* MODAL 3: PROJECT LIFECYCLE, MILESTONES, DELIVERABLES, TESTING & DUAL SIGNOFF */}
       {selectedProjectForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 border border-slate-300 shadow-xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Project Progress &amp; Milestone Log</h3>
-                <span className="text-slate-500 font-mono text-[11px]">{selectedProjectForDetail.projectCode || selectedProjectForDetail.id}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedProjectForDetail(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <h4 className="font-bold text-slate-900 text-base">{selectedProjectForDetail.title}</h4>
-              <p className="text-slate-600 leading-relaxed">{selectedProjectForDetail.abstractDescription}</p>
-            </div>
-
-            {/* What Has Been Done Till Now - Chronological Roadmap */}
-            <div className="space-y-3 pt-2">
-              <h5 className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-                Deliverables &amp; Progress History
-              </h5>
-
-              <div className="border border-slate-200 rounded divide-y divide-slate-100">
-                {STAGE_ORDER.map((stageName, idx) => {
-                  const currentIdx = STAGE_ORDER.indexOf(selectedProjectForDetail.stage);
-                  const isCompleted = idx < currentIdx;
-                  const isCurrent = idx === currentIdx;
-                  const isPending = idx > currentIdx;
-
-                  return (
-                    <div key={stageName} className="p-3 flex items-start justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                            isCompleted ? "bg-slate-900 text-white" : isCurrent ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-500"
-                          }`}>
-                            {idx + 1}
-                          </span>
-                          <span className={`font-semibold ${isPending ? "text-slate-400" : "text-slate-900"}`}>
-                            {STAGE_LABELS[stageName]}
-                          </span>
-                        </div>
-                        <p className="text-slate-500 text-[11px] pl-6">
-                          {idx === 0 && "Faculty guide confirmed, student innovators assigned, and problem scope approved."}
-                          {idx === 1 && "Technical CAD/electronic blueprint finalized. Hardware prototype constructed in department lab."}
-                          {idx === 2 && "Field pilot testing on site in municipal ward with recorded sensor data."}
-                          {idx === 3 && "Final unit deployed at community site and handed over to local civic body."}
-                          {idx === 4 && "Final ground verification completed with citizen satisfaction sign-off."}
-                        </p>
-                      </div>
-
-                      <span className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded ${
-                        isCompleted ? "bg-slate-100 text-slate-700" : isCurrent ? "bg-slate-900 text-white" : "text-slate-400"
-                      }`}>
-                        {isCompleted ? "Completed" : isCurrent ? "In Progress" : "Pending"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Current Milestone Notes */}
-            <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1">
-              <div className="font-semibold text-slate-800">Current Milestone Notes:</div>
-              <div className="text-slate-600">{selectedProjectForDetail.milestoneDesc || "Active development in progress."}</div>
-            </div>
-
-            {/* Update milestone or advance stage */}
-            {selectedProjectForDetail.stage !== "COMPLETED" && (
-              <div className="pt-2 border-t border-slate-200 space-y-2">
-                <label className="block text-slate-700 font-semibold text-[11px]">Update Milestone Progress Notes:</label>
-                <input
-                  type="text"
-                  value={advMilestoneNote}
-                  onChange={(e) => setAdvMilestoneNote(e.target.value)}
-                  placeholder="Record newly completed tasks or prototype observations..."
-                  className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
-                />
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleAdvanceStage(selectedProjectForDetail)}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium cursor-pointer"
-                  >
-                    Advance to Next Stage
-                  </button>
-                </div>
-              </div>
-            )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="max-w-5xl w-full">
+            <ProjectMilestoneTimeline
+              project={selectedProjectForDetail}
+              onClose={() => setSelectedProjectForDetail(null)}
+              onProjectUpdated={(up) => {
+                setSelectedProjectForDetail(up);
+              }}
+            />
           </div>
         </div>
       )}
