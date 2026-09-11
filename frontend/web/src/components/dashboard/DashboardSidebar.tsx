@@ -48,7 +48,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
       { id: "collaborations", label: "My Collaborations" },
       { id: "funding", label: "Mentorship & Funding" },
       { id: "prototyping", label: "Prototyping & Testing" },
-      { id: "ip", label: "IP & Tech Transfer", badge: "PLANNED" },
+      { id: "ip", label: "IP & Tech Transfer", badge: "NEW" },
       { id: "analytics", label: "Analytics", badge: "PLANNED" },
       { id: "communication", label: "Communication", badge: "PLANNED" },
       { id: "profile", label: "Profile & Capabilities" },

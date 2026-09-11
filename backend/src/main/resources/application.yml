@@ -48,4 +48,8 @@ app:
     secret: ${JWT_SECRET:jharkhand_innovation_portal_secure_jwt_secret_key_2026_very_long_secret}
     access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000} # 15 minutes
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+  encryption:
+    enabled: ${FILE_ENCRYPTION_ENABLED:true}
+    secret-key: ${APP_ENCRYPTION_SECRET:JharkhandInnovationPortalAES256Key2026!} # 32-byte 256-bit AES master key
+
 

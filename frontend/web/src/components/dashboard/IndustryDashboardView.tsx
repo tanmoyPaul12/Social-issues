@@ -10,6 +10,7 @@ import { IndustryMarketplaceTab } from "./industry/marketplace/IndustryMarketpla
 import { ActivePilotsTab } from "./industry/pilots/ActivePilotsTab";
 import { CsrComplianceTab } from "./industry/csr/CsrComplianceTab";
 import { CompanySettingsTab } from "./industry/settings/CompanySettingsTab";
+import { IndustryIpTransferTab } from "./industry/IndustryIpTransferTab";
 import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 interface CoFundedEngagement {
@@ -151,20 +152,7 @@ export function IndustryDashboardView({
 
       {/* Tab 6: IP & Technology Transfer */}
       {(activeTab === "ip" || activeTab === "ip_transfer") && (
-        <WorkspacePlaceholderTab
-          title="IP & Technology Transfer Workspace"
-          subtitle="Intellectual Property Lifecycle & Institutional MOUs"
-          description="Track patents filed, IP co-ownership agreements, licensing terms, and technology transfer requests between industry partners and university research incubation centres."
-          role="industry"
-          tabId="ip"
-          features={[
-            "Tripartite IP Ownership & Patent Assignment Tracking",
-            "Technology Readiness Level (TRL 4 to TRL 9) Milestones",
-            "Standard MCA & Higher Education Department MOU Repository",
-            "Commercial Licensing & Royalty Disbursement Records",
-          ]}
-          onNavigateTab={handleNavigate}
-        />
+        <IndustryIpTransferTab onNavigateTab={handleNavigate} />
       )}
 
       {/* Tab 7: Analytics */}
