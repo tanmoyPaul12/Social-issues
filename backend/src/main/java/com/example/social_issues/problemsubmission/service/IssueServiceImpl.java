@@ -108,15 +108,13 @@ public class IssueServiceImpl implements IssueService {
 
                     // Route challenge to matching university HEIs via AI engine
                     Map<String, Object> routeResult = aiServiceClient.routeChallengeToHEIs(issueToAudit);
-                    if (routeResult != null && routeResult.containsKey("recommended_heis")) {
-                        List<Map<String, Object>> recs = (List<Map<String, Object>>) routeResult.get("recommended_heis");
-                        if (!recs.isEmpty()) {
-                            Map<String, Object> topMatch = recs.get(0);
-                            String topHeiName = (String) topMatch.get("hei_name");
+                    if (routeResult != null && routeResult.get("recommended_heis") instanceof List<?> recsList && !recsList.isEmpty()) {
+                        Object firstItem = recsList.get(0);
+                        if (firstItem instanceof Map<?, ?> topMatch && topMatch.get("hei_name") instanceof String topHeiName) {
                             issueToAudit.setAssignedHEI(topHeiName);
-                            issueToAudit.setRecommendedHeisJson(recs.toString());
                             log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
                         }
+                        issueToAudit.setRecommendedHeisJson(recsList.toString());
                     }
 
                     issueRepository.save(issueToAudit);

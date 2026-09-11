@@ -13,7 +13,6 @@ import com.example.social_issues.projectlifecycle.model.ApproverRole;
 import com.example.social_issues.projectlifecycle.model.StageApprovalSignoff;
 import com.example.social_issues.projectlifecycle.repository.StageApprovalSignoffRepository;
 import com.example.social_issues.projectlifecycle.service.StageApprovalService;
-import com.example.social_issues.universitycollab.model.UniversityProject;
 import com.example.social_issues.universitycollab.model.UniversityProjectStage;
 import com.example.social_issues.universitycollab.repository.UniversityProjectRepository;
 import org.slf4j.Logger;

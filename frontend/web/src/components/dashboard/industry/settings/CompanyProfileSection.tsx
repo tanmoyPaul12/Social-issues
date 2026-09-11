@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CompanyProfile, UpdateCompanyProfilePayload, JHARKHAND_RESEARCH_DOMAINS } from "@/modules/industry/types/companySettings";
+import { CompanyProfile, UpdateCompanyProfilePayload, JHARKHAND_RESEARCH_DOMAINS, PARTNER_CATEGORY_OPTIONS, PartnerCategory } from "@/modules/industry/types/companySettings";
 
 interface CompanyProfileSectionProps {
   profile: CompanyProfile | null;
@@ -19,6 +19,11 @@ export function CompanyProfileSection({
   const [formData, setFormData] = useState<UpdateCompanyProfilePayload>({
     companyName: "",
     companyType: "Public Limited Enterprise",
+    partnerCategory: "LARGE_ENTERPRISE",
+    dpiitRecognitionNumber: "",
+    udyamRegistrationNumber: "",
+    taxExemptionNumber: "",
+    institutionRegNumber: "",
     gstin: "",
     cinNumber: "",
     csrNumber: "",
@@ -43,6 +48,11 @@ export function CompanyProfileSection({
       setFormData({
         companyName: profile.companyName || "",
         companyType: profile.companyType || "Public Limited Enterprise",
+        partnerCategory: profile.partnerCategory || "LARGE_ENTERPRISE",
+        dpiitRecognitionNumber: profile.dpiitRecognitionNumber || "",
+        udyamRegistrationNumber: profile.udyamRegistrationNumber || "",
+        taxExemptionNumber: profile.taxExemptionNumber || "",
+        institutionRegNumber: profile.institutionRegNumber || "",
         gstin: profile.gstin || "",
         cinNumber: profile.cinNumber || "",
         csrNumber: profile.csrNumber || "",
@@ -151,14 +161,38 @@ export function CompanyProfileSection({
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-900">1. Statutory Identification &amp; Corporate Structure</h3>
-            <p className="text-xs text-slate-500">Government registry numbers filed with MCA &amp; GSTIN portal</p>
+            <p className="text-xs text-slate-500">Government registry numbers filed with MCA, MSME, DPIIT &amp; GSTIN portals</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Partner Category Selector */}
+          <div className="sm:col-span-2 lg:col-span-3 bg-gradient-to-r from-indigo-50/70 to-slate-50 border border-indigo-100 rounded-xl p-4">
+            <label className="block text-xs font-bold text-indigo-950 mb-1.5 flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Partner Category / Ecosystem Entity Type <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={formData.partnerCategory || "LARGE_ENTERPRISE"}
+              onChange={(e) => setFormData({ ...formData, partnerCategory: e.target.value as PartnerCategory })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-white text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer shadow-xs"
+            >
+              {PARTNER_CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label} — {opt.description}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-indigo-700/80 mt-1.5">
+              Selecting your partner type customizes required statutory credentials and unlocks tailored engagement tracks (Mentorship, Prototyping, Co-Development, Field Testing).
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Legal Corporate Name <span className="text-rose-500">*</span>
+              Legal Entity Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -172,7 +206,7 @@ export function CompanyProfileSection({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Corporate Scale / Category
+              Corporate Scale / Legal Structure
             </label>
             <select
               value={formData.companyScale}
@@ -183,17 +217,86 @@ export function CompanyProfileSection({
               <option value="Public Sector Undertaking (PSU)">Public Sector Undertaking (PSU)</option>
               <option value="Mid Corporate">Mid Corporate (₹50 Cr - ₹500 Cr)</option>
               <option value="Multinational Corporation">Multinational Corporation (MNC)</option>
-              <option value="Philanthropic Foundation">Corporate Foundation / Trust</option>
+              <option value="Startup">Early / Growth Startup</option>
+              <option value="MSME">Micro / Small / Medium Enterprise</option>
+              <option value="Philanthropic Foundation">Corporate Foundation / Trust / Section 8</option>
+              <option value="Research Institution">Academic / Autonomous R&amp;D Institution</option>
+              <option value="Innovation Hub">Incubator / CoE / TBI</option>
             </select>
           </div>
 
+          {/* Conditional Category Specific Registration Numbers */}
+          {formData.partnerCategory === "STARTUP" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>DPIIT Recognition Number</span>
+                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Startup India</span>
+              </label>
+              <input
+                type="text"
+                value={formData.dpiitRecognitionNumber || ""}
+                onChange={(e) => setFormData({ ...formData, dpiitRecognitionNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50/20 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
+                placeholder="DIPP12345"
+              />
+            </div>
+          )}
+
+          {formData.partnerCategory === "MSME" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Udyam Registration Number</span>
+                <span className="text-[10px] font-semibold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded">MSME Portal</span>
+              </label>
+              <input
+                type="text"
+                value={formData.udyamRegistrationNumber || ""}
+                onChange={(e) => setFormData({ ...formData, udyamRegistrationNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-sky-300 bg-sky-50/20 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all uppercase"
+                placeholder="UDYAM-JH-01-0012345"
+              />
+            </div>
+          )}
+
+          {formData.partnerCategory === "CSR_ORGANIZATION" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>12A / 80G Tax Exemption No.</span>
+                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Income Tax Dept</span>
+              </label>
+              <input
+                type="text"
+                value={formData.taxExemptionNumber || ""}
+                onChange={(e) => setFormData({ ...formData, taxExemptionNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-amber-300 bg-amber-50/20 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all uppercase"
+                placeholder="AAATE1234F"
+              />
+            </div>
+          )}
+
+          {(formData.partnerCategory === "RESEARCH_INSTITUTION" || formData.partnerCategory === "INNOVATION_HUB") && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Institution / Hub Registration No.</span>
+                <span className="text-[10px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">DST / UGC / AICTE</span>
+              </label>
+              <input
+                type="text"
+                value={formData.institutionRegNumber || ""}
+                onChange={(e) => setFormData({ ...formData, institutionRegNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-purple-300 bg-purple-50/20 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all uppercase"
+                placeholder="DST/TBI/2024/09"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              GST Identification Number (GSTIN) <span className="text-rose-500">*</span>
+              GST Identification Number (GSTIN) {formData.partnerCategory === "LARGE_ENTERPRISE" && <span className="text-rose-500">*</span>}
             </label>
             <input
               type="text"
-              required
+              required={formData.partnerCategory === "LARGE_ENTERPRISE"}
               value={formData.gstin}
               onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
@@ -201,31 +304,35 @@ export function CompanyProfileSection({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Corporate Identity Number (CIN)
-            </label>
-            <input
-              type="text"
-              value={formData.cinNumber}
-              onChange={(e) => setFormData({ ...formData, cinNumber: e.target.value.toUpperCase() })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
-              placeholder="L27100WB1907PLC000260"
-            />
-          </div>
+          {(formData.partnerCategory === "LARGE_ENTERPRISE" || !formData.partnerCategory) && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Corporate Identity Number (CIN)
+              </label>
+              <input
+                type="text"
+                value={formData.cinNumber}
+                onChange={(e) => setFormData({ ...formData, cinNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
+                placeholder="L27100WB1907PLC000260"
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              MCA Form CSR-1 Registration No.
-            </label>
-            <input
-              type="text"
-              value={formData.csrNumber}
-              onChange={(e) => setFormData({ ...formData, csrNumber: e.target.value.toUpperCase() })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
-              placeholder="CSR00018942"
-            />
-          </div>
+          {(formData.partnerCategory === "LARGE_ENTERPRISE" || formData.partnerCategory === "CSR_ORGANIZATION") && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                MCA Form CSR-1 Registration No.
+              </label>
+              <input
+                type="text"
+                value={formData.csrNumber}
+                onChange={(e) => setFormData({ ...formData, csrNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
+                placeholder="CSR00018942"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">

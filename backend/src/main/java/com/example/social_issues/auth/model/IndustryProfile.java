@@ -1,5 +1,6 @@
 package com.example.social_issues.auth.model;
 
+import com.example.social_issues.industrypartnership.model.PartnerCategory;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,7 +24,23 @@ public class IndustryProfile {
     @Column(name = "company_type", length = 80)
     private String companyType;
 
-    @Column(name = "gstin", length = 50, nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "partner_category", length = 50)
+    private PartnerCategory partnerCategory = PartnerCategory.LARGE_ENTERPRISE;
+
+    @Column(name = "dpiit_recognition_number", length = 50)
+    private String dpiitRecognitionNumber;
+
+    @Column(name = "udyam_registration_number", length = 50)
+    private String udyamRegistrationNumber;
+
+    @Column(name = "tax_exemption_number", length = 50)
+    private String taxExemptionNumber;
+
+    @Column(name = "institution_reg_number", length = 50)
+    private String institutionRegNumber;
+
+    @Column(name = "gstin", length = 50)
     private String gstin;
 
     @Column(name = "cin_number", length = 50)
@@ -108,6 +125,21 @@ public class IndustryProfile {
 
     public String getCompanyType() { return companyType; }
     public void setCompanyType(String companyType) { this.companyType = companyType; }
+
+    public PartnerCategory getPartnerCategory() { return partnerCategory; }
+    public void setPartnerCategory(PartnerCategory partnerCategory) { this.partnerCategory = partnerCategory; }
+
+    public String getDpiitRecognitionNumber() { return dpiitRecognitionNumber; }
+    public void setDpiitRecognitionNumber(String dpiitRecognitionNumber) { this.dpiitRecognitionNumber = dpiitRecognitionNumber; }
+
+    public String getUdyamRegistrationNumber() { return udyamRegistrationNumber; }
+    public void setUdyamRegistrationNumber(String udyamRegistrationNumber) { this.udyamRegistrationNumber = udyamRegistrationNumber; }
+
+    public String getTaxExemptionNumber() { return taxExemptionNumber; }
+    public void setTaxExemptionNumber(String taxExemptionNumber) { this.taxExemptionNumber = taxExemptionNumber; }
+
+    public String getInstitutionRegNumber() { return institutionRegNumber; }
+    public void setInstitutionRegNumber(String institutionRegNumber) { this.institutionRegNumber = institutionRegNumber; }
 
     public String getGstin() { return gstin; }
     public void setGstin(String gstin) { this.gstin = gstin; }

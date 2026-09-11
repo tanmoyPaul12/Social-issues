@@ -129,7 +129,13 @@ public class AiServiceClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
-            Map<String, Object> response = restTemplate.postForObject(endpoint, requestEntity, Map.class);
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> response = responseEntity.getBody();
             if (response != null && response.containsKey("recommended_heis")) {
                 return response;
             }

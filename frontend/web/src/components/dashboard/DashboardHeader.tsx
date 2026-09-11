@@ -70,20 +70,22 @@ export function DashboardHeader({ activeRole }: DashboardHeaderProps) {
       <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         {/* Left: Emblem & Government of Jharkhand Command Center branding */}
         <div className="flex items-center gap-3.5">
-          <Link href="/" className="flex items-center gap-3 group">
-            {/* Government Shield Emblem */}
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0a1128] to-[#1c2d5a] flex items-center justify-center text-white border border-slate-700/30 flex-shrink-0 shadow-2xs">
-              <svg className="w-5 h-5 text-[#fbbf24]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
-              </svg>
+          <Link href="/" className="flex items-center gap-3 group py-0.5">
+            <div className="w-8 sm:w-9 h-11 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/emblem.png"
+                alt="State Emblem of India"
+                className="w-full h-full object-contain"
+              />
             </div>
 
-            <div className="flex flex-col text-left leading-tight">
-              <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                Government of Jharkhand
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[13px] sm:text-[14.5px] font-black text-slate-950 tracking-tight leading-tight">
+                झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
               </span>
-              <span className="text-[11px] text-slate-500 font-medium tracking-wide">
-                Command Center Portal &amp; Innovation Platform
+              <span className="text-[10.5px] sm:text-[11.5px] font-bold text-slate-800 tracking-tight leading-tight mt-0.5">
+                Jharkhand Science, Technology and Innovation Portal
               </span>
             </div>
           </Link>

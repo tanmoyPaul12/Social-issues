@@ -129,23 +129,25 @@ export function SiteNavbar() {
   return (
     <header ref={navRef} className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 font-sans text-slate-800 shadow-2xs select-none">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
+        <div className="flex items-center justify-between h-[68px] gap-3">
           
-          {/* Left Brand Identity: Official Jharkhand Govt Shield & Text */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 group py-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0a1128] to-[#1c2d5a] flex items-center justify-center text-white shadow-xs border border-slate-700/30 shrink-0 group-hover:scale-105 transition-transform">
-              <svg className="w-5 h-5 text-[#fbbf24]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
-              </svg>
+          {/* Left Brand Identity: Official State Emblem & Bilingual Typography */}
+          <Link href="/" className="flex items-center gap-3 shrink-0 group py-1">
+            <div className="w-8 sm:w-9 h-11 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/emblem.png"
+                alt="State Emblem of India"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <div className="flex flex-col text-left leading-tight">
-              <span className="text-[9px] font-bold tracking-[0.14em] text-slate-500 uppercase">
-                GOVERNMENT OF JHARKHAND
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[13.5px] sm:text-[15.5px] font-black text-slate-950 tracking-tight leading-tight">
+                झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
               </span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[17px] font-black text-slate-950 tracking-tight">Innovation</span>
-                <span className="text-[17px] font-bold text-blue-600 tracking-tight">Platform</span>
-              </div>
+              <span className="text-[11px] sm:text-[12.5px] font-bold text-slate-800 tracking-tight leading-tight mt-0.5">
+                Jharkhand Science, Technology and Innovation Portal
+              </span>
             </div>
           </Link>
 

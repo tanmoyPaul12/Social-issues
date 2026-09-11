@@ -1,5 +1,6 @@
 package com.example.social_issues.industrypartnership.dto;
 
+import com.example.social_issues.industrypartnership.model.PartnerCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -12,6 +13,11 @@ public class UpdateCompanyProfileRequest {
     private String companyName;
 
     private String companyType;
+    private PartnerCategory partnerCategory;
+    private String dpiitRecognitionNumber;
+    private String udyamRegistrationNumber;
+    private String taxExemptionNumber;
+    private String institutionRegNumber;
     private String gstin;
     private String cinNumber;
     private String csrNumber;
@@ -40,6 +46,21 @@ public class UpdateCompanyProfileRequest {
 
     public String getCompanyType() { return companyType; }
     public void setCompanyType(String companyType) { this.companyType = companyType; }
+
+    public PartnerCategory getPartnerCategory() { return partnerCategory; }
+    public void setPartnerCategory(PartnerCategory partnerCategory) { this.partnerCategory = partnerCategory; }
+
+    public String getDpiitRecognitionNumber() { return dpiitRecognitionNumber; }
+    public void setDpiitRecognitionNumber(String dpiitRecognitionNumber) { this.dpiitRecognitionNumber = dpiitRecognitionNumber; }
+
+    public String getUdyamRegistrationNumber() { return udyamRegistrationNumber; }
+    public void setUdyamRegistrationNumber(String udyamRegistrationNumber) { this.udyamRegistrationNumber = udyamRegistrationNumber; }
+
+    public String getTaxExemptionNumber() { return taxExemptionNumber; }
+    public void setTaxExemptionNumber(String taxExemptionNumber) { this.taxExemptionNumber = taxExemptionNumber; }
+
+    public String getInstitutionRegNumber() { return institutionRegNumber; }
+    public void setInstitutionRegNumber(String institutionRegNumber) { this.institutionRegNumber = institutionRegNumber; }
 
     public String getGstin() { return gstin; }
     public void setGstin(String gstin) { this.gstin = gstin; }

@@ -11,6 +11,10 @@ import { ActivePilotsTab } from "./industry/pilots/ActivePilotsTab";
 import { CsrComplianceTab } from "./industry/csr/CsrComplianceTab";
 import { CompanySettingsTab } from "./industry/settings/CompanySettingsTab";
 import { IndustryIpTransferTab } from "./industry/IndustryIpTransferTab";
+import { FieldTestbedDeploymentTab } from "./industry/testbeds/FieldTestbedDeploymentTab";
+import { IndustryAnalyticsTab } from "./industry/analytics/IndustryAnalyticsTab";
+import { IndustryNotificationsTab } from "./industry/notifications/IndustryNotificationsTab";
+import { IndustryCommunicationTab } from "./industry/communication/IndustryCommunicationTab";
 import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 
 interface CoFundedEngagement {
@@ -145,9 +149,9 @@ export function IndustryDashboardView({
         <CsrComplianceTab onNavigateTab={handleNavigate} />
       )}
 
-      {/* Tab 5: Prototyping & Testing */}
+      {/* Tab 5: Prototyping & Testing (Field Testbeds) */}
       {(activeTab === "prototyping" || activeTab === "testbeds") && (
-        <ActivePilotsTab onNavigateTab={handleNavigate} />
+        <FieldTestbedDeploymentTab onNavigateTab={handleNavigate} />
       )}
 
       {/* Tab 6: IP & Technology Transfer */}
@@ -156,42 +160,21 @@ export function IndustryDashboardView({
       )}
 
       {/* Tab 7: Analytics */}
-      {activeTab === "analytics" && (
-        <WorkspacePlaceholderTab
-          title="Impact & Engagement Analytics"
-          subtitle="Real-time CSR Impact Metrics & Deployment Telemetry"
-          description="Deep-dive analytics on domain-wise corporate capital deployment, university project completion rates, time-to-market metrics, and rural beneficiary reach across Jharkhand districts."
-          role="industry"
-          tabId="analytics"
-          features={[
-            "District-wise Community Beneficiary Reach Analysis",
-            "Schedule VII CSR Expenditure vs. Milestone ROI",
-            "University Faculty & Student Cohort Performance Index",
-            "Automated State Cabinet & MCA Audit Export Engine",
-          ]}
-          onNavigateTab={handleNavigate}
-        />
+      {(activeTab === "analytics" || activeTab === "reports") && (
+        <IndustryAnalyticsTab onNavigateTab={handleNavigate} />
       )}
 
       {/* Tab 8: Communication */}
       {(activeTab === "communication" || activeTab === "messages") && (
-        <WorkspacePlaceholderTab
-          title="Communication & Review Workspace"
-          subtitle="Direct Stakeholder Threads & Review Meeting Scheduler"
-          description="Unified messaging channel connecting corporate CSR SPOCs, university Principal Investigators (PIs), student teams, and government district nodal officers."
-          role="industry"
-          tabId="communication"
-          features={[
-            "Direct Secure Messaging Threads with University Research Teams",
-            "Automated Milestone Review Call & Demonstration Scheduler",
-            "Government Nodal Officer Escalation & Clarification Channel",
-            "Centralized Document & Compliance Attachment Thread",
-          ]}
-          onNavigateTab={handleNavigate}
-        />
+        <IndustryCommunicationTab />
       )}
 
-      {/* Tab 9: Profile & Capabilities */}
+      {/* Tab 9: Notifications & Compliance Alerts */}
+      {(activeTab === "notifications" || activeTab === "alerts") && (
+        <IndustryNotificationsTab onNavigateTab={handleNavigate} />
+      )}
+
+      {/* Tab 10: Profile & Capabilities */}
       {(activeTab === "settings" || activeTab === "profile") && (
         <CompanySettingsTab onNavigateTab={handleNavigate} />
       )}
@@ -211,8 +194,11 @@ export function IndustryDashboardView({
         "ip",
         "ip_transfer",
         "analytics",
+        "reports",
         "communication",
         "messages",
+        "notifications",
+        "alerts",
         "settings",
         "profile",
       ].includes(activeTab) && (

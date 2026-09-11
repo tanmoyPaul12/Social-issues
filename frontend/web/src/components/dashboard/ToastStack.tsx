@@ -6,6 +6,7 @@ import { create } from "zustand";
 export interface ToastMessage {
   id: string;
   type: "success" | "error" | "info" | "warning";
+  title?: string;
   message: string;
 }
 
@@ -37,10 +38,30 @@ export const useToastStore = create<ToastStore>((set) => ({
 }));
 
 export const toast = {
-  success: (message: string) => useToastStore.getState().addToast({ type: "success", message }),
-  error: (message: string) => useToastStore.getState().addToast({ type: "error", message }),
-  info: (message: string) => useToastStore.getState().addToast({ type: "info", message }),
-  warning: (message: string) => useToastStore.getState().addToast({ type: "warning", message }),
+  success: (messageOrTitle: string, description?: string) =>
+    useToastStore.getState().addToast({
+      type: "success",
+      title: description ? messageOrTitle : undefined,
+      message: description || messageOrTitle,
+    }),
+  error: (messageOrTitle: string, description?: string) =>
+    useToastStore.getState().addToast({
+      type: "error",
+      title: description ? messageOrTitle : undefined,
+      message: description || messageOrTitle,
+    }),
+  info: (messageOrTitle: string, description?: string) =>
+    useToastStore.getState().addToast({
+      type: "info",
+      title: description ? messageOrTitle : undefined,
+      message: description || messageOrTitle,
+    }),
+  warning: (messageOrTitle: string, description?: string) =>
+    useToastStore.getState().addToast({
+      type: "warning",
+      title: description ? messageOrTitle : undefined,
+      message: description || messageOrTitle,
+    }),
 };
 
 export function ToastStack() {
@@ -60,32 +81,35 @@ export function ToastStack() {
             key={t.id}
             className="bg-white border border-slate-200 shadow-xl rounded-md p-3.5 flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-200"
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-start gap-2.5">
               {isSuccess && (
-                <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-2xs">
+                <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-2xs mt-0.5">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               )}
               {isError && (
-                <div className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs">
+                <div className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs mt-0.5">
                   !
                 </div>
               )}
               {isWarning && (
-                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs">
+                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs mt-0.5">
                   !
                 </div>
               )}
               {!isSuccess && !isError && !isWarning && (
-                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-2xs">
+                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-2xs mt-0.5">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               )}
-              <span className="text-xs font-semibold text-slate-800 leading-snug">{t.message}</span>
+              <div className="flex flex-col">
+                {t.title && <span className="text-xs font-bold text-slate-900 leading-tight">{t.title}</span>}
+                <span className="text-xs font-semibold text-slate-800 leading-snug">{t.message}</span>
+              </div>
             </div>
 
             <button

@@ -20,6 +20,18 @@ public class SectorEngagementDto {
         this.committedAmount = committedAmount != null ? committedAmount : BigDecimal.ZERO;
     }
 
+    public SectorEngagementDto(String sectorName, String displayName, BigDecimal committedAmount, double percentage, int projectCount) {
+        try {
+            this.sector = IssueSector.valueOf(sectorName);
+        } catch (Exception e) {
+            this.sector = IssueSector.OTHER;
+        }
+        this.sectorName = displayName;
+        this.committedAmount = committedAmount != null ? committedAmount : BigDecimal.ZERO;
+        this.percentage = percentage;
+        this.projectCount = projectCount;
+    }
+
     public IssueSector getSector() { return sector; }
     public void setSector(IssueSector sector) { this.sector = sector; }
 

@@ -2,6 +2,29 @@ export type CorporateRole = "CSR_ADMIN" | "FINANCE_APPROVER" | "PROJECT_MANAGER"
 export type TeamMemberStatus = "INVITED" | "ACTIVE" | "SUSPENDED";
 export type EmailDigestFrequency = "INSTANT" | "DAILY_DIGEST" | "WEEKLY_DIGEST" | "MUTED";
 
+export type PartnerCategory =
+  | "LARGE_ENTERPRISE"
+  | "STARTUP"
+  | "MSME"
+  | "CSR_ORGANIZATION"
+  | "RESEARCH_INSTITUTION"
+  | "INNOVATION_HUB";
+
+export interface PartnerCategoryOption {
+  id: PartnerCategory;
+  label: string;
+  description: string;
+}
+
+export const PARTNER_CATEGORY_OPTIONS: PartnerCategoryOption[] = [
+  { id: "LARGE_ENTERPRISE", label: "Large Enterprise / Corporate", description: "Companies with > ₹500 Cr turnover or statutory CSR obligations" },
+  { id: "STARTUP", label: "Startup (DPIIT Recognized)", description: "Early-stage or growth tech startups registered with DPIIT" },
+  { id: "MSME", label: "MSME (Udyam Registered)", description: "Micro, Small & Medium Enterprises with Udyam Registration" },
+  { id: "CSR_ORGANIZATION", label: "CSR Organization / Foundation / NGO", description: "Non-profit foundations, CSR implementing agencies (12A/80G)" },
+  { id: "RESEARCH_INSTITUTION", label: "Research Institution / Lab", description: "Academic institutions, CSIR / ICAR / DST laboratories" },
+  { id: "INNOVATION_HUB", label: "Innovation Hub / Incubator / Accelerator", description: "Technology Business Incubators (TBIs), CoEs, Science Parks" },
+];
+
 export interface ResearchDomainOption {
   id: string;
   label: string;
@@ -25,6 +48,11 @@ export interface CompanyProfile {
   ownerUserId?: number;
   companyName: string;
   companyType: string;
+  partnerCategory?: PartnerCategory;
+  dpiitRecognitionNumber?: string;
+  udyamRegistrationNumber?: string;
+  taxExemptionNumber?: string;
+  institutionRegNumber?: string;
   gstin: string;
   cinNumber: string;
   csrNumber: string;
@@ -60,6 +88,11 @@ export interface CompanyProfile {
 export interface UpdateCompanyProfilePayload {
   companyName: string;
   companyType?: string;
+  partnerCategory?: PartnerCategory;
+  dpiitRecognitionNumber?: string;
+  udyamRegistrationNumber?: string;
+  taxExemptionNumber?: string;
+  institutionRegNumber?: string;
   gstin?: string;
   cinNumber?: string;
   csrNumber?: string;

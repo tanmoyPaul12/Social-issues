@@ -88,6 +88,11 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
 
         profile.setCompanyName(request.getCompanyName());
         if (request.getCompanyType() != null) profile.setCompanyType(request.getCompanyType());
+        if (request.getPartnerCategory() != null) profile.setPartnerCategory(request.getPartnerCategory());
+        if (request.getDpiitRecognitionNumber() != null) profile.setDpiitRecognitionNumber(request.getDpiitRecognitionNumber());
+        if (request.getUdyamRegistrationNumber() != null) profile.setUdyamRegistrationNumber(request.getUdyamRegistrationNumber());
+        if (request.getTaxExemptionNumber() != null) profile.setTaxExemptionNumber(request.getTaxExemptionNumber());
+        if (request.getInstitutionRegNumber() != null) profile.setInstitutionRegNumber(request.getInstitutionRegNumber());
         if (request.getGstin() != null) profile.setGstin(request.getGstin());
         if (request.getCinNumber() != null) profile.setCinNumber(request.getCinNumber());
         if (request.getCsrNumber() != null) profile.setCsrNumber(request.getCsrNumber());
