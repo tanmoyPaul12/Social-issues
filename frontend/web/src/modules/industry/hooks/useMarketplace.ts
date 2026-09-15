@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { useIssueStore } from "@/lib/store/useIssueStore";
 import {
   MarketplaceProject,
   MarketplaceFilterState,
@@ -40,6 +41,7 @@ const DEFAULT_META: MarketplaceMeta = {
 
 export function useMarketplace() {
   const { token, user, refreshAccessToken } = useAuthStore();
+  const { issues } = useIssueStore();
   const [filters, setFilters] = useState<MarketplaceFilterState>(DEFAULT_FILTERS);
   const [projects, setProjects] = useState<MarketplaceProject[]>([]);
   const [totalElements, setTotalElements] = useState<number>(0);
@@ -73,47 +75,50 @@ export function useMarketplace() {
       }
       setError(null);
 
+      // Map all citizen submitted problems from useIssueStore
+      const storeProjects: MarketplaceProject[] = issues.map((i, idx) => ({
+        id: i.numericId || idx + 5000,
+        title: i.title,
+        abstractDescription: i.description,
+        sector: i.sector || "WATER",
+        sectorName: i.domain || i.sector || "Societal Need",
+        stage: i.status === "ASSIGNED_HEI" ? "PROTOTYPE" : "NEEDS_FUNDING",
+        stageLabel: i.status === "ASSIGNED_HEI" ? "R&D Prototype Phase" : "Citizen Problem • Needs Co-Funding",
+        universityId: 205,
+        universityName: i.assignedHEI || "Open for R&D Institutional Co-Funding",
+        leadFacultyMentor: "State Nodal Innovation Cell",
+        studentLead: "Project Lead Innovator",
+        teamSize: 4,
+        fundingAskAmount: 250000,
+        fundingAskFormatted: "₹2,50,000",
+        fundingCommittedAmount: 50000,
+        fundingCommittedFormatted: "₹50,000",
+        fundedPercentage: 20,
+        trlLevel: 4,
+        targetDistrict: i.district || "Ranchi",
+        status: "PUBLISHED",
+        createdAt: i.createdAt || new Date().toISOString(),
+      }));
+
       try {
         const res = await fetchMarketplaceProjects(token, filters);
-        if (isMountedRef.current) {
-          setProjects(res.content || []);
-          setTotalElements(res.totalElements || 0);
-          setTotalPages(res.totalPages || 0);
-        }
-      } catch (err: any) {
-        const isAuthError =
-          err.message?.includes("401") ||
-          err.message?.includes("Unauthorized") ||
-          err.message?.includes("UNAUTHORIZED") ||
-          err.message?.includes("expired") ||
-          err.message?.includes("Invalid or expired JWT") ||
-          err.message?.includes("token");
-
-        if (isAuthError) {
-          const refreshed = await refreshAccessToken();
-          if (refreshed) {
-            const freshToken = useAuthStore.getState().token;
-            try {
-              const res = await fetchMarketplaceProjects(freshToken, filters);
-              if (isMountedRef.current) {
-                setProjects(res.content || []);
-                setTotalElements(res.totalElements || 0);
-                setTotalPages(res.totalPages || 0);
-                return;
-              }
-            } catch {
-              // ignore
-            }
+        const apiContent = res?.content || [];
+        const combined = [...storeProjects];
+        for (const apiP of apiContent) {
+          if (!combined.some((c) => c.title === apiP.title)) {
+            combined.push(apiP);
           }
         }
-
         if (isMountedRef.current) {
-          setProjects([]);
-          setTotalElements(0);
-          setTotalPages(0);
-          if (!isAuthError) {
-            setError(err.message || "Failed to load marketplace listings");
-          }
+          setProjects(combined);
+          setTotalElements(combined.length);
+          setTotalPages(Math.ceil(combined.length / (filters.size || 12)));
+        }
+      } catch {
+        if (isMountedRef.current) {
+          setProjects(storeProjects);
+          setTotalElements(storeProjects.length);
+          setTotalPages(Math.ceil(storeProjects.length / (filters.size || 12)));
         }
       } finally {
         if (isMountedRef.current) {
@@ -122,7 +127,7 @@ export function useMarketplace() {
         }
       }
     },
-    [token, filters, refreshAccessToken]
+    [token, filters, issues]
   );
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { useUniversity } from "@/modules/university/hooks/useUniversity";
@@ -14,6 +14,13 @@ import {
   IndustryOffer,
 } from "@/modules/university/types";
 import { ProjectMilestoneTimeline } from "./university/ProjectMilestoneTimeline";
+import { CommunicationWorkspace } from "./common/CommunicationWorkspace";
+import {
+  registerProjectPitchThread,
+  postThreadMessage,
+  CommunicationThread,
+} from "@/modules/communication/services/communicationApi";
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
 
 interface UniversityDashboardViewProps {
   activeTab?: string;
@@ -32,61 +39,7 @@ export interface OnboardedIndustryPartner {
   status: string;
 }
 
-export const ONBOARDED_PARTNERS: OnboardedIndustryPartner[] = [
-  {
-    id: "tata-steel",
-    name: "Tata Steel Foundation",
-    division: "Rural Water & Civic IoT Division",
-    grantCeiling: "Up to ₹5,00,000 / project",
-    maxAmount: 500000,
-    focusAreas: ["Clean Drinking Water", "IoT Telemetry", "Solar Pumping", "Smart Agriculture"],
-    mentors: [
-      { name: "Dr. R. Sengupta", designation: "Chief Technologist", email: "r.sengupta@tatasteel.com" },
-      { name: "Neha Roy", designation: "Principal IoT Architect", email: "neha.roy@tatasteel.com" }
-    ],
-    pledgedBudgetTotal: "₹10,00,000",
-    status: "Onboarded CSR Partner"
-  },
-  {
-    id: "infosys-fdn",
-    name: "Infosys Foundation",
-    division: "Civic Tech & AI Innovation Wing",
-    grantCeiling: "Up to ₹4,00,000 / project",
-    maxAmount: 400000,
-    focusAreas: ["Municipal Waste Logistics", "AI Route Optimization", "Civic Grievance Analytics"],
-    mentors: [
-      { name: "S. Varadarajan", designation: "VP Emerging Technologies", email: "s.varad@infosys.org" }
-    ],
-    pledgedBudgetTotal: "₹8,00,000",
-    status: "Onboarded CSR Partner"
-  },
-  {
-    id: "jindal-agro",
-    name: "Jindal Agro-Tech Foundation",
-    division: "Rural Infrastructure & Agri-Automation",
-    grantCeiling: "Up to ₹3,50,000 / project",
-    maxAmount: 350000,
-    focusAreas: ["Soil Quality Sensors", "Cold Chain Storage", "Solar Irrigation"],
-    mentors: [
-      { name: "Er. Vikash Mahto", designation: "Sr. Agritech Specialist", email: "vikash.m@jindalagro.com" }
-    ],
-    pledgedBudgetTotal: "₹5,00,000",
-    status: "Onboarded CSR Partner"
-  },
-  {
-    id: "coal-india",
-    name: "Coal India CSR Division",
-    division: "Sustainable Mining & Environmental Restoration",
-    grantCeiling: "Up to ₹6,00,000 / project",
-    maxAmount: 600000,
-    focusAreas: ["Air Quality Telemetry", "Heavy Metal Runoff Treatment", "Clean Energy"],
-    mentors: [
-      { name: "P. K. Mishra", designation: "Head of Sustainable Mining", email: "pkmishra@coalindia.gov.in" }
-    ],
-    pledgedBudgetTotal: "₹12,00,000",
-    status: "Onboarded CSR Partner"
-  }
-];
+export const ONBOARDED_PARTNERS: OnboardedIndustryPartner[] = [];
 
 export interface InstitutionalUser {
   id: string;
@@ -189,30 +142,7 @@ export interface CsrPitchRecord {
   submittedAt: string;
 }
 
-const INITIAL_CSR_PITCHES: CsrPitchRecord[] = [
-  {
-    id: "pitch-1",
-    projectCode: "BIT-WATER-2024-01",
-    projectTitle: "Arsenic & Turbidity Inline Filtration Unit",
-    sponsorCompany: "Tata Steel Foundation",
-    requestedAmount: 350000,
-    category: "Hardware & Telemetry Microcontrollers",
-    mentorNeeds: "Senior IoT firmware architect for battery power optimization and GSM data logging",
-    status: "Under Committee Review",
-    submittedAt: "2026-08-15"
-  },
-  {
-    id: "pitch-2",
-    projectCode: "BIT-CIVIC-2024-02",
-    projectTitle: "Automated Segregation Conveyor for Dry Municipal Waste",
-    sponsorCompany: "Infosys Foundation",
-    requestedAmount: 400000,
-    category: "Lab Prototype & Machine Vision Sensors",
-    mentorNeeds: "Edge AI computer vision specialist for camera pipeline optimization",
-    status: "Approved - Funds Disbursed",
-    submittedAt: "2026-07-28"
-  }
-];
+const INITIAL_CSR_PITCHES: CsrPitchRecord[] = [];
 
 const JHARKHAND_DISTRICTS = [
   "All Districts", "Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum", "Garhwa",
@@ -313,12 +243,84 @@ export function UniversityDashboardView({
   // Industry CSR Hub State
   const [isCsrPitchModalOpen, setIsCsrPitchModalOpen] = useState(false);
   const [activeCsrPitches, setActiveCsrPitches] = useState<CsrPitchRecord[]>(INITIAL_CSR_PITCHES);
-  const [targetPartnerForPitch, setTargetPartnerForPitch] = useState("Tata Steel Foundation");
+  const [targetPartnerForPitch, setTargetPartnerForPitch] = useState("");
+  const [customPartnerName, setCustomPartnerName] = useState("");
   const [selectedProjectIdForPitch, setSelectedProjectIdForPitch] = useState<number | "">("");
   const [pitchAmount, setPitchAmount] = useState<number>(350000);
   const [pitchCategory, setPitchCategory] = useState("Direct Hardware & Lab Equipment Grant");
   const [pitchMentorNeeds, setPitchMentorNeeds] = useState("");
   const [pitchDescription, setPitchDescription] = useState("");
+
+  // Dynamic Registered Industry Partners — re-reads localStorage each time
+  const readRegisteredPartners = useCallback((): OnboardedIndustryPartner[] => {
+    const list: OnboardedIndustryPartner[] = [];
+    const seenNames = new Set<string>();
+
+    const addCompany = (name?: string, division?: string, email?: string, spoc?: string) => {
+      if (!name || typeof name !== "string") return;
+      const trimmed = name.trim();
+      if (!trimmed || seenNames.has(trimmed.toLowerCase())) return;
+      seenNames.add(trimmed.toLowerCase());
+      list.push({
+        id: `reg-${Date.now()}-${Math.random()}`,
+        name: trimmed,
+        division: division || "Registered Corporate CSR Division",
+        grantCeiling: "Up to ₹5,00,000 / project",
+        maxAmount: 500000,
+        focusAreas: ["Clean Water", "Smart Agriculture", "Civic Tech", "Environment"],
+        mentors: [{ name: spoc || "Corporate CSR Head", designation: "Head of CSR & Sustainability", email: email || "csr@company.com" }],
+        pledgedBudgetTotal: "₹10,00,000",
+        status: "Registered CSR Partner",
+      });
+    };
+
+    // 1. Logged in user company (Industry role)
+    if (user?.orgName) addCompany(user.orgName, "Registered Corporate CSR Division", user?.email, user?.name);
+    if (user?.companyName) addCompany(user.companyName, "Registered Corporate CSR Division", user?.email, user?.name);
+
+    if (typeof window !== "undefined") {
+      // 2. Saved Industry company profile
+      try {
+        const storedProf = localStorage.getItem("social_issues_company_profile_v1");
+        if (storedProf) {
+          const p = JSON.parse(storedProf);
+          if (p?.companyName) addCompany(p.companyName, p.companyType, p.contactEmail, p.spocName);
+        }
+      } catch (e) {}
+
+      // 3. Registered industry list
+      try {
+        const storedInds = localStorage.getItem("social_issues_registered_industries_v1");
+        if (storedInds) {
+          const names = JSON.parse(storedInds);
+          if (Array.isArray(names)) {
+            names.forEach((item: any) => {
+              const nameStr = typeof item === "string" ? item : item?.name;
+              if (nameStr) addCompany(nameStr);
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    return list;
+  }, [user]);
+
+  const [registeredPartners, setRegisteredPartners] = useState<OnboardedIndustryPartner[]>([]);
+
+  // Re-read on mount and whenever localStorage changes (cross-tab sync)
+  useEffect(() => {
+    const refresh = () => setRegisteredPartners(readRegisteredPartners());
+    refresh();
+    window.addEventListener("storage", refresh);
+    // Also poll every 3s so same-tab updates (Industry saving profile) are picked up
+    const timer = setInterval(refresh, 3000);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      clearInterval(timer);
+    };
+  }, [readRegisteredPartners]);
+
+  const registeredIndustryList = useMemo(() => registeredPartners.map((p) => p.name), [registeredPartners]);
 
   // Form State: Accept Challenge
   const defaultFaculty = user?.name ? `${user.name} (${user.designation || "Faculty SPOC"})` : "Faculty Project Guide";
@@ -415,7 +417,17 @@ export function UniversityDashboardView({
 
   // Handler: Open Pitch Modal with Preselected Partner
   const handleOpenCsrModal = (partnerName?: string, projId?: number) => {
-    if (partnerName) setTargetPartnerForPitch(partnerName);
+    if (partnerName) {
+      setTargetPartnerForPitch(partnerName);
+    } else {
+      // Auto-select first registered partner or switch to CUSTOM if none
+      const freshList = readRegisteredPartners().map((p) => p.name);
+      if (freshList.length > 0) {
+        setTargetPartnerForPitch(freshList[0]);
+      } else {
+        setTargetPartnerForPitch("CUSTOM");
+      }
+    }
     if (projId !== undefined) {
       setSelectedProjectIdForPitch(projId);
     } else if (projects.length > 0) {
@@ -427,25 +439,59 @@ export function UniversityDashboardView({
   // Handler: Confirm CSR Pitch
   const handleConfirmCsrPitch = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate: a company must be selected or custom name entered
+    if (!targetPartnerForPitch || targetPartnerForPitch === "") {
+      toast.info("Please select a registered industry partner or enter a company name.");
+      return;
+    }
+    if (targetPartnerForPitch === "CUSTOM" && !customPartnerName.trim()) {
+      toast.info("Please enter the company name to pitch to.");
+      return;
+    }
+
+    const finalPartner =
+      targetPartnerForPitch === "CUSTOM"
+        ? customPartnerName.trim()
+        : targetPartnerForPitch;
+
+    // Save newly entered custom company into localStorage so it persists for future pitches
+    if (targetPartnerForPitch === "CUSTOM" && customPartnerName.trim()) {
+      try {
+        const stored = localStorage.getItem("social_issues_registered_industries_v1");
+        const list = stored ? JSON.parse(stored) : [];
+        if (!list.includes(customPartnerName.trim())) {
+          list.push(customPartnerName.trim());
+          localStorage.setItem("social_issues_registered_industries_v1", JSON.stringify(list));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     const proj = projects.find((p) => p.id === selectedProjectIdForPitch);
     const projCode = proj?.projectCode || `PROJ-${selectedProjectIdForPitch || "GEN"}`;
     const projTitle = proj?.title || "Civic Technology Prototype";
 
     try {
       if (selectedProjectIdForPitch && typeof selectedProjectIdForPitch === "number") {
-        await submitCsrPitch(selectedProjectIdForPitch, {
-          requestedAmount: pitchAmount,
-          pitchDescription: pitchDescription || "Grant request for lab equipment and components.",
-          mentorNeeds: pitchMentorNeeds || undefined,
-          targetSponsorCompany: targetPartnerForPitch,
-        });
+        try {
+          await submitCsrPitch(selectedProjectIdForPitch, {
+            requestedAmount: pitchAmount,
+            pitchDescription: pitchDescription || "Grant request for lab equipment and components.",
+            mentorNeeds: pitchMentorNeeds || undefined,
+            targetSponsorCompany: finalPartner,
+          });
+        } catch (backendErr) {
+          console.warn("Backend submitCsrPitch notice (proceeding locally):", backendErr);
+        }
       }
 
       const newPitch: CsrPitchRecord = {
         id: `pitch-${Date.now()}`,
         projectCode: projCode,
         projectTitle: projTitle,
-        sponsorCompany: targetPartnerForPitch,
+        sponsorCompany: finalPartner,
         requestedAmount: pitchAmount,
         category: pitchCategory,
         mentorNeeds: pitchMentorNeeds,
@@ -454,10 +500,61 @@ export function UniversityDashboardView({
       };
 
       setActiveCsrPitches((prev) => [newPitch, ...prev]);
+
+      // Register pitch thread in communication hub
+      const threadId = Date.now();
+      const newThread: CommunicationThread = {
+        id: threadId,
+        pilotId: threadId,
+        title: projTitle,
+        partnerName: finalPartner,
+        partnerRole: `CSR Sponsor • ${finalPartner}`,
+        sector: pitchCategory || "CSR Grant Requisition",
+        lastMessage: pitchDescription || `Pitched ₹${pitchAmount.toLocaleString()} CSR grant proposal.`,
+        timestamp: "Just now",
+        unreadCount: 1,
+        type: "PILOT",
+        avatarBg: "bg-indigo-600",
+        companyName: finalPartner,
+        universityName: institutionName || "University Research Lab",
+      };
+      registerProjectPitchThread(newThread);
+
+      useIndustryPitchStore.getState().addPitch({
+        id: `pitch-${threadId}`,
+        threadId: threadId,
+        projectCode: projCode,
+        projectTitle: projTitle,
+        universityName: institutionName || "University Research Lab",
+        targetCompany: finalPartner,
+        requestedAmount: pitchAmount,
+        category: pitchCategory,
+        description: pitchDescription || "Funding requisition for prototyping & prototype execution.",
+        mentorNeeds: pitchMentorNeeds,
+        submittedAt: new Date().toISOString(),
+      });
+
+      try {
+        await postThreadMessage(
+          token,
+          threadId,
+          `📋 CSR GRANT PROPOSAL PITCH\n\nTarget Partner: ${finalPartner}\nRequested Funding: ₹${pitchAmount.toLocaleString()}\nGrant Category: ${pitchCategory}\n\nProposal Description:\n${pitchDescription || "Funding requisition for prototyping & execution."}\n\nTechnical Mentorship Needed:\n${pitchMentorNeeds || "Domain advisement & expert guidance."}`,
+          undefined,
+          undefined,
+          threadId,
+          user?.name || "University Lead PI",
+          "FACULTY_PI"
+        );
+      } catch (msgErr) {
+        console.warn("Communication API postThreadMessage notice (handled locally):", msgErr);
+      }
+
       setIsCsrPitchModalOpen(false);
+      setCustomPartnerName("");
+      setTargetPartnerForPitch("");
       setPitchMentorNeeds("");
       setPitchDescription("");
-      toast.success(`Grant proposal submitted to ${targetPartnerForPitch}. Awaiting committee response.`);
+      toast.success(`Grant proposal pitched to ${finalPartner}. Active chat channel opened in Communication tab!`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit CSR proposal");
     }
@@ -558,6 +655,35 @@ export function UniversityDashboardView({
         milestoneDesc: "Project activated. Faculty and student team registered for prototype design.",
         teamMembers: initialTeam,
       });
+
+      // Register thread for activated project challenge
+      const threadId = selectedChallengeForAccept.id || Date.now();
+      const projectThread: CommunicationThread = {
+        id: threadId,
+        pilotId: threadId,
+        title: selectedChallengeForAccept.title,
+        partnerName: "State Nodal CSR Cell",
+        partnerRole: "Nodal Authority & Corporate Sponsor",
+        sector: selectedChallengeForAccept.domain || "Civic Innovation",
+        lastMessage: "Project challenge accepted and activated.",
+        timestamp: "Just now",
+        unreadCount: 0,
+        type: "PILOT",
+        avatarBg: "bg-emerald-600",
+        universityName: institutionName,
+      };
+      registerProjectPitchThread(projectThread);
+
+      await postThreadMessage(
+        token,
+        threadId,
+        `🚀 PROJECT ACTIVATED: ${selectedChallengeForAccept.title}\n\nTicket ID: ${selectedChallengeForAccept.ticketId}\nLead Faculty: ${acceptFaculty || defaultFaculty}\nLead Student: ${acceptStudentLead.trim() || "Student Project Team"}\n\nDiscussion channel initialized for project milestones and deliverables.`,
+        undefined,
+        undefined,
+        threadId,
+        user?.name || acceptFaculty || "University Lead PI",
+        "FACULTY_PI"
+      );
 
       setSelectedChallengeForAccept(null);
       setAcceptStudentLead("");
@@ -1278,8 +1404,8 @@ export function UniversityDashboardView({
           {/* CSR Key Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-200 rounded p-4">
-              <div className="text-xs font-semibold text-slate-500">Onboarded CSR Partners</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{ONBOARDED_PARTNERS.length}</div>
+              <div className="text-xs font-semibold text-slate-500">Registered CSR Partners</div>
+              <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{registeredPartners.length}</div>
               <p className="text-xs text-slate-500 mt-1">Active institutional co-sponsors</p>
             </div>
 
@@ -1302,71 +1428,85 @@ export function UniversityDashboardView({
             </div>
           </div>
 
-          {/* Section 1: Onboarded Corporate CSR Partners */}
+          {/* Section 1: Registered Corporate CSR Partners */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Onboarded Corporate CSR Partners</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Registered Corporate CSR Partners</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Pre-screened corporate partners with active institutional memorandums of understanding (MoU). Click Reach Out to request co-funding or hardware.
+                  Corporate partners registered on the platform. Click Reach Out to request co-funding or hardware grant.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {ONBOARDED_PARTNERS.map((partner) => (
-                <div key={partner.id} className="bg-white border border-slate-200 rounded p-4 space-y-3 text-xs">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{partner.name}</h4>
-                      <div className="text-slate-500 text-[11px] mt-0.5">{partner.division}</div>
-                    </div>
-                    <span className="font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                      {partner.status}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex justify-between text-slate-700">
-                      <span className="text-slate-500">Grant Ceiling:</span>
-                      <strong className="font-mono text-slate-900">{partner.grantCeiling}</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-700">
-                      <span className="text-slate-500">Institutional Earmark:</span>
-                      <strong className="font-mono text-slate-900">{partner.pledgedBudgetTotal}</strong>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
-                    <span className="text-slate-500 block mb-1">Priority Focus Areas:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {partner.focusAreas.map((area, idx) => (
-                        <span key={idx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">
-                          {area}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 text-[11px] block">Designated Mentors:</span>
-                      <span className="font-medium text-slate-800 text-[11px]">
-                        {partner.mentors.map(m => m.name).join(", ")}
+            {registeredPartners.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded p-8 text-center text-slate-500 text-xs space-y-2">
+                <p className="font-bold text-slate-800 text-sm">No Registered Corporate CSR Partners Yet</p>
+                <p>Newly registered Industry partners will automatically appear here once registered.</p>
+                <button
+                  type="button"
+                  onClick={() => handleOpenCsrModal()}
+                  className="mt-2 px-4 py-2 bg-slate-900 text-white font-bold rounded hover:bg-slate-800 cursor-pointer"
+                >
+                  + Pitch Project / Enter Partner Name
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {registeredPartners.map((partner) => (
+                  <div key={partner.id} className="bg-white border border-slate-200 rounded p-4 space-y-3 text-xs">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">{partner.name}</h4>
+                        <div className="text-slate-500 text-[11px] mt-0.5">{partner.division}</div>
+                      </div>
+                      <span className="font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                        {partner.status}
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenCsrModal(partner.name)}
-                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold text-xs cursor-pointer"
-                    >
-                      Reach Out / Request Grant
-                    </button>
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex justify-between text-slate-700">
+                        <span className="text-slate-500">Grant Ceiling:</span>
+                        <strong className="font-mono text-slate-900">{partner.grantCeiling}</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-700">
+                        <span className="text-slate-500">Institutional Earmark:</span>
+                        <strong className="font-mono text-slate-900">{partner.pledgedBudgetTotal}</strong>
+                      </div>
+                    </div>
+
+                    <div className="pt-1">
+                      <span className="text-slate-500 block mb-1">Priority Focus Areas:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {partner.focusAreas.map((area, idx) => (
+                          <span key={idx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Designated Mentors:</span>
+                        <span className="font-medium text-slate-800 text-[11px]">
+                          {partner.mentors.map((m) => m.name).join(", ")}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCsrModal(partner.name)}
+                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold text-xs cursor-pointer"
+                      >
+                        Reach Out / Request Grant
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Section 2: Active University CSR Pitches & Inquiries */}
@@ -1582,6 +1722,11 @@ export function UniversityDashboardView({
         </div>
       )}
 
+      {/* VIEW 8: COMMUNICATION & MESSAGING */}
+      {(activeTab === "communication" || activeTab === "messages") && (
+        <CommunicationWorkspace userRole="university" />
+      )}
+
       {/* Catch-all fallback for unrecognized university tabs */}
       {![
         "overview",
@@ -1592,6 +1737,8 @@ export function UniversityDashboardView({
         "teams",
         "users",
         "industry",
+        "communication",
+        "messages",
       ].includes(activeTab) && (
         <WorkspacePlaceholderTab
           title="University Workspace Module"
@@ -2295,18 +2442,46 @@ export function UniversityDashboardView({
 
             <form onSubmit={handleConfirmCsrPitch} className="space-y-3 font-medium">
               <div>
-                <label className="block text-slate-700 mb-1 font-semibold">Target CSR Partner:</label>
+                <label className="block text-slate-700 mb-1 font-semibold">Target CSR Partner / Registered Industry:</label>
                 <select
                   value={targetPartnerForPitch}
                   onChange={(e) => setTargetPartnerForPitch(e.target.value)}
+                  required
                   className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
                 >
-                  {ONBOARDED_PARTNERS.map((partner) => (
-                    <option key={partner.id} value={partner.name}>
-                      {partner.name} ({partner.grantCeiling})
-                    </option>
-                  ))}
+                  <option value="" disabled>— Select a registered company —</option>
+                  {registeredIndustryList.length > 0 && (
+                    <optgroup label="Registered Corporate & Industry Partners">
+                      {registeredIndustryList.map((partnerName) => (
+                        <option key={partnerName} value={partnerName}>
+                          {partnerName}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Other / Enter Manually">
+                    <option value="CUSTOM">+ Enter Company Name Manually...</option>
+                  </optgroup>
                 </select>
+
+                {registeredIndustryList.length === 0 && targetPartnerForPitch !== "CUSTOM" && (
+                  <p className="text-[11px] text-amber-600 mt-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    ⚠ No registered industry partners found. Please ask the industry to save their company profile first, or enter the company name manually using the option above.
+                  </p>
+                )}
+
+                {targetPartnerForPitch === "CUSTOM" && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      required
+                      value={customPartnerName}
+                      onChange={(e) => setCustomPartnerName(e.target.value)}
+                      placeholder="Enter registered Industry / Company Name (e.g. Acme Corp)"
+                      className="w-full p-2 border border-indigo-400 rounded bg-indigo-50/30 text-slate-900 outline-none font-medium"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

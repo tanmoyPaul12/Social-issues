@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GrassrootIssueRecord } from '@/lib/store/useIssueStore';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useIssueStore, GrassrootIssueRecord } from '@/lib/store/useIssueStore';
 import { toast } from '@/components/dashboard/ToastStack';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 
 export interface ModalityBreakdown {
   text_analysis?: { category: string; priority_score: number };
@@ -33,6 +36,9 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   generalizedConsensus,
   onClose,
 }) => {
+  const { user, token } = useAuthStore();
+  const { updateIssue } = useIssueStore();
+
   // Main Top Level Tab: "citizen" | "ai" | "action"
   const [mainTab, setMainTab] = useState<'citizen' | 'ai' | 'action'>('citizen');
   // Text Toggle inside Citizen Tab: "english" | "original"
@@ -55,6 +61,12 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   const domain = issue?.domain || "General Grassroot Need";
   const assignedHEI = issue?.assignedHEI || "Pending Assignment";
 
+  const defaultHei = issue?.assignedHEI && issue.assignedHEI !== "Pending Assignment"
+    ? issue.assignedHEI
+    : (user?.orgName || "Birla Institute of Technology, Mesra");
+
+  const [selectedHei, setSelectedHei] = useState<string>(defaultHei);
+
   // Citizen Contact Details
   const citizenEmail = issue?.citizenEmail || "citizen.anonymous@jharkhand.gov.in";
   const citizenName = issue?.citizenName || "Registered Citizen Submitter";
@@ -75,13 +87,36 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   const priorityLevel = consensus?.final_priority_level || issue?.priority || 'MEDIUM';
   const priorityScore = consensus?.average_priority_score ?? (priorityLevel === 'CRITICAL' ? 85 : priorityLevel === 'HIGH' ? 70 : 50);
 
-  const handleAction = (actionType: 'APPROVED' | 'CLARIFICATION' | 'ESCALATED') => {
+  const handleAction = async (actionType: 'APPROVED' | 'CLARIFICATION' | 'ESCALATED') => {
     setDecisionState(actionType);
     if (actionType === 'APPROVED') {
-      toast.success(`Grievance #${issueId} Approved! Dispatched to ${assignedHEI}.`);
+      updateIssue(issueId, {
+        assignedHEI: selectedHei,
+        status: 'ASSIGNED_HEI',
+      });
+
+      try {
+        const numId = issue?.numericId;
+        if (numId) {
+          await fetch(`${API_BASE_URL}/issues/${numId}/assign`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ assignedHEI: selectedHei }),
+          });
+        }
+      } catch (err) {
+        console.warn('Backend issue assignment update note:', err);
+      }
+
+      toast.success(`Grievance #${issueId} Approved! Dispatched to ${selectedHei}.`);
     } else if (actionType === 'CLARIFICATION') {
+      updateIssue(issueId, { status: 'CLARIFICATION_REQUESTED' });
       toast.info(`Clarification notice dispatched to citizen (${citizenEmail}).`);
     } else if (actionType === 'ESCALATED') {
+      updateIssue(issueId, { status: 'ESCALATED_CABINET' });
       toast.warning(`Grievance #${issueId} Escalated to State Secretariat.`);
     }
   };
@@ -477,10 +512,29 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   <p className="text-xs text-slate-600">State Nodal Directorate Level 4 Clearance</p>
                 </div>
 
-                <div className="p-4 bg-white rounded border border-slate-300 space-y-1">
-                  <span className="text-[11px] text-slate-500 font-bold uppercase">Assigned R&amp;D University</span>
-                  <div className="text-sm font-bold text-slate-900">{assignedHEI}</div>
-                  <p className="text-xs text-slate-600">Institutional Allocation</p>
+                <div className="p-4 bg-white rounded border border-slate-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500 font-bold uppercase">Assigned R&amp;D University (AI Recommendation)</span>
+                    <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded border border-indigo-200">
+                      🤖 AI Suggested Target
+                    </span>
+                  </div>
+                  <select
+                    value={selectedHei}
+                    onChange={(e) => setSelectedHei(e.target.value)}
+                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {user?.orgName && (
+                      <option value={user.orgName}>{user.orgName} (Newly Registered University)</option>
+                    )}
+                    <option value="Birla Institute of Technology, Mesra">Birla Institute of Technology, Mesra (BIT Mesra - AISHE U-0205)</option>
+                    <option value="IIT (ISM) Dhanbad">IIT (ISM) Dhanbad (AISHE U-0206)</option>
+                    <option value="NIT Jamshedpur">NIT Jamshedpur (AISHE U-0207)</option>
+                    <option value="Birsa Agricultural University, Kanke">Birsa Agricultural University, Kanke (BAU - AISHE U-0208)</option>
+                    <option value="Ranchi University">Ranchi University (AISHE U-0209)</option>
+                    <option value="Vinoba Bhave University, Hazaribagh">Vinoba Bhave University, Hazaribagh (VBU - AISHE U-0210)</option>
+                  </select>
+                  <p className="text-xs text-slate-600">Select target University R&D center to receive this civic problem statement.</p>
                 </div>
               </div>
             </div>

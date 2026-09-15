@@ -7,11 +7,14 @@ import { PilotsOverviewStats } from "./PilotsOverviewStats";
 import { ActivePilotCard } from "./ActivePilotCard";
 import { PilotDetailDossierModal } from "./PilotDetailDossierModal";
 
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
+
 interface ActivePilotsTabProps {
   onNavigateTab?: (tabId: string) => void;
 }
 
 export function ActivePilotsTab({ onNavigateTab }: ActivePilotsTabProps) {
+  const { coFundedProjects } = useIndustryPitchStore();
   const {
     pilots,
     overview,
@@ -57,6 +60,59 @@ export function ActivePilotsTab({ onNavigateTab }: ActivePilotsTabProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in">
+      {/* ── ACCEPTED & CO-FUNDED CSR PROJECTS ── */}
+      {coFundedProjects.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                Active Co-Funded Projects &amp; CSR Pilots ({coFundedProjects.length})
+              </h3>
+              <p className="text-xs text-slate-500">
+                Institutional R&amp;D innovations co-funded under Schedule VII MCA CSR provisions
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coFundedProjects.map((p) => (
+              <div
+                key={p.id}
+                className="bg-white rounded-xl border border-slate-200 p-5 space-y-3.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {p.stage} • 35% Progress
+                    </span>
+                    <span className="font-mono text-xs font-black text-indigo-900">
+                      {p.grantCommitted}
+                    </span>
+                  </div>
+
+                  <h4 className="font-bold text-slate-900 text-sm leading-snug">{p.title}</h4>
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <p className="font-medium text-slate-800">🏫 {p.university}</p>
+                    <p className="text-[11px] text-slate-500">Lead PI: {p.leadInvestigator}</p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-mono text-slate-500">{p.disbursedAmount}</span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab && onNavigateTab("communication")}
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <span>💬 Open Chat</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 1. Header Overview Stats */}
       <PilotsOverviewStats overview={overview} />
 
