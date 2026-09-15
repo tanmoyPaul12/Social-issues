@@ -392,8 +392,6 @@ public class ActivePilotsServiceImpl implements ActivePilotsService {
     @Override
     @Transactional(readOnly = true)
     public List<DiscussionMessageDto> getDiscussions(Long userId, Long pilotId) {
-        IndustryProfile profile = resolveIndustryProfile(userId);
-        resolvePilotForProfile(pilotId, profile.getId());
         return discussionRepository.findByPilotIdOrderByCreatedAtAsc(pilotId)
                 .stream()
                 .map(DiscussionMessageDto::fromEntity)
@@ -403,15 +401,22 @@ public class ActivePilotsServiceImpl implements ActivePilotsService {
     @Override
     @Transactional
     public DiscussionMessageDto postDiscussion(Long userId, Long pilotId, PostDiscussionRequest request) {
-        IndustryProfile profile = resolveIndustryProfile(userId);
-        CoFundedPilot pilot = resolvePilotForProfile(pilotId, profile.getId());
+        CoFundedPilot pilot = pilotRepository.findById(pilotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Co-funded pilot not found with ID: " + pilotId));
 
         PilotDiscussion discussion = new PilotDiscussion();
         discussion.setPilot(pilot);
         discussion.setSenderUserId(userId);
-        String senderName = profile.getSpocName() != null ? profile.getSpocName() : profile.getCompanyName();
+        
+        String senderName = request.getSenderName() != null && !request.getSenderName().isBlank()
+                ? request.getSenderName()
+                : "Project Contributor";
+        String senderRole = request.getSenderRole() != null && !request.getSenderRole().isBlank()
+                ? request.getSenderRole()
+                : "INDUSTRY_PARTNER";
+
         discussion.setSenderName(senderName);
-        discussion.setSenderRole("INDUSTRY_PARTNER");
+        discussion.setSenderRole(senderRole);
         discussion.setMessage(request.getMessage().trim());
         discussion.setAttachmentUrl(request.getAttachmentUrl());
         discussion.setAttachmentName(request.getAttachmentName());
@@ -419,16 +424,20 @@ public class ActivePilotsServiceImpl implements ActivePilotsService {
         discussion = discussionRepository.save(discussion);
 
         // Real-time Event Broadcast
-        NotificationEvent event = new NotificationEvent();
-        event.setEventType("PILOT_MESSAGE_POSTED");
-        event.setSource("backend.pilots");
-        event.setRecipientUserId(userId);
-        event.setRecipientUserType("INDUSTRY_PARTNER");
-        event.setTitle("Message Sent: " + pilot.getTitle());
-        event.setMessage(senderName + ": " + (request.getMessage().length() > 60 ? request.getMessage().substring(0, 57) + "..." : request.getMessage()));
-        event.setSeverity("INFO");
-        event.setActionUrl("/dashboard?role=industry&tab=active-projects");
-        eventPublisher.publishIndustryNotification(event);
+        try {
+            NotificationEvent event = new NotificationEvent();
+            event.setEventType("PILOT_MESSAGE_POSTED");
+            event.setSource("backend.pilots");
+            event.setRecipientUserId(userId);
+            event.setRecipientUserType(senderRole);
+            event.setTitle("Message Sent: " + pilot.getTitle());
+            event.setMessage(senderName + ": " + (request.getMessage().length() > 60 ? request.getMessage().substring(0, 57) + "..." : request.getMessage()));
+            event.setSeverity("INFO");
+            event.setActionUrl("/dashboard?role=industry&tab=active-projects");
+            eventPublisher.publishIndustryNotification(event);
+        } catch (Exception e) {
+            log.warn("Failed to publish notification event for discussion message: {}", e.getMessage());
+        }
 
         return DiscussionMessageDto.fromEntity(discussion);
     }

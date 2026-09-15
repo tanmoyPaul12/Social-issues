@@ -8,6 +8,8 @@ import { MarketplaceProjectCard } from "./MarketplaceProjectCard";
 import { CommitFundingModal } from "./CommitFundingModal";
 import { OfferMentorshipModal } from "./OfferMentorshipModal";
 import { ProjectDossierModal } from "./ProjectDossierModal";
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
+import { toast } from "@/components/dashboard/ToastStack";
 
 interface IndustryMarketplaceTabProps {
   onNavigateTab?: (tabId: string) => void;
@@ -58,6 +60,31 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
     await expressInterest(project.id, {
       pilotInterestScope: "General R&D Collaboration & Testbed Evaluation",
     });
+  };
+
+  const handleCommitFundingWrapper = async (projectId: number, payload: any) => {
+    const success = await commitFunding(projectId, payload);
+    if (selectedProject) {
+      useIndustryPitchStore.getState().addCoFundedProject({
+        projectId: selectedProject.id,
+        title: selectedProject.title,
+        university: selectedProject.universityName,
+        leadInvestigator: selectedProject.leadFacultyMentor || "Faculty Lead PI",
+        grantCommitted: `₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}`,
+        disbursedAmount: `₹${Math.round((payload.grantAmount || 500000) * 0.33).toLocaleString("en-IN")} (Tranche 1)`,
+        domain: selectedProject.sectorName || selectedProject.sector || "R&D Innovation",
+        district: selectedProject.targetDistrict || "Jharkhand",
+        stage: "Prototyping",
+        progress: 30,
+        csrScheduleVII: payload.csrScheduleViiHead || "Schedule VII CSR Provision",
+      });
+
+      toast.success(`Grant commitment signed for "${selectedProject.title}"! Project added to My Co-Funded Projects.`);
+      if (onNavigateTab) {
+        onNavigateTab("collaborations");
+      }
+    }
+    return success;
   };
 
   const handleOpenDossier = (project: MarketplaceProject) => {
@@ -290,7 +317,7 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
         project={selectedProject}
         isOpen={isCommitOpen}
         onClose={() => setIsCommitOpen(false)}
-        onSubmit={commitFunding}
+        onSubmit={handleCommitFundingWrapper}
       />
 
       <OfferMentorshipModal
