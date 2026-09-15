@@ -10,7 +10,11 @@ import {
 import { IndustryActivity, ActivitySeverity } from "@/modules/industry/types/industryDashboard";
 import { toast } from "@/components/dashboard/ToastStack";
 import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
-import { registerProjectPitchThread, CommunicationThread } from "@/modules/communication/services/communicationApi";
+import {
+  registerProjectPitchThread,
+  postThreadMessage,
+  CommunicationThread,
+} from "@/modules/communication/services/communicationApi";
 
 interface IndustryNotificationsTabProps {
   onNavigateTab?: (tabId: string) => void;
@@ -55,7 +59,7 @@ const SEVERITY_CONFIG: Record<
 const SAMPLE_FALLBACK_ACTIVITIES: IndustryActivity[] = [];
 
 export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotificationsTabProps) {
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const [activities, setActivities] = useState<IndustryActivity[]>(SAMPLE_FALLBACK_ACTIVITIES);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,7 +131,7 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
   const handleAcceptCsrPitch = (pitchId: string) => {
     const accepted = acceptPitch(pitchId);
     if (accepted) {
-      const thread: CommunicationThread = {
+      const createdThread = registerProjectPitchThread({
         id: accepted.threadId,
         pilotId: accepted.threadId,
         title: accepted.projectTitle,
@@ -139,9 +143,24 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
         unreadCount: 0,
         type: "PILOT",
         avatarBg: "bg-indigo-600",
-        universityName: accepted.universityName,
-      };
-      registerProjectPitchThread(thread);
+        universityName: accepted.universityName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: accepted.targetCompany || user?.name || "Corporate CSR Sponsor",
+      });
+
+      try {
+        postThreadMessage(
+          token,
+          createdThread.id,
+          `🤝 CSR GRANT PROPOSAL ACCEPTED\n\nCorporate Partner (${user?.name || accepted.targetCompany || "Industry CSR Committee"}) has officially accepted the grant pitch for "${accepted.projectTitle}".\n\nActive communication channel is now open for prototype review, technical mentorship, and milestone disbursements.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || "Industry CSR SPOC",
+          "INDUSTRY_SPOC",
+          accepted.projectTitle,
+          "INDUSTRY"
+        );
+      } catch {}
 
       toast.success(`Accepted CSR Pitch for "${accepted.projectTitle}"! Moved to My Co-Funded Projects.`);
       if (onNavigateTab) {

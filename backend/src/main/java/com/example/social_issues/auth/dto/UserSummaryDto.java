@@ -185,6 +185,18 @@ public class UserSummaryDto {
         this.role = role;
     }
 
+    public void setRole(String role) {
+        if (role == null) {
+            this.role = null;
+            return;
+        }
+        try {
+            this.role = Role.valueOf(role.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            this.role = null;
+        }
+    }
+
     public boolean isVerified() {
         return verified;
     }

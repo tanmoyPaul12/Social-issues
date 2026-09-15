@@ -12,6 +12,16 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.example.social_issues.universitycollab.model.UniversityProject;
+import com.example.social_issues.universitycollab.model.UniversityProjectStage;
+import com.example.social_issues.universitycollab.repository.UniversityProjectRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -20,6 +30,7 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(MarketplaceDataSeeder.class);
 
     private final MarketplaceProjectRepository projectRepository;
+    private final UniversityProjectRepository universityProjectRepository;
     private final IndustryProfileRepository industryProfileRepository;
     private final CoFundedPilotRepository pilotRepository;
     private final PilotMilestoneRepository milestoneRepository;
@@ -35,6 +46,7 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
 
     public MarketplaceDataSeeder(
             MarketplaceProjectRepository projectRepository,
+            UniversityProjectRepository universityProjectRepository,
             IndustryProfileRepository industryProfileRepository,
             CoFundedPilotRepository pilotRepository,
             PilotMilestoneRepository milestoneRepository,
@@ -48,6 +60,7 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
             IndustryTeamMemberRepository industryTeamMemberRepository,
             CorporateNotificationPreferenceRepository corporateNotificationPreferenceRepository) {
         this.projectRepository = projectRepository;
+        this.universityProjectRepository = universityProjectRepository;
         this.industryProfileRepository = industryProfileRepository;
         this.pilotRepository = pilotRepository;
         this.milestoneRepository = milestoneRepository;
@@ -65,6 +78,7 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         seedMarketplaceProjects();
+        seedUniversityProjects();
         seedActivePilots();
     }
 
@@ -163,6 +177,78 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
 
         projectRepository.saveAll(List.of(p1, p2, p3, p4, p5));
         log.info("Successfully seeded {} academic R&D marketplace projects.", 5);
+    }
+
+    private void seedUniversityProjects() {
+        if (universityProjectRepository.count() > 0) {
+            log.info("University collaboration projects already exist in the database, skipping seeding.");
+            return;
+        }
+
+        log.info("Seeding verified University Research Projects for Jharkhand HEIs (AISHE U-0205)...");
+
+        UniversityProject up1 = new UniversityProject();
+        up1.setProjectCode("UNIV-BAU-2026-001");
+        up1.setAisheCode("U-0205");
+        up1.setUniversityName("Birsa Agricultural University (BAU), Kanke");
+        up1.setTitle("IoT-Enabled Low-Power Soil Nutrient & Moisture Sensing Grid for Rainfed Millets");
+        up1.setAbstractDescription("Subsurface LoRaWAN wireless sensor nodes measuring NPK concentration, pH, and soil moisture levels in Khunti tribal millet clusters with dynamic solar valve controllers.");
+        up1.setDomain("AgriTech & IoT");
+        up1.setDistrict("Khunti");
+        up1.setStage(UniversityProjectStage.LAB_PROTOTYPING);
+        up1.setProgressPercentage(40);
+        up1.setLeadFacultyMentor("Prof. Shailendra Prasad");
+        up1.setLeadStudentInnovator("Vikas Mahato");
+        up1.setAllocatedGrant(new BigDecimal("2400000.00"));
+        up1.setCsrPartner("TATA Steel CSR Foundation");
+        up1.setCurrentMilestone("Field telemetry sensors calibrated for Ranchi & Jamshedpur testbeds.");
+        up1.setIsSeekingCsrGrant(true);
+        up1.setRequestedCsrAmount(new BigDecimal("2400000.00"));
+        up1.setCsrPitchDescription("IoT sensing grid for precision irrigation in rainfed tribal millets.");
+        up1.setCsrMentorNeeds("Agronomy sensor telemetry and LoRa gateway hardware guidance.");
+
+        UniversityProject up2 = new UniversityProject();
+        up2.setProjectCode("UNIV-BIT-2026-002");
+        up2.setAisheCode("U-0205");
+        up2.setUniversityName("Birla Institute of Technology (BIT) Mesra, Ranchi");
+        up2.setTitle("Solar-Assisted Arsenic Removal Unit with Continuous Water Quality Telemetry");
+        up2.setAbstractDescription("Adsorption-based modular water treatment plant removing arsenic and dissolved iron from groundwater in Sahibganj tribal settlements.");
+        up2.setDomain("Water & Environment");
+        up2.setDistrict("Sahibganj");
+        up2.setStage(UniversityProjectStage.LAB_PROTOTYPING);
+        up2.setProgressPercentage(30);
+        up2.setLeadFacultyMentor("Dr. R. K. Mukherjee");
+        up2.setLeadStudentInnovator("Ananya Soren");
+        up2.setAllocatedGrant(new BigDecimal("1800000.00"));
+        up2.setCsrPartner("Uranium Corp India Ltd (UCIL) CSR");
+        up2.setCurrentMilestone("NABL lab test report verified for arsenic reduction < 0.005 mg/L.");
+        up2.setIsSeekingCsrGrant(true);
+        up2.setRequestedCsrAmount(new BigDecimal("1800000.00"));
+        up2.setCsrPitchDescription("Solar bio-sand arsenic filtration for Sahibganj & Pakur.");
+        up2.setCsrMentorNeeds("Hydraulic scaling & field pilot deployment.");
+
+        UniversityProject up3 = new UniversityProject();
+        up3.setProjectCode("UNIV-NIT-2026-003");
+        up3.setAisheCode("U-0205");
+        up3.setUniversityName("NIT Jamshedpur");
+        up3.setTitle("Solar Microgrid & Energy Storage Optimization");
+        up3.setAbstractDescription("Decentralized smart solar microgrid inverter and battery management system for tribal off-grid health clinics.");
+        up3.setDomain("Clean Energy");
+        up3.setDistrict("Latehar");
+        up3.setStage(UniversityProjectStage.FIELD_PILOT);
+        up3.setProgressPercentage(65);
+        up3.setLeadFacultyMentor("Dr. A. K. Verma");
+        up3.setLeadStudentInnovator("Amit Tirkey");
+        up3.setAllocatedGrant(new BigDecimal("2000000.00"));
+        up3.setCsrPartner("Adani Foundation CSR");
+        up3.setCurrentMilestone("Prototype inverter firmware v2.4 validated in institutional lab.");
+        up3.setIsSeekingCsrGrant(true);
+        up3.setRequestedCsrAmount(new BigDecimal("2000000.00"));
+        up3.setCsrPitchDescription("Off-grid solar microgrid optimization for remote PHCs.");
+        up3.setCsrMentorNeeds("Power electronics testing and grid synchronization.");
+
+        universityProjectRepository.saveAll(List.of(up1, up2, up3));
+        log.info("Successfully seeded {} university collaboration research projects.", 3);
     }
 
     private void seedActivePilots() {
@@ -391,6 +477,104 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
 
             milestoneRepository.saveAll(List.of(m2_1, m2_2, m2_3, m2_4));
 
+            // Discussions for Pilot 2
+            PilotDiscussion p2disc1 = new PilotDiscussion();
+            p2disc1.setPilot(pilot2);
+            p2disc1.setSenderUserId(profile.getUser() != null ? profile.getUser().getId() : 1L);
+            p2disc1.setSenderName("Uranium Corp CSR Lead");
+            p2disc1.setSenderRole("INDUSTRY_SPOC");
+            p2disc1.setMessage("Tranche 1 grant disbursed for the arsenic filtration rig. Please submit the NABL lab test report for Milestone 2.");
+            p2disc1.setIsPinned(true);
+
+            PilotDiscussion p2disc2 = new PilotDiscussion();
+            p2disc2.setPilot(pilot2);
+            p2disc2.setSenderUserId(998L);
+            p2disc2.setSenderName("Dr. R. K. Mukherjee");
+            p2disc2.setSenderRole("FACULTY_PI");
+            p2disc2.setMessage("NABL certification report has been completed and uploaded. Arsenic levels in treated output measured at < 0.005 mg/L.");
+            p2disc2.setIsPinned(false);
+
+            discussionRepository.saveAll(List.of(p2disc1, p2disc2));
+
+            // Pilot 3: Clean Energy Solar Microgrid & Storage
+            CoFundedPilot pilot3 = new CoFundedPilot();
+            pilot3.setIndustryProfile(profile);
+            pilot3.setTitle("Solar Microgrid & Energy Storage Optimization");
+            pilot3.setAbstractDescription("Decentralized smart solar microgrid inverter and battery management system for tribal off-grid health clinics.");
+            pilot3.setSector(IssueSector.ELECTRICITY);
+            pilot3.setUniversityId(103L);
+            pilot3.setUniversityName("NIT Jamshedpur");
+            pilot3.setFacultyLeadName("Dr. A. K. Verma");
+            pilot3.setFacultyLeadDesignation("Professor, Dept. of Electrical Engineering");
+            pilot3.setFacultyLeadEmail("akverma@nitjsr.ac.in");
+            pilot3.setStudentLeadName("Amit Tirkey");
+            pilot3.setCorporateMentorName("Siddharth Verma");
+            pilot3.setCorporateMentorDesignation("Clean Energy CSR SPOC");
+            pilot3.setTargetDistrict("Latehar");
+            pilot3.setStage(PilotStage.FIELD_TRIAL);
+            pilot3.setStatus(PilotStatus.ACTIVE);
+            pilot3.setHealthStatus(PilotHealthStatus.ON_TRACK);
+            pilot3.setCurrentMilestone(3);
+            pilot3.setTotalMilestones(4);
+            pilot3.setProgressPercentage(65);
+            pilot3.setTotalBudget(new BigDecimal("2000000.00"));
+            pilot3.setDisbursedBudget(new BigDecimal("800000.00"));
+            pilot3.setNextDeliverableDate(LocalDate.now().plusWeeks(2));
+            pilot3.setTargetCompletionDate(LocalDate.now().plusMonths(5));
+            pilot3 = pilotRepository.save(pilot3);
+
+            PilotMilestone m3_1 = new PilotMilestone();
+            m3_1.setPilot(pilot3);
+            m3_1.setMilestoneNumber(1);
+            m3_1.setTitle("Inverter Controller Hardware & PCB Fabrication");
+            m3_1.setDeliverableSummary("Custom MPPT charge controller and high-efficiency inverter PCB built and tested.");
+            m3_1.setTargetDate(LocalDate.now().minusMonths(3));
+            m3_1.setCompletedDate(LocalDate.now().minusMonths(3));
+            m3_1.setStatus(MilestoneStatus.APPROVED);
+            m3_1.setTrancheAmount(new BigDecimal("800000.00"));
+            m3_1.setCompletionPercentage(100);
+
+            PilotMilestone m3_2 = new PilotMilestone();
+            m3_2.setPilot(pilot3);
+            m3_2.setMilestoneNumber(2);
+            m3_2.setTitle("Laboratory Load Bank Bench Testing & Validation");
+            m3_2.setDeliverableSummary("Simulated load testing up to 5kW with LiFePO4 battery pack.");
+            m3_2.setTargetDate(LocalDate.now().minusMonths(1));
+            m3_2.setCompletedDate(LocalDate.now().minusMonths(1));
+            m3_2.setStatus(MilestoneStatus.APPROVED);
+            m3_2.setTrancheAmount(new BigDecimal("600000.00"));
+            m3_2.setCompletionPercentage(100);
+
+            PilotMilestone m3_3 = new PilotMilestone();
+            m3_3.setPilot(pilot3);
+            m3_3.setMilestoneNumber(3);
+            m3_3.setTitle("Field Deployment at Mahuadanr Tribal PHC Clinic");
+            m3_3.setDeliverableSummary("Installation and 24x7 telemetry link for emergency vaccine refrigerators.");
+            m3_3.setTargetDate(LocalDate.now().plusWeeks(2));
+            m3_3.setStatus(MilestoneStatus.IN_PROGRESS);
+            m3_3.setTrancheAmount(new BigDecimal("400000.00"));
+            m3_3.setCompletionPercentage(60);
+
+            milestoneRepository.saveAll(List.of(m3_1, m3_2, m3_3));
+
+            PilotDiscussion p3disc1 = new PilotDiscussion();
+            p3disc1.setPilot(pilot3);
+            p3disc1.setSenderUserId(profile.getUser() != null ? profile.getUser().getId() : 1L);
+            p3disc1.setSenderName("Adani Foundation CSR SPOC");
+            p3disc1.setSenderRole("INDUSTRY_SPOC");
+            p3disc1.setMessage("Review meeting scheduled for pilot testing in Khunti & Latehar clean energy cluster.");
+            p3disc1.setIsPinned(true);
+
+            PilotDiscussion p3disc2 = new PilotDiscussion();
+            p3disc2.setPilot(pilot3);
+            p3disc2.setSenderUserId(997L);
+            p3disc2.setSenderName("Dr. A. K. Verma");
+            p3disc2.setSenderRole("FACULTY_PI");
+            p3disc2.setMessage("Prototype inverter firmware v2.4 validated in institutional lab. On-ground field trial commences next week.");
+            p3disc2.setIsPinned(false);
+
+            discussionRepository.saveAll(List.of(p3disc1, p3disc2));
+
             // Also create CSR commitment records for ledger synchronization
             CsrCommitment csr1 = new CsrCommitment();
             csr1.setIndustryProfile(profile);
@@ -412,7 +596,17 @@ public class MarketplaceDataSeeder implements CommandLineRunner {
             csr2.setStatus(CommitmentStatus.COMMITTED);
             csr2.setCsrProjectCode("CSR-PLT-" + pilot2.getId());
 
-            csrCommitmentRepository.saveAll(List.of(csr1, csr2));
+            CsrCommitment csr3 = new CsrCommitment();
+            csr3.setIndustryProfile(profile);
+            csr3.setPilot(pilot3);
+            csr3.setFinancialYear("2026-2027");
+            csr3.setTotalCommittedAmount(pilot3.getTotalBudget());
+            csr3.setTotalDisbursedAmount(pilot3.getDisbursedBudget());
+            csr3.setScheduleVIICategory(CsrCategory.TECHNOLOGY_INCUBATORS);
+            csr3.setStatus(CommitmentStatus.COMMITTED);
+            csr3.setCsrProjectCode("CSR-PLT-" + pilot3.getId());
+
+            csrCommitmentRepository.saveAll(List.of(csr1, csr2, csr3));
 
             // Seed CSR Annual Statutory Budget (FY 2026-2027)
             if (csrAnnualBudgetRepository.findByIndustryProfileIdAndFinancialYear(profile.getId(), "2026-2027").isEmpty()) {

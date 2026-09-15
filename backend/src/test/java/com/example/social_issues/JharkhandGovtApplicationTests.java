@@ -1,4 +1,4 @@
-package com.example.jharkhand_govt;
+package com.example.social_issues;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
