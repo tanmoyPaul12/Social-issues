@@ -10,12 +10,19 @@ import { OfferMentorshipModal } from "./OfferMentorshipModal";
 import { ProjectDossierModal } from "./ProjectDossierModal";
 import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
 import { toast } from "@/components/dashboard/ToastStack";
+import {
+  registerProjectPitchThread,
+  postThreadMessage,
+  CommunicationThread,
+} from "@/modules/communication/services/communicationApi";
+import { useAuthStore } from "@/lib/store/useAuthStore";
 
 interface IndustryMarketplaceTabProps {
   onNavigateTab?: (tabId: string) => void;
 }
 
 export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTabProps) {
+  const { token, user } = useAuthStore();
   const {
     projects,
     totalElements,
@@ -78,6 +85,39 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
         progress: 30,
         csrScheduleVII: payload.csrScheduleViiHead || "Schedule VII CSR Provision",
       });
+
+      // Register cross-portal communication thread
+      const threadId = selectedProject.id || Date.now();
+      const createdThread = registerProjectPitchThread({
+        id: threadId,
+        pilotId: threadId,
+        title: selectedProject.title,
+        partnerName: selectedProject.universityName,
+        partnerRole: `Lead PI • ${selectedProject.universityName}`,
+        sector: selectedProject.sectorName || selectedProject.sector || "R&D Innovation",
+        lastMessage: `CSR Grant committed (₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}).`,
+        timestamp: "Just now",
+        unreadCount: 0,
+        type: "PILOT",
+        avatarBg: "bg-indigo-600",
+        universityName: selectedProject.universityName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: user?.name || "Corporate CSR Sponsor",
+      });
+
+      try {
+        postThreadMessage(
+          token,
+          createdThread.id,
+          `💰 CSR GRANT COMMITTED: ${selectedProject.title}\n\nGrant Sponsor: ${user?.name || "Corporate CSR Sponsor"}\nTotal Grant Committed: ₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}\nSchedule VII Head: ${payload.csrScheduleViiHead || "Schedule VII Provision"}\n\nProject channel initialized for prototyping milestones, telemetry reports, and tranche disbursements.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || "Industry CSR SPOC",
+          "INDUSTRY_SPOC",
+          selectedProject.title,
+          "INDUSTRY"
+        );
+      } catch {}
 
       toast.success(`Grant commitment signed for "${selectedProject.title}"! Project added to My Co-Funded Projects.`);
       if (onNavigateTab) {

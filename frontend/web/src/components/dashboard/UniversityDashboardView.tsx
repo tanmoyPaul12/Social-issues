@@ -53,82 +53,26 @@ export interface InstitutionalUser {
   status: string;
 }
 
-const INITIAL_INSTITUTIONAL_USERS: InstitutionalUser[] = [
-  {
-    id: "usr-1",
-    name: "Dr. A. K. Sinha",
-    role: "FACULTY_MENTOR",
-    department: "Department of Remote Sensing & CSE",
-    identifier: "FAC-CSE-102",
-    email: "ak.sinha@bitmesra.ac.in",
-    assignedProjectCode: "BIT-WATER-2024-01",
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-2",
-    name: "Dr. Anita Sharma",
-    role: "FACULTY_MENTOR",
-    department: "Department of Civil & Environmental Engineering",
-    identifier: "FAC-CE-084",
-    email: "asharma@bitmesra.ac.in",
-    assignedProjectCode: "BIT-CIVIC-2024-02",
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-3",
-    name: "Prof. S. K. Mahapatra",
-    role: "FACULTY_MENTOR",
-    department: "Department of Electrical & Electronics",
-    identifier: "FAC-EE-049",
-    email: "skmahapatra@bitmesra.ac.in",
-    assignedProjectCode: "BIT-AGRI-2024-03",
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-4",
-    name: "Rahul Kumar",
-    role: "STUDENT_INNOVATOR",
-    department: "Computer Science & Engineering",
-    identifier: "22BTECH014",
-    email: "rahul.k@institution.edu.in",
-    assignedProjectCode: "BIT-WATER-2024-01",
-    abcCredits: 6,
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-5",
-    name: "Priya Kumari",
-    role: "STUDENT_INNOVATOR",
-    department: "Electronics & Communication",
-    identifier: "22MTECH008",
-    email: "priya.k@institution.edu.in",
-    assignedProjectCode: "BIT-WATER-2024-01",
-    abcCredits: 4,
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-6",
-    name: "Amit Tirkey",
-    role: "STUDENT_INNOVATOR",
-    department: "Civil & Environmental Engineering",
-    identifier: "23BTECH089",
-    email: "amit.t@institution.edu.in",
-    assignedProjectCode: "BIT-CIVIC-2024-02",
-    abcCredits: 4,
-    status: "Active & Verified"
-  },
-  {
-    id: "usr-7",
-    name: "Sneha Soren",
-    role: "STUDENT_INNOVATOR",
-    department: "Mechanical Engineering",
-    identifier: "22BTECH051",
-    email: "sneha.s@institution.edu.in",
-    assignedProjectCode: "BIT-AGRI-2024-03",
-    abcCredits: 4,
-    status: "Active & Verified"
+const INSTITUTIONAL_USERS_STORAGE_KEY = "social_issues_institutional_users_v1";
+
+export function getLocalInstitutionalUsers(): InstitutionalUser[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(INSTITUTIONAL_USERS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-];
+}
+
+export function saveLocalInstitutionalUsers(users: InstitutionalUser[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(INSTITUTIONAL_USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch {}
+}
 
 export interface CsrPitchRecord {
   id: string;
@@ -199,6 +143,7 @@ export function UniversityDashboardView({
     updateStage,
     recordCitizenVerification,
     addTeamMember,
+    removeTeamMember,
     submitCsrPitch,
   } = useUniversity(aisheCode, token);
 
@@ -226,10 +171,70 @@ export function UniversityDashboardView({
   } | null>(null);
 
   // Faculty & Student Directory State
-  const [institutionalUsers, setInstitutionalUsers] = useState<InstitutionalUser[]>(INITIAL_INSTITUTIONAL_USERS);
+  const [institutionalUsers, setInstitutionalUsers] = useState<InstitutionalUser[]>(() => getLocalInstitutionalUsers());
+  const [selectedProjectIdForAllocation, setSelectedProjectIdForAllocation] = useState<number | null>(null);
   const [isAddResearcherModalOpen, setIsAddResearcherModalOpen] = useState(false);
   const [userRoleFilter, setUserRoleFilter] = useState<"ALL" | "FACULTY" | "STUDENT">("ALL");
   const [userSearchQuery, setUserSearchQuery] = useState("");
+
+  // Quick Allocate Form State for Team Allocator Tab
+  const [allocMemberName, setAllocMemberName] = useState("");
+  const [allocMemberRole, setAllocMemberRole] = useState<TeamMemberRole>("STUDENT_INNOVATOR");
+  const [allocMemberDept, setAllocMemberDept] = useState("Computer Science & Engineering");
+  const [allocMemberId, setAllocMemberId] = useState("");
+  const [allocMemberCredits, setAllocMemberCredits] = useState(4);
+
+  // Sync projects team members with institutional directory
+  useEffect(() => {
+    if (projects.length > 0) {
+      setInstitutionalUsers((prev) => {
+        const existing = [...prev];
+        const seenIds = new Set(existing.map((u) => u.identifier || u.name));
+
+        let changed = false;
+        projects.forEach((p) => {
+          if (p.facultyMentor && !seenIds.has(p.facultyMentor)) {
+            seenIds.add(p.facultyMentor);
+            existing.push({
+              id: `fac-${p.id}`,
+              name: p.facultyMentor,
+              role: "FACULTY_MENTOR",
+              department: p.domain ? `Dept of ${p.domain}` : "Academic Research Wing",
+              identifier: `FAC-${p.id * 10 + 101}`,
+              email: `${p.facultyMentor.toLowerCase().replace(/[^a-z0-9]/g, ".")}@bitmesra.ac.in`,
+              assignedProjectCode: p.projectCode || `PROJ-${p.id}`,
+              status: "Active & Verified",
+            });
+            changed = true;
+          }
+          (p.teamMembers || []).forEach((tm, idx) => {
+            const key = tm.identifier || tm.name;
+            if (key && !seenIds.has(key)) {
+              seenIds.add(key);
+              existing.push({
+                id: `tm-${p.id}-${idx}`,
+                name: tm.name,
+                role: tm.role || "STUDENT_INNOVATOR",
+                department: tm.department || "Engineering & Technology",
+                identifier: tm.identifier || `22BTECH${100 + idx}`,
+                email: `${tm.name.toLowerCase().replace(/[^a-z0-9]/g, ".")}@institution.edu.in`,
+                assignedProjectCode: p.projectCode || `PROJ-${p.id}`,
+                abcCredits: tm.abcCredits || 4,
+                status: "Active & Verified",
+              });
+              changed = true;
+            }
+          });
+        });
+
+        if (changed) {
+          saveLocalInstitutionalUsers(existing);
+          return existing;
+        }
+        return prev;
+      });
+    }
+  }, [projects]);
 
   // Add Researcher Form State
   const [newResearcherName, setNewResearcherName] = useState("");
@@ -503,7 +508,7 @@ export function UniversityDashboardView({
 
       // Register pitch thread in communication hub
       const threadId = Date.now();
-      const newThread: CommunicationThread = {
+      const createdThread = registerProjectPitchThread({
         id: threadId,
         pilotId: threadId,
         title: projTitle,
@@ -516,16 +521,15 @@ export function UniversityDashboardView({
         type: "PILOT",
         avatarBg: "bg-indigo-600",
         companyName: finalPartner,
-        universityName: institutionName || "University Research Lab",
-      };
-      registerProjectPitchThread(newThread);
+        universityName: institutionName || "Birla Institute of Technology (BIT) Mesra",
+      });
 
       useIndustryPitchStore.getState().addPitch({
         id: `pitch-${threadId}`,
-        threadId: threadId,
+        threadId: createdThread.id,
         projectCode: projCode,
         projectTitle: projTitle,
-        universityName: institutionName || "University Research Lab",
+        universityName: institutionName || "Birla Institute of Technology (BIT) Mesra",
         targetCompany: finalPartner,
         requestedAmount: pitchAmount,
         category: pitchCategory,
@@ -537,13 +541,15 @@ export function UniversityDashboardView({
       try {
         await postThreadMessage(
           token,
-          threadId,
+          createdThread.id,
           `📋 CSR GRANT PROPOSAL PITCH\n\nTarget Partner: ${finalPartner}\nRequested Funding: ₹${pitchAmount.toLocaleString()}\nGrant Category: ${pitchCategory}\n\nProposal Description:\n${pitchDescription || "Funding requisition for prototyping & execution."}\n\nTechnical Mentorship Needed:\n${pitchMentorNeeds || "Domain advisement & expert guidance."}`,
           undefined,
           undefined,
-          threadId,
+          createdThread.pilotId,
           user?.name || "University Lead PI",
-          "FACULTY_PI"
+          "FACULTY_PI",
+          projTitle,
+          "UNIVERSITY"
         );
       } catch (msgErr) {
         console.warn("Communication API postThreadMessage notice (handled locally):", msgErr);
@@ -577,7 +583,11 @@ export function UniversityDashboardView({
       status: "Active & Verified",
     };
 
-    setInstitutionalUsers((prev) => [newUsr, ...prev]);
+    setInstitutionalUsers((prev) => {
+      const updated = [newUsr, ...prev];
+      saveLocalInstitutionalUsers(updated);
+      return updated;
+    });
 
     if (newResearcherProjectCode.trim()) {
       const matchProject = projects.find(
@@ -604,6 +614,64 @@ export function UniversityDashboardView({
     setNewResearcherId("");
     setNewResearcherProjectCode("");
     toast.success(`Registered ${newUsr.name} into institutional directory.`);
+  };
+
+  const handleDeleteResearcher = (id: string) => {
+    setInstitutionalUsers((prev) => {
+      const updated = prev.filter((u) => u.id !== id);
+      saveLocalInstitutionalUsers(updated);
+      return updated;
+    });
+    toast.success("Researcher account removed from directory.");
+  };
+
+  const handleAllocateMemberToProject = async (e: React.FormEvent, targetProjectId: number) => {
+    e.preventDefault();
+    if (!allocMemberName.trim()) return;
+
+    try {
+      await addTeamMember(targetProjectId, {
+        role: allocMemberRole,
+        name: allocMemberName.trim(),
+        identifier: allocMemberId.trim() || undefined,
+        department: allocMemberDept.trim(),
+        abcCredits: allocMemberRole === "STUDENT_INNOVATOR" ? allocMemberCredits : undefined,
+      });
+
+      const matchProj = projects.find((p) => p.id === targetProjectId);
+      const newUsr: InstitutionalUser = {
+        id: `usr-${Date.now()}`,
+        name: allocMemberName.trim(),
+        role: allocMemberRole,
+        department: allocMemberDept.trim(),
+        identifier: allocMemberId.trim() || `ID-${Math.floor(1000 + Math.random() * 9000)}`,
+        email: `${allocMemberName.toLowerCase().replace(/\s+/g, ".")}@institution.edu.in`,
+        assignedProjectCode: matchProj?.projectCode || `PROJ-${targetProjectId}`,
+        abcCredits: allocMemberRole === "STUDENT_INNOVATOR" ? allocMemberCredits : undefined,
+        status: "Active & Verified",
+      };
+
+      setInstitutionalUsers((prev) => {
+        const updated = [newUsr, ...prev];
+        saveLocalInstitutionalUsers(updated);
+        return updated;
+      });
+
+      setAllocMemberName("");
+      setAllocMemberId("");
+      toast.success(`Allocated ${newUsr.name} to project.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to allocate team member");
+    }
+  };
+
+  const handleUnassignMember = async (projectId: number, memberId: number, memberName: string) => {
+    try {
+      await removeTeamMember(projectId, memberId);
+      toast.success(`Unassigned ${memberName} from project.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to unassign member");
+    }
   };
 
   // Handler: Accept Industry Co-Funding Offer
@@ -658,10 +726,11 @@ export function UniversityDashboardView({
 
       // Register thread for activated project challenge
       const threadId = selectedChallengeForAccept.id || Date.now();
-      const projectThread: CommunicationThread = {
+      const projTitle = selectedChallengeForAccept.title;
+      const createdThread = registerProjectPitchThread({
         id: threadId,
         pilotId: threadId,
-        title: selectedChallengeForAccept.title,
+        title: projTitle,
         partnerName: "State Nodal CSR Cell",
         partnerRole: "Nodal Authority & Corporate Sponsor",
         sector: selectedChallengeForAccept.domain || "Civic Innovation",
@@ -670,20 +739,24 @@ export function UniversityDashboardView({
         unreadCount: 0,
         type: "PILOT",
         avatarBg: "bg-emerald-600",
-        universityName: institutionName,
-      };
-      registerProjectPitchThread(projectThread);
+        universityName: institutionName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: "State Nodal CSR Cell",
+      });
 
-      await postThreadMessage(
-        token,
-        threadId,
-        `🚀 PROJECT ACTIVATED: ${selectedChallengeForAccept.title}\n\nTicket ID: ${selectedChallengeForAccept.ticketId}\nLead Faculty: ${acceptFaculty || defaultFaculty}\nLead Student: ${acceptStudentLead.trim() || "Student Project Team"}\n\nDiscussion channel initialized for project milestones and deliverables.`,
-        undefined,
-        undefined,
-        threadId,
-        user?.name || acceptFaculty || "University Lead PI",
-        "FACULTY_PI"
-      );
+      try {
+        await postThreadMessage(
+          token,
+          createdThread.id,
+          `🚀 PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${selectedChallengeForAccept.ticketId}\nLead Faculty: ${acceptFaculty || defaultFaculty}\nLead Student: ${acceptStudentLead.trim() || "Student Project Team"}\n\nDiscussion channel initialized for project milestones and deliverables.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || acceptFaculty || "University Lead PI",
+          "FACULTY_PI",
+          projTitle,
+          "UNIVERSITY"
+        );
+      } catch {}
 
       setSelectedChallengeForAccept(null);
       setAcceptStudentLead("");
@@ -1608,12 +1681,323 @@ export function UniversityDashboardView({
         </div>
       )}
 
-      {/* VIEW 7: FACULTY & STUDENT DIRECTORY */}
-      {(activeTab === "teams" || activeTab === "users") && (
-        <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* VIEW 7A: TEAM ALLOCATOR */}
+      {activeTab === "teams" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
             <div>
-              <h2 className="font-bold text-slate-900 text-base">Faculty Guides &amp; Student Innovators Directory</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-black text-slate-900 text-base">Capstone Project Team Allocator</h2>
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800 rounded-md">
+                  NEP 2020 Allocation
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Assign and manage institutional faculty mentors, student innovators, and research assistants across active Capstone Projects.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">
+                <strong>{projects.length}</strong> Active Projects
+              </span>
+            </div>
+          </div>
+
+          {projects.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-10 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl mx-auto font-bold">
+                👥
+              </div>
+              <h3 className="font-bold text-slate-900 text-sm">No Active Capstone Projects</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Accept an assigned challenge or initiate a research project to start allocating faculty guides and student innovators.
+              </p>
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab("inbox")}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  View Assigned Challenges →
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Projects Selector (4 cols) */}
+              <div className="lg:col-span-4 space-y-3">
+                <div className="font-bold text-xs uppercase tracking-wider text-slate-500">
+                  Select Project to Manage ({projects.length})
+                </div>
+                <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
+                  {projects.map((proj) => {
+                    const currentSelectedId = selectedProjectIdForAllocation || projects[0]?.id;
+                    const isSelected = proj.id === currentSelectedId;
+                    const teamCount = (proj.teamMembers?.length || 0) + (proj.facultyMentor ? 1 : 0);
+
+                    return (
+                      <button
+                        key={proj.id}
+                        type="button"
+                        onClick={() => setSelectedProjectIdForAllocation(proj.id)}
+                        className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                          isSelected
+                            ? "bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs"
+                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[11px] font-bold text-slate-600">
+                            {proj.projectCode || `PROJ-${proj.id}`}
+                          </span>
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                            {STAGE_LABELS[proj.stage] || proj.stage}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-xs text-slate-900 line-clamp-2">
+                          {proj.title}
+                        </h4>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 text-[11px] text-slate-500">
+                          <span>{proj.domain || "Civic R&D"}</span>
+                          <span className="font-semibold text-indigo-700">
+                            {teamCount} Members
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right Column: Selected Project Team Roster & Allocation Form (8 cols) */}
+              <div className="lg:col-span-8 space-y-6">
+                {(() => {
+                  const targetProj =
+                    projects.find((p) => p.id === (selectedProjectIdForAllocation || projects[0]?.id)) ||
+                    projects[0];
+
+                  if (!targetProj) return null;
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Project Header Summary */}
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                          <div>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+                              {targetProj.projectCode || `PROJ-${targetProj.id}`} • {targetProj.district}
+                            </span>
+                            <h3 className="font-bold text-slate-900 text-base mt-0.5">
+                              {targetProj.title}
+                            </h3>
+                          </div>
+                          <span className="font-mono text-xs font-bold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0">
+                            Progress: {targetProj.progress}%
+                          </span>
+                        </div>
+
+                        {/* Team Roster Table */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                              Assigned Research Team ({ (targetProj.teamMembers?.length || 0) + (targetProj.facultyMentor ? 1 : 0) })
+                            </h4>
+                          </div>
+
+                          <div className="border border-slate-200 rounded-lg overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 text-[11px]">
+                                <tr>
+                                  <th className="py-2.5 px-3">Member Name</th>
+                                  <th className="py-2.5 px-3">Role</th>
+                                  <th className="py-2.5 px-3">Department</th>
+                                  <th className="py-2.5 px-3">Roll / ID</th>
+                                  <th className="py-2.5 px-3">NEP Credits</th>
+                                  <th className="py-2.5 px-3 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {/* Faculty Lead Row */}
+                                {targetProj.facultyMentor && (
+                                  <tr className="bg-purple-50/40">
+                                    <td className="py-2.5 px-3 font-bold text-slate-900">
+                                      {targetProj.facultyMentor}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <span className="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                                        LEAD FACULTY PI
+                                      </span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-slate-600">
+                                      {targetProj.domain ? `Dept of ${targetProj.domain}` : "Academic Faculty"}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-mono text-slate-600">PI-LEAD</td>
+                                    <td className="py-2.5 px-3 font-mono text-slate-600">Faculty Guide</td>
+                                    <td className="py-2.5 px-3 text-right text-slate-400 font-medium text-[11px]">
+                                      Lead PI
+                                    </td>
+                                  </tr>
+                                )}
+
+                                {/* Team Members Rows */}
+                                {(targetProj.teamMembers || []).map((member, idx) => (
+                                  <tr key={member.id || idx} className="hover:bg-slate-50">
+                                    <td className="py-2.5 px-3 font-semibold text-slate-900">
+                                      {member.name}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        member.role === "FACULTY_MENTOR"
+                                          ? "bg-purple-100 text-purple-800"
+                                          : "bg-blue-100 text-blue-800"
+                                      }`}>
+                                        {member.role?.replace(/_/g, " ") || "STUDENT INNOVATOR"}
+                                      </span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-slate-600">
+                                      {member.department || "Engineering"}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-mono text-slate-600">
+                                      {member.identifier || `22BTECH${100 + idx}`}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-mono text-slate-800 font-bold">
+                                      {member.abcCredits ? `${member.abcCredits} Credits` : "—"}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right">
+                                      {member.id ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUnassignMember(targetProj.id, member.id!, member.name)}
+                                          className="text-rose-600 hover:text-rose-800 font-bold text-[11px] hover:underline cursor-pointer"
+                                        >
+                                          Unassign
+                                        </button>
+                                      ) : (
+                                        <span className="text-slate-400 text-[11px]">Assigned</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Allocate Form Card */}
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">
+                              + Allocate Researcher to &ldquo;{targetProj.title}&rdquo;
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              Register and assign a faculty guide or student innovator to this capstone project roster.
+                            </p>
+                          </div>
+                        </div>
+
+                        <form
+                          onSubmit={(e) => handleAllocateMemberToProject(e, targetProj.id)}
+                          className="space-y-3 text-xs"
+                        >
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block font-bold text-slate-700 mb-1">
+                                Researcher / Student Name *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. Vikas Mahato"
+                                value={allocMemberName}
+                                onChange={(e) => setAllocMemberName(e.target.value)}
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-medium"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold text-slate-700 mb-1">
+                                Allocation Role *
+                              </label>
+                              <select
+                                value={allocMemberRole}
+                                onChange={(e: any) => setAllocMemberRole(e.target.value)}
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none cursor-pointer bg-white font-medium"
+                              >
+                                <option value="STUDENT_INNOVATOR">Student Innovator</option>
+                                <option value="FACULTY_MENTOR">Faculty Co-Mentor</option>
+                                <option value="TECHNICAL_SPECIALIST">Technical Specialist</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block font-bold text-slate-700 mb-1">
+                                Academic Department
+                              </label>
+                              <input
+                                type="text"
+                                value={allocMemberDept}
+                                onChange={(e) => setAllocMemberDept(e.target.value)}
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-medium"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold text-slate-700 mb-1">
+                                Roll / Employee ID
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. 22BTECH042"
+                                value={allocMemberId}
+                                onChange={(e) => setAllocMemberId(e.target.value)}
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-medium"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold text-slate-700 mb-1">
+                                NEP 2020 ABC Credits
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={12}
+                                value={allocMemberCredits}
+                                onChange={(e) => setAllocMemberCredits(Number(e.target.value))}
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-bold"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end pt-2">
+                            <button
+                              type="submit"
+                              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
+                            >
+                              Allocate to Project Roster
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW 7B: FACULTY & STUDENT DIRECTORY */}
+      {activeTab === "users" && (
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+            <div>
+              <h2 className="font-black text-slate-900 text-base">Institutional Faculty &amp; Student Accounts</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Manage registered institutional researchers, faculty mentors, and student capstone innovators participating in civic R&amp;D.
               </p>
@@ -1622,7 +2006,7 @@ export function UniversityDashboardView({
               <button
                 type="button"
                 onClick={() => setIsAddResearcherModalOpen(true)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer"
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs"
               >
                 + Add / Invite Researcher
               </button>
@@ -1630,12 +2014,12 @@ export function UniversityDashboardView({
           </div>
 
           {/* Directory Filter & Search */}
-          <div className="bg-white border border-slate-200 rounded p-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs shadow-xs">
             <div className="flex items-center gap-2 w-full md:w-auto">
               <button
                 type="button"
                 onClick={() => setUserRoleFilter("ALL")}
-                className={`px-3 py-1.5 rounded font-medium cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors ${
                   userRoleFilter === "ALL" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
@@ -1644,20 +2028,20 @@ export function UniversityDashboardView({
               <button
                 type="button"
                 onClick={() => setUserRoleFilter("FACULTY")}
-                className={`px-3 py-1.5 rounded font-medium cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors ${
                   userRoleFilter === "FACULTY" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
-                Faculty Guides ({institutionalUsers.filter(u => u.role === "FACULTY_MENTOR").length})
+                Faculty Guides ({institutionalUsers.filter((u) => u.role === "FACULTY_MENTOR").length})
               </button>
               <button
                 type="button"
                 onClick={() => setUserRoleFilter("STUDENT")}
-                className={`px-3 py-1.5 rounded font-medium cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors ${
                   userRoleFilter === "STUDENT" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
-                Student Innovators ({institutionalUsers.filter(u => u.role === "STUDENT_INNOVATOR").length})
+                Student Innovators ({institutionalUsers.filter((u) => u.role === "STUDENT_INNOVATOR").length})
               </button>
             </div>
 
@@ -1667,57 +2051,74 @@ export function UniversityDashboardView({
                 value={userSearchQuery}
                 onChange={(e) => setUserSearchQuery(e.target.value)}
                 placeholder="Search by name, department, roll ID..."
-                className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none text-xs"
+                className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-900 outline-none text-xs focus:border-indigo-500"
               />
             </div>
           </div>
 
           {/* Directory Table */}
-          <div className="bg-white border border-slate-200 rounded overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Researcher Name</th>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Roll / Employee ID</th>
-                  <th className="py-3 px-4">Institutional Email</th>
-                  <th className="py-3 px-4">Assigned Project</th>
-                  <th className="py-3 px-4">Credits / Allocation</th>
-                  <th className="py-3 px-4 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredInstitutionalUsers.map((userItem) => (
-                  <tr key={userItem.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-4 font-bold text-slate-900">{userItem.name}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded font-mono text-[11px] ${
-                        userItem.role === "FACULTY_MENTOR"
-                          ? "bg-slate-200 text-slate-800 font-semibold"
-                          : "bg-slate-100 text-slate-700"
-                      }`}>
-                        {userItem.role.replace(/_/g, " ")}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">{userItem.department}</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">{userItem.identifier}</td>
-                    <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{userItem.email}</td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-800">
-                      {userItem.assignedProjectCode || "General Pool"}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-700">
-                      {userItem.abcCredits ? `${userItem.abcCredits} ABC Credits` : "Project Guide"}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="font-mono text-[11px] text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                        {userItem.status}
-                      </span>
-                    </td>
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+            {filteredInstitutionalUsers.length === 0 ? (
+              <div className="p-10 text-center text-slate-400 text-xs font-medium space-y-2">
+                <p>No researcher accounts found matching your search or filters.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsAddResearcherModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-slate-900 text-white font-bold text-xs rounded-lg cursor-pointer"
+                >
+                  + Add Researcher Now
+                </button>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Researcher Name</th>
+                    <th className="py-3 px-4">Role</th>
+                    <th className="py-3 px-4">Department</th>
+                    <th className="py-3 px-4">Roll / Employee ID</th>
+                    <th className="py-3 px-4">Institutional Email</th>
+                    <th className="py-3 px-4">Assigned Project</th>
+                    <th className="py-3 px-4">Credits / Allocation</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredInstitutionalUsers.map((userItem) => (
+                    <tr key={userItem.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-4 font-bold text-slate-900">{userItem.name}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold ${
+                          userItem.role === "FACULTY_MENTOR"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}>
+                          {userItem.role.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700">{userItem.department}</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">{userItem.identifier}</td>
+                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{userItem.email}</td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-800">
+                        {userItem.assignedProjectCode || "General Pool"}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-700">
+                        {userItem.abcCredits ? `${userItem.abcCredits} ABC Credits` : "Project Guide"}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteResearcher(userItem.id)}
+                          className="text-rose-600 hover:text-rose-800 font-bold text-xs hover:underline cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

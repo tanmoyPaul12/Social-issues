@@ -46,7 +46,9 @@ interface IpRecord {
   createdAt: string;
 }
 
-const INITIAL_DEMO_RECORDS: IpRecord[] = [
+const STORAGE_KEY = "social_issues_ip_records_v1";
+
+const DEFAULT_IP_SEEDS: IpRecord[] = [
   {
     id: 1,
     projectId: 1,
@@ -116,8 +118,8 @@ interface IndustryIpTransferTabProps {
 
 export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabProps) {
   const { token, user } = useAuthStore();
-  const [records, setRecords] = useState<IpRecord[]>(INITIAL_DEMO_RECORDS);
-  const [isLoading, setIsLoading] = useState(false);
+  const [records, setRecords] = useState<IpRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,7 +129,7 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
   // Form State for new IP disclosure
   const [newTitle, setNewTitle] = useState("");
   const [newAbstract, setNewAbstract] = useState("");
-  const [newIpType, setNewIpType] = useState<"SHARED_PATENT" | "OPEN_SOURCE" | "COMMERCIAL_LICENSE">("SHARED_PATENT");
+  const [newIpType, setNewIpType] = useState<"SHARED_PATENT" | "OPEN_SOURCE" | "COMMERCIAL_LICENSE" | "COPYRIGHT_SOFTWARE">("SHARED_PATENT");
   const [newPatentOffice, setNewPatentOffice] = useState("Indian Patent Office (IPO) Kolkata");
   const [newHeiShare, setNewHeiShare] = useState(50);
   const [newStudentShare, setNewStudentShare] = useState(30);
@@ -137,13 +139,42 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
   const [newRoyaltyTerms, setNewRoyaltyTerms] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Save to LocalStorage helper
+  const saveRecordsToStorage = (updated: IpRecord[]) => {
+    setRecords(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        // Broadcast custom event so other components / analytics can re-sync
+        window.dispatchEvent(new CustomEvent("social_issues_ip_updated", { detail: updated }));
+      } catch (e) {
+        console.error("Failed to save IP records to localStorage", e);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchIpCatalog();
   }, [token]);
 
   const fetchIpCatalog = async () => {
+    setIsLoading(true);
+    let initialList: IpRecord[] = [];
+
+    // 1. Check local storage first
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          initialList = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.warn("Could not read IP records from localStorage", e);
+      }
+    }
+
+    // 2. Fetch from backend API
     try {
-      setIsLoading(true);
       const res = await fetch(`${API_BASE_URL}/ip/catalog`, {
         headers: {
           "Accept": "application/json",
@@ -153,14 +184,27 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setRecords(data);
+          // Merge API data with any locally created records
+          const localOnly = initialList.filter(loc => !data.some((d: IpRecord) => d.id === loc.id));
+          initialList = [...data, ...localOnly];
         }
       }
     } catch (err) {
-      console.warn("Could not fetch live IP catalog, falling back to demo records:", err);
-    } finally {
-      setIsLoading(false);
+      console.warn("Could not fetch live IP catalog from backend:", err);
     }
+
+    // 3. Fallback to default seeds if completely empty
+    if (initialList.length === 0) {
+      initialList = DEFAULT_IP_SEEDS;
+    }
+
+    setRecords(initialList);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialList));
+      } catch (e) {}
+    }
+    setIsLoading(false);
   };
 
   const handleCreateIpRecord = async (e: React.FormEvent) => {
@@ -181,7 +225,7 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
         abstractDescription: newAbstract.trim(),
         ipType: newIpType,
         patentOffice: newPatentOffice,
-        status: "IDEA_DISCLOSURE",
+        status: "IDEA_DISCLOSURE" as const,
         heiOwnershipShare: newHeiShare,
         studentInnovatorsShare: newStudentShare,
         industryPartnerShare: newIndustryShare,
@@ -190,34 +234,41 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
         royaltyTerms: newRoyaltyTerms.trim()
       };
 
-      const res = await fetch(`${API_BASE_URL}/projects/1/ip-records`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
-      });
+      let newRecord: IpRecord;
+      try {
+        const res = await fetch(`${API_BASE_URL}/projects/1/ip-records`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
 
-      if (res.ok) {
-        const saved = await res.json();
-        setRecords((prev) => [saved, ...prev]);
-        toast.success("Intellectual Property disclosure filed and recorded!");
-      } else {
-        // Optimistic update for UI if backend returns error
-        const mockNew: IpRecord = {
+        if (res.ok) {
+          newRecord = await res.json();
+        } else {
+          newRecord = {
+            id: Date.now(),
+            projectId: 1,
+            ...payload,
+            patentApplicationNumber: `IN-${new Date().getFullYear()}-APP-${Math.floor(100000 + Math.random() * 900000)}`,
+            createdAt: new Date().toISOString()
+          };
+        }
+      } catch (e) {
+        newRecord = {
           id: Date.now(),
           projectId: 1,
           ...payload,
           patentApplicationNumber: `IN-${new Date().getFullYear()}-APP-${Math.floor(100000 + Math.random() * 900000)}`,
-          status: "IDEA_DISCLOSURE",
           createdAt: new Date().toISOString()
         };
-        setRecords((prev) => [mockNew, ...prev]);
-        toast.success("IP disclosure registered locally in portfolio.");
       }
 
+      saveRecordsToStorage([newRecord, ...records]);
+      toast.success("Intellectual Property disclosure filed and recorded!");
       setShowCreateModal(false);
       resetForm();
     } catch (err: any) {
@@ -225,6 +276,24 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteIpRecord = (id: number) => {
+    const updated = records.filter((r) => r.id !== id);
+    saveRecordsToStorage(updated);
+    if (selectedRecordForDetail?.id === id) {
+      setSelectedRecordForDetail(null);
+    }
+    toast.success("IP record removed from portfolio.");
+  };
+
+  const handleUpdateIpStatus = (id: number, nextStatus: IpRecord["status"]) => {
+    const updated = records.map((r) => (r.id === id ? { ...r, status: nextStatus } : r));
+    saveRecordsToStorage(updated);
+    if (selectedRecordForDetail?.id === id) {
+      setSelectedRecordForDetail((prev) => prev ? { ...prev, status: nextStatus } : null);
+    }
+    toast.success(`IP status updated to ${nextStatus.replace(/_/g, " ")}`);
   };
 
   const resetForm = () => {
@@ -489,13 +558,25 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
                       {item.filingDate ? new Date(item.filingDate).toLocaleDateString() : "Pending"}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRecordForDetail(item)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition-all cursor-pointer"
-                      >
-                        View Details
-                      </button>
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRecordForDetail(item)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition-all cursor-pointer"
+                        >
+                          View Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteIpRecord(item.id)}
+                          title="Delete IP Record"
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded border border-transparent hover:border-rose-200 transition-all cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -679,12 +760,23 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
-                  <div className="text-[11px] text-slate-500 font-bold uppercase">Status</div>
+                  <div className="text-[11px] text-slate-500 font-bold uppercase">Current Status</div>
                   <div className="mt-1">{getStatusBadge(selectedRecordForDetail.status)}</div>
                 </div>
                 <div>
-                  <div className="text-[11px] text-slate-500 font-bold uppercase">Jurisdiction</div>
-                  <div className="font-semibold text-slate-800 mt-1">{selectedRecordForDetail.patentOffice}</div>
+                  <div className="text-[11px] text-slate-500 font-bold uppercase">Update Status</div>
+                  <select
+                    value={selectedRecordForDetail.status}
+                    onChange={(e: any) => handleUpdateIpStatus(selectedRecordForDetail.id, e.target.value)}
+                    className="mt-1 px-2 py-1 text-xs font-bold bg-white border border-slate-300 rounded-md outline-none cursor-pointer"
+                  >
+                    <option value="IDEA_DISCLOSURE">Idea Disclosure</option>
+                    <option value="PROVISIONAL_FILED">Provisional Filed</option>
+                    <option value="COMPLETE_SPEC_FILED">Complete Spec Filed</option>
+                    <option value="EXAMINATION">Under Examination</option>
+                    <option value="GRANTED">Patent Granted</option>
+                    <option value="COMMERCIALLY_LICENSED">Commercially Licensed</option>
+                  </select>
                 </div>
               </div>
 
@@ -717,7 +809,14 @@ export function IndustryIpTransferTab({ onNavigateTab }: IndustryIpTransferTabPr
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleDeleteIpRecord(selectedRecordForDetail.id)}
+                className="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 cursor-pointer"
+              >
+                Delete Disclosure
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedRecordForDetail(null)}

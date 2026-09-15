@@ -128,12 +128,12 @@ export function SiteNavbar() {
 
   return (
     <header ref={navRef} className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 font-sans text-slate-800 shadow-2xs select-none">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[68px] gap-3">
+      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-6">
+        <div className="flex items-center justify-between h-[66px] gap-2 lg:gap-3">
           
           {/* Left Brand Identity: Official State Emblem & Bilingual Typography */}
-          <Link href="/" className="flex items-center gap-3 shrink-0 group py-1">
-            <div className="w-8 sm:w-9 h-11 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group py-1">
+            <div className="w-7 sm:w-8 h-10 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/emblem.png"
@@ -142,27 +142,27 @@ export function SiteNavbar() {
               />
             </div>
             <div className="flex flex-col text-left justify-center">
-              <span className="text-[13.5px] sm:text-[15.5px] font-black text-slate-950 tracking-tight leading-tight">
+              <span className="text-[12.5px] sm:text-[13.5px] xl:text-[14.5px] font-black text-slate-950 tracking-tight leading-tight">
                 झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
               </span>
-              <span className="text-[11px] sm:text-[12.5px] font-bold text-slate-800 tracking-tight leading-tight mt-0.5">
+              <span className="text-[10px] sm:text-[11px] xl:text-[11.5px] font-bold text-slate-700 tracking-tight leading-tight mt-0.5">
                 Jharkhand Science, Technology and Innovation Portal
               </span>
             </div>
           </Link>
 
           {/* Center Navigation Links (With hover box stack dropdowns) */}
-          <nav className="hidden lg:flex items-center h-full text-[13px] xl:text-[13.5px] font-medium text-[#004b75] whitespace-nowrap shrink-0">
+          <nav className="hidden xl:flex items-center h-full text-[12.5px] 2xl:text-[13px] font-medium text-[#004b75] whitespace-nowrap shrink-0">
             <Link
               href="/"
-              className="px-2 xl:px-2.5 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
             >
               Home
             </Link>
 
             <Link
               href="/#co-partners"
-              className="px-2 xl:px-2.5 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
             >
               Co-Partners
             </Link>
@@ -176,7 +176,7 @@ export function SiteNavbar() {
               <button
                 type="button"
                 onClick={() => setActiveMenu(activeMenu === "opportunities" ? null : "opportunities")}
-                className={`flex items-center gap-1 px-2 xl:px-2.5 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
                   activeMenu === "opportunities" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
                 }`}
               >
@@ -229,7 +229,7 @@ export function SiteNavbar() {
               <button
                 type="button"
                 onClick={() => setActiveMenu(activeMenu === "industry" ? null : "industry")}
-                className={`flex items-center gap-1 px-2 xl:px-2.5 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
                   activeMenu === "industry" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
                 }`}
               >
@@ -282,7 +282,7 @@ export function SiteNavbar() {
               <button
                 type="button"
                 onClick={() => setActiveMenu(activeMenu === "segments" ? null : "segments")}
-                className={`flex items-center gap-1 px-2 xl:px-2.5 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
                   activeMenu === "segments" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
                 }`}
               >
@@ -328,14 +328,14 @@ export function SiteNavbar() {
 
             <Link
               href="/#rsvc-amrit"
-              className="px-2 xl:px-2.5 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
             >
               RSVC - Amrit
             </Link>
 
             <Link
               href="/#exhibitions"
-              className="px-2 xl:px-2.5 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
             >
               Exhibitions
             </Link>
@@ -349,7 +349,7 @@ export function SiteNavbar() {
               <button
                 type="button"
                 onClick={() => setActiveMenu(activeMenu === "events" ? null : "events")}
-                className={`flex items-center gap-1 px-2 xl:px-2.5 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
                   activeMenu === "events" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
                 }`}
               >
@@ -395,53 +395,57 @@ export function SiteNavbar() {
           </nav>
 
           {/* Right Action Area */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
             {isAuthenticated ? (
               /* Authenticated View: Role-based Portal Dashboard & Profile & Sign Out */
-              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 {/* User chip */}
-                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 shadow-2xs shrink-0 whitespace-nowrap">
-                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
+                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors shrink-0 whitespace-nowrap shadow-2xs">
+                  <div className="w-5.5 h-5.5 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-[10.5px] flex items-center justify-center shadow-xs shrink-0">
                     {(user?.name || "U").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col text-left leading-none">
-                    <span className="text-[11.5px] font-bold text-slate-800 max-w-[110px] truncate">{user?.name}</span>
-                    <span className="text-[9px] font-semibold text-blue-600 uppercase mt-0.5">{user?.role || "Citizen"}</span>
+                    <span className="text-[11px] font-bold text-slate-800 max-w-[85px] xl:max-w-[110px] truncate">{user?.name}</span>
+                    <span className="text-[8.5px] font-semibold text-blue-600 uppercase tracking-wider mt-0.5">{user?.role || "Citizen"}</span>
                   </div>
                 </div>
 
-                {/* Role-based Portal Dashboard Button (Visible only when user is logged in with valid session) */}
+                {/* Role-based Portal Dashboard Button */}
                 <Link
                   href={getRoleDashboardUrl()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#0077b6] bg-[#0077b6] hover:bg-[#005f92] text-white text-xs font-semibold transition-all shadow-2xs shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0077b6] to-[#0096c7] hover:from-[#005f92] hover:to-[#0077b6] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200 shrink-0 whitespace-nowrap group active:scale-95"
                 >
-                  <svg className="w-3.5 h-3.5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 text-blue-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                   <span>Portal Dashboard</span>
                 </Link>
 
+                {/* Sign Out Button */}
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="px-2.5 py-1.5 rounded text-xs font-medium text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all cursor-pointer shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200/70 hover:border-rose-300 transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
                   title="Sign Out"
                 >
-                  Sign Out
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Sign Out</span>
                 </button>
               </div>
             ) : (
               /* Unauthenticated View: Sign In & Register Buttons Only */
-              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 <Link
                   href="/auth/login"
-                  className="inline-flex items-center px-3.5 py-1.5 rounded border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-all shadow-2xs shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-all shadow-2xs shrink-0 whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="inline-flex items-center px-3.5 py-1.5 rounded border border-[#0077b6] bg-[#0077b6] hover:bg-[#005f92] text-white text-xs font-medium transition-all shadow-2xs shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg border border-[#0077b6] bg-[#0077b6] hover:bg-[#005f92] text-white text-xs font-medium transition-all shadow-2xs shrink-0 whitespace-nowrap"
                 >
                   Register
                 </Link>
@@ -452,7 +456,7 @@ export function SiteNavbar() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="xl:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 cursor-pointer"
               aria-label="Toggle navigation"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

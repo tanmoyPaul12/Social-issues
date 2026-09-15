@@ -1,5 +1,8 @@
 package com.example.social_issues.universitycollab.controller;
 
+import com.example.social_issues.industrypartnership.dto.DiscussionMessageDto;
+import com.example.social_issues.industrypartnership.dto.PostDiscussionRequest;
+import com.example.social_issues.industrypartnership.service.ActivePilotsService;
 import com.example.social_issues.universitycollab.dto.*;
 import com.example.social_issues.universitycollab.service.UniversityCollabService;
 import jakarta.validation.Valid;
@@ -10,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/university")
@@ -19,9 +23,11 @@ public class UniversityCollabController {
     private static final Logger log = LoggerFactory.getLogger(UniversityCollabController.class);
 
     private final UniversityCollabService collabService;
+    private final ActivePilotsService activePilotsService;
 
-    public UniversityCollabController(UniversityCollabService collabService) {
+    public UniversityCollabController(UniversityCollabService collabService, ActivePilotsService activePilotsService) {
         this.collabService = collabService;
+        this.activePilotsService = activePilotsService;
     }
 
     /**
@@ -175,5 +181,30 @@ public class UniversityCollabController {
             @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
         log.info("API: getAccreditationSummary for AISHE: {}", aisheCode);
         return ResponseEntity.ok(collabService.getAccreditationSummary(aisheCode));
+    }
+
+    /**
+     * 15. Fetch discussion messages for university project thread.
+     * GET /api/university/projects/{id}/discussions
+     */
+    @GetMapping("/projects/{id}/discussions")
+    public ResponseEntity<List<DiscussionMessageDto>> getProjectDiscussions(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(activePilotsService.getDiscussions(1L, id));
+    }
+
+    /**
+     * 16. Post message to university project discussion thread.
+     * POST /api/university/projects/{id}/discussions
+     */
+    @PostMapping("/projects/{id}/discussions")
+    public ResponseEntity<?> postProjectDiscussion(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody PostDiscussionRequest request) {
+        DiscussionMessageDto posted = activePilotsService.postDiscussion(1L, id, request);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Message posted to research project discussion",
+                "discussion", posted
+        ));
     }
 }

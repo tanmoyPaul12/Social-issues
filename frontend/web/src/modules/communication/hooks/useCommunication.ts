@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import {
@@ -6,17 +8,17 @@ import {
   fetchCommunicationThreads,
   fetchThreadMessages,
   postThreadMessage,
-  getLocalStoredMessages,
-  saveLocalStoredMessage,
+  getCanonicalSlug,
+  BC_CHANNEL,
+  CHAT_EVENT_NAME,
+  STORAGE_CHANNELS_KEY,
+  STORAGE_MESSAGES_KEY,
 } from "../services/communicationApi";
-
-// BroadcastChannel name for real-time cross-tab messaging (same origin)
-const BC_CHANNEL = "social_issues_chat_sync";
 
 export function useCommunication(userRole: "industry" | "university" = "industry") {
   const { token, user } = useAuthStore();
   const [threads, setThreads] = useState<CommunicationThread[]>([]);
-  const [selectedThreadId, setSelectedThreadId] = useState<number>(0);
+  const [selectedThreadId, setSelectedThreadId] = useState<number>(1);
   const [messagesMap, setMessagesMap] = useState<Record<number, CommunicationMessage[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -27,174 +29,198 @@ export function useCommunication(userRole: "industry" | "university" = "industry
   const selectedThreadIdRef = useRef(selectedThreadId);
   selectedThreadIdRef.current = selectedThreadId;
 
-  // Load messages for a thread — reads shared localStorage (works across portals)
+  // Load messages for a thread
   const loadMessages = useCallback(
     async (threadId: number) => {
       if (!threadId) return;
       try {
         const activeThread = threadsRef.current.find((t) => t.id === threadId);
-        const data = await fetchThreadMessages(token, threadId, activeThread?.pilotId, userRole);
-        setMessagesMap((prevMap) => ({
-          ...prevMap,
+        const data = await fetchThreadMessages(
+          token,
+          threadId,
+          activeThread?.pilotId,
+          userRole,
+          activeThread?.title
+        );
+        setMessagesMap((prev) => ({
+          ...prev,
           [threadId]: data,
         }));
-      } catch {
-        // Silent fallback — localStorage data still available
+      } catch (err) {
+        console.warn("Load messages notice:", err);
       }
     },
     [token, userRole]
   );
 
   // Load threads
-  const loadThreads = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await fetchCommunicationThreads(token, userRole);
-      setThreads(data);
-      if (data.length > 0) {
-        setSelectedThreadId((prev) => {
-          const currentValid = data.some((t) => t.id === prev);
-          return currentValid ? prev : data[0].id;
-        });
+  const loadThreads = useCallback(
+    async (isBackground = false) => {
+      if (!isBackground) setIsLoading(true);
+      setError(null);
+      try {
+        const list = await fetchCommunicationThreads(token, userRole);
+        setThreads(list);
+        if (list.length > 0) {
+          setSelectedThreadId((prev) => {
+            const valid = list.some((t) => t.id === prev);
+            return valid && prev !== 0 ? prev : list[0].id;
+          });
+        }
+      } catch (err: any) {
+        if (!isBackground) {
+          setError(err.message || "Failed to load communication channels");
+        }
+      } finally {
+        if (!isBackground) setIsLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load communication channels");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, userRole]);
+    },
+    [token, userRole]
+  );
 
-  // Initial thread load
+  // Initial load
   useEffect(() => {
-    loadThreads();
+    loadThreads(false);
   }, [loadThreads]);
 
-  // Poll threads every 5s for cross-portal thread discovery
-  useEffect(() => {
-    const interval = setInterval(() => loadThreads(), 5000);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "social_issues_pitched_threads_v1") {
-        loadThreads();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [loadThreads]);
-
-  // Message sync: poll + BroadcastChannel for real-time cross-tab delivery
+  // Real-time synchronization listeners
   useEffect(() => {
     if (!selectedThreadId) return;
 
-    // Initial load for selected thread
+    // 1. Initial messages fetch for active thread
     loadMessages(selectedThreadId);
 
-    // Poll every 1 second (fast enough for live chat feel)
-    const interval = setInterval(() => {
-      loadMessages(selectedThreadIdRef.current);
-    }, 1000);
-
-    // localStorage cross-tab fallback (fires in other tabs when storage changes)
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "social_issues_live_discussions_v1") {
+    // 2. High-speed heartbeat poll (every 800ms) for instant responsiveness
+    const heartbeat = setInterval(() => {
+      if (selectedThreadIdRef.current) {
         loadMessages(selectedThreadIdRef.current);
+      }
+    }, 800);
+
+    // Helper to check if event targets currently viewed thread
+    const isTargetThread = (channelKey?: string, threadId?: number, threadTitle?: string) => {
+      const currId = selectedThreadIdRef.current;
+      if (!currId) return false;
+      if (threadId && threadId === currId) return true;
+
+      const active = threadsRef.current.find((t) => t.id === currId);
+      if (!active) return false;
+
+      if (channelKey && (active.channelKey === channelKey || getCanonicalSlug(active.title) === channelKey)) {
+        return true;
+      }
+      if (threadTitle && getCanonicalSlug(active.title) === getCanonicalSlug(threadTitle)) {
+        return true;
+      }
+      return false;
+    };
+
+    // 3. Same-tab DOM Custom Event
+    const handleLocalSync = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      if (isTargetThread(detail.channelKey, detail.threadId, detail.threadTitle)) {
+        loadMessages(selectedThreadIdRef.current);
+      }
+      loadThreads(true);
+    };
+    window.addEventListener(CHAT_EVENT_NAME, handleLocalSync);
+
+    // 4. Cross-tab StorageEvent
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_CHANNELS_KEY || e.key === STORAGE_MESSAGES_KEY) {
+        if (selectedThreadIdRef.current) {
+          loadMessages(selectedThreadIdRef.current);
+        }
+        loadThreads(true);
       }
     };
     window.addEventListener("storage", handleStorage);
 
-    // BroadcastChannel: most reliable cross-tab/window sync for same origin
+    // 5. Cross-tab BroadcastChannel
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel(BC_CHANNEL);
       bc.onmessage = (event) => {
-        // When we receive a new message broadcast, reload immediately
-        const { threadId } = event.data || {};
-        if (threadId && threadId === selectedThreadIdRef.current) {
+        const { channelKey, threadId, threadTitle } = event.data || {};
+        if (isTargetThread(channelKey, threadId, threadTitle)) {
           loadMessages(selectedThreadIdRef.current);
         }
+        loadThreads(true);
       };
-    } catch {
-      // BroadcastChannel not supported — fall back to polling only
-    }
+    } catch {}
 
     return () => {
-      clearInterval(interval);
+      clearInterval(heartbeat);
+      window.removeEventListener(CHAT_EVENT_NAME, handleLocalSync);
       window.removeEventListener("storage", handleStorage);
       bc?.close();
     };
-  }, [selectedThreadId, loadMessages]);
+  }, [selectedThreadId, loadMessages, loadThreads]);
 
   const activeThread = threads.find((t) => t.id === selectedThreadId) || threads[0];
   const messages = messagesMap[selectedThreadId] || [];
 
-  // Send a message — writes to shared localStorage + broadcasts to other portal
+  // Post new message
   const sendMessage = async (
     text: string,
     attachmentName?: string,
     attachmentUrl?: string
   ) => {
-    const trimmedText = text.trim();
-    if (!trimmedText && !attachmentName) return;
+    const trimmed = text.trim();
+    if (!trimmed && !attachmentName) return;
 
     const threadId = selectedThreadIdRef.current;
     if (!threadId) return;
 
     setIsSending(true);
     try {
-      const currentUserRole = userRole === "university" ? "FACULTY_PI" : "INDUSTRY_SPOC";
-      const currentUserName =
-        user?.name || (userRole === "university" ? "Faculty Lead PI" : "Industry CSR SPOC");
+      const isUni = userRole === "university";
+      const senderPortal: "UNIVERSITY" | "INDUSTRY" = isUni ? "UNIVERSITY" : "INDUSTRY";
+      const senderRole = isUni ? "FACULTY_PI" : "INDUSTRY_SPOC";
+      const senderName = user?.name || (isUni ? "University Lead PI" : "Industry CSR SPOC");
 
-      const activeThreadNow = threadsRef.current.find((t) => t.id === threadId);
+      const active = threadsRef.current.find((t) => t.id === threadId);
 
       const newMsg = await postThreadMessage(
         token,
         threadId,
-        trimmedText,
+        trimmed,
         attachmentName,
         attachmentUrl,
-        activeThreadNow?.pilotId,
-        currentUserName,
-        currentUserRole
+        active?.pilotId,
+        senderName,
+        senderRole,
+        active?.title,
+        senderPortal
       );
 
-      const enrichedMsg: CommunicationMessage = {
-        ...newMsg,
-        senderName: currentUserName,
-        senderRole: currentUserRole,
-        message: trimmedText || newMsg.message,
-        isCurrentUser: true,
-      };
-
-      // 1. Optimistically append for sender's view (immediate feedback)
+      // Optimistic instant state update
       setMessagesMap((prev) => ({
         ...prev,
-        [threadId]: [...(prev[threadId] || []), enrichedMsg],
+        [threadId]: [...(prev[threadId] || []), { ...newMsg, isCurrentUser: true }],
       }));
 
-      // 2. Update thread snippet
+      // Update sidebar snippet
       setThreads((prev) =>
         prev.map((t) =>
           t.id === threadId
-            ? { ...t, lastMessage: trimmedText || `📎 ${attachmentName}`, timestamp: "Just now" }
+            ? {
+                ...t,
+                lastMessage: trimmed || `📎 ${attachmentName || "Document"}`,
+                timestamp: "Just now",
+              }
             : t
         )
       );
 
-      // 3. Broadcast to other tabs/windows so they reload immediately
-      try {
-        const bc = new BroadcastChannel(BC_CHANNEL);
-        bc.postMessage({ threadId, senderRole: currentUserRole });
-        bc.close();
-      } catch {}
-
-      // 4. Also reload from localStorage after 150ms (confirms the persisted state)
-      setTimeout(() => loadMessages(threadId), 150);
+      // Confirm persistence
+      setTimeout(() => {
+        if (selectedThreadIdRef.current === threadId) {
+          loadMessages(threadId);
+        }
+      }, 100);
     } catch (err: any) {
-      setError(err.message || "Failed to post message");
+      setError(err?.message || "Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -210,7 +236,7 @@ export function useCommunication(userRole: "industry" | "university" = "industry
     isSending,
     error,
     sendMessage,
-    refreshThreads: loadThreads,
+    refreshThreads: () => loadThreads(false),
     refreshMessages: () => loadMessages(selectedThreadId),
   };
 }
