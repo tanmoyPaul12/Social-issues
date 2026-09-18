@@ -97,3 +97,12 @@ Based on the industry partnership module in your problem statement, here's a tab
 - Company/startup profile: sectors of expertise, past collaborations, certifications
 - Editable "areas of interest" to improve AI-based challenge matching
 
+
+
+
+
+
+./mvnw clean spring-boot:run
+
+source .venv/bin/activate  
+uvicorn app.main:app --reload --port 8000
