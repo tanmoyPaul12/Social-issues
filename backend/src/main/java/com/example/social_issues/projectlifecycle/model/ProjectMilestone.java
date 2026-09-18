@@ -10,7 +10,7 @@ import java.util.List;
 @Entity
 @Table(name = "project_milestones", indexes = {
     @Index(name = "idx_milestone_project_id", columnList = "project_id"),
-    @Index(name = "idx_milestone_status", columnList = "status"),
+    @Index(name = "idx_proj_milestone_status", columnList = "status"),
     @Index(name = "idx_milestone_target_date", columnList = "target_date")
 })
 public class ProjectMilestone {

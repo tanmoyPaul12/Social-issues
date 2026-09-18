@@ -59,9 +59,29 @@ export function useIndustryAnalytics() {
 
       if (!isMountedRef.current) return;
 
-      if (summaryRes.status === "fulfilled") {
-        setImpactSummary(summaryRes.value);
+      let baseSummary = summaryRes.status === "fulfilled" ? summaryRes.value : DEFAULT_IMPACT;
+
+      // Check dynamic IP disclosures in localStorage
+      if (typeof window !== "undefined") {
+        try {
+          const storedIps = localStorage.getItem("social_issues_ip_records_v1");
+          if (storedIps) {
+            const ipList = JSON.parse(storedIps);
+            if (Array.isArray(ipList)) {
+              const dynamicPatents = ipList.filter(
+                (r) => r.status === "GRANTED" || r.status === "COMMERCIALLY_LICENSED" || r.ipType === "SHARED_PATENT"
+              ).length;
+              baseSummary = {
+                ...baseSummary,
+                patentsGenerated: Math.max(dynamicPatents, baseSummary.patentsGenerated || 0),
+              };
+            }
+          }
+        } catch (e) {}
       }
+
+      setImpactSummary(baseSummary);
+
       if (trendsRes.status === "fulfilled") {
         setQuarterlyTrends(trendsRes.value || []);
       }
@@ -82,6 +102,17 @@ export function useIndustryAnalytics() {
 
   useEffect(() => {
     loadAnalytics();
+
+    const handleIpUpdate = () => {
+      loadAnalytics();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("social_issues_ip_updated", handleIpUpdate);
+      return () => {
+        window.removeEventListener("social_issues_ip_updated", handleIpUpdate);
+      };
+    }
   }, [loadAnalytics]);
 
   const exportAuditReport = (format: "PDF" | "CSV" | "EXCEL") => {

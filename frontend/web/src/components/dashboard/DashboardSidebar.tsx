@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
 import { DashboardRole } from "./DashboardNavbar";
 
 export interface SidebarItem {
@@ -40,6 +41,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
       { id: "teams", label: "Team Allocator" },
       { id: "industry", label: "Industry CSR Hub" },
       { id: "users", label: "Student & Faculty Accounts" },
+      { id: "communication", label: "Communication & Messaging", badge: "LIVE" },
     ],
   },
   industry: {
@@ -84,6 +86,9 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
   const roleConfig = SIDEBAR_CONFIG[activeRole];
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  const pendingPitchesCount = useIndustryPitchStore((state) =>
+    state.pitches.filter((p) => p.status === "PENDING").length
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -100,6 +105,13 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
       <nav className="divide-y divide-slate-200/80">
         {roleConfig.items.map((item) => {
           const isActive = activeItem === item.id;
+          const displayBadge =
+            item.id === "notifications" && activeRole === "industry"
+              ? pendingPitchesCount > 0
+                ? String(pendingPitchesCount)
+                : undefined
+              : item.badge;
+
           return (
             <button
               key={item.id}
@@ -112,7 +124,7 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
               }`}
             >
               <span className="truncate">{item.label}</span>
-              {item.badge && (
+              {displayBadge && (
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                     item.id === "notifications" || item.id === "alerts"
@@ -122,7 +134,7 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
                       : "bg-slate-200 text-slate-700"
                   }`}
                 >
-                  {item.badge}
+                  {displayBadge}
                 </span>
               )}
             </button>

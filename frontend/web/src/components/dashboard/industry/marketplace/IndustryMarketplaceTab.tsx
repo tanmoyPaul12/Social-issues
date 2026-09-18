@@ -8,12 +8,21 @@ import { MarketplaceProjectCard } from "./MarketplaceProjectCard";
 import { CommitFundingModal } from "./CommitFundingModal";
 import { OfferMentorshipModal } from "./OfferMentorshipModal";
 import { ProjectDossierModal } from "./ProjectDossierModal";
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
+import { toast } from "@/components/dashboard/ToastStack";
+import {
+  registerProjectPitchThread,
+  postThreadMessage,
+  CommunicationThread,
+} from "@/modules/communication/services/communicationApi";
+import { useAuthStore } from "@/lib/store/useAuthStore";
 
 interface IndustryMarketplaceTabProps {
   onNavigateTab?: (tabId: string) => void;
 }
 
 export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTabProps) {
+  const { token, user } = useAuthStore();
   const {
     projects,
     totalElements,
@@ -58,6 +67,64 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
     await expressInterest(project.id, {
       pilotInterestScope: "General R&D Collaboration & Testbed Evaluation",
     });
+  };
+
+  const handleCommitFundingWrapper = async (projectId: number, payload: any) => {
+    const success = await commitFunding(projectId, payload);
+    if (selectedProject) {
+      useIndustryPitchStore.getState().addCoFundedProject({
+        projectId: selectedProject.id,
+        title: selectedProject.title,
+        university: selectedProject.universityName,
+        leadInvestigator: selectedProject.leadFacultyMentor || "Faculty Lead PI",
+        grantCommitted: `₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}`,
+        disbursedAmount: `₹${Math.round((payload.grantAmount || 500000) * 0.33).toLocaleString("en-IN")} (Tranche 1)`,
+        domain: selectedProject.sectorName || selectedProject.sector || "R&D Innovation",
+        district: selectedProject.targetDistrict || "Jharkhand",
+        stage: "Prototyping",
+        progress: 30,
+        csrScheduleVII: payload.csrScheduleViiHead || "Schedule VII CSR Provision",
+      });
+
+      // Register cross-portal communication thread
+      const threadId = selectedProject.id || Date.now();
+      const createdThread = registerProjectPitchThread({
+        id: threadId,
+        pilotId: threadId,
+        title: selectedProject.title,
+        partnerName: selectedProject.universityName,
+        partnerRole: `Lead PI • ${selectedProject.universityName}`,
+        sector: selectedProject.sectorName || selectedProject.sector || "R&D Innovation",
+        lastMessage: `CSR Grant committed (₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}).`,
+        timestamp: "Just now",
+        unreadCount: 0,
+        type: "PILOT",
+        avatarBg: "bg-indigo-600",
+        universityName: selectedProject.universityName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: user?.name || "Corporate CSR Sponsor",
+      });
+
+      try {
+        postThreadMessage(
+          token,
+          createdThread.id,
+          `💰 CSR GRANT COMMITTED: ${selectedProject.title}\n\nGrant Sponsor: ${user?.name || "Corporate CSR Sponsor"}\nTotal Grant Committed: ₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}\nSchedule VII Head: ${payload.csrScheduleViiHead || "Schedule VII Provision"}\n\nProject channel initialized for prototyping milestones, telemetry reports, and tranche disbursements.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || "Industry CSR SPOC",
+          "INDUSTRY_SPOC",
+          selectedProject.title,
+          "INDUSTRY"
+        );
+      } catch {}
+
+      toast.success(`Grant commitment signed for "${selectedProject.title}"! Project added to My Co-Funded Projects.`);
+      if (onNavigateTab) {
+        onNavigateTab("collaborations");
+      }
+    }
+    return success;
   };
 
   const handleOpenDossier = (project: MarketplaceProject) => {
@@ -290,7 +357,7 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
         project={selectedProject}
         isOpen={isCommitOpen}
         onClose={() => setIsCommitOpen(false)}
-        onSubmit={commitFunding}
+        onSubmit={handleCommitFundingWrapper}
       />
 
       <OfferMentorshipModal

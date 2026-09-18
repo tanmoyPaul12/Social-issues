@@ -14,7 +14,7 @@ public class PilotDiscussion {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pilot_id", nullable = false)
+    @JoinColumn(name = "pilot_id", nullable = true)
     private CoFundedPilot pilot;
 
     @Column(name = "sender_user_id", nullable = false)

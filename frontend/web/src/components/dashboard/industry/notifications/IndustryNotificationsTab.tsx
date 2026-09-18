@@ -9,6 +9,12 @@ import {
 } from "@/modules/industry/services/industryDashboardApi";
 import { IndustryActivity, ActivitySeverity } from "@/modules/industry/types/industryDashboard";
 import { toast } from "@/components/dashboard/ToastStack";
+import { useIndustryPitchStore } from "@/lib/store/useIndustryPitchStore";
+import {
+  registerProjectPitchThread,
+  postThreadMessage,
+  CommunicationThread,
+} from "@/modules/communication/services/communicationApi";
 
 interface IndustryNotificationsTabProps {
   onNavigateTab?: (tabId: string) => void;
@@ -50,68 +56,10 @@ const SEVERITY_CONFIG: Record<
   },
 };
 
-const SAMPLE_FALLBACK_ACTIVITIES: IndustryActivity[] = [
-  {
-    id: 101,
-    eventType: "MILESTONE_SUBMITTED",
-    title: "Phase 2 Milestone Evidence Submitted: BIT Mesra Microgrid",
-    description: "Principal Investigator Dr. Ramesh Kumar uploaded 6 IoT sensor telemetry logs and field verification photos for Tranche 2 disbursement.",
-    severity: "ACTION_REQUIRED",
-    relativeTime: "15 mins ago",
-    timestamp: new Date(Date.now() - 15 * 60000).toISOString(),
-    read: false,
-    referenceEntityType: "PILOT",
-    referenceEntityId: 1,
-  },
-  {
-    id: 102,
-    eventType: "COMPLIANCE_REMINDER",
-    title: "MCA Form CSR-1 Annual Filing Window Open",
-    description: "Schedule VII Item (ix) certified allocation ledger for FY 2024-25 is prepared and awaiting CFO digital signature.",
-    severity: "WARNING",
-    relativeTime: "2 hours ago",
-    timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
-    read: false,
-    referenceEntityType: "CSR",
-  },
-  {
-    id: 103,
-    eventType: "TESTBED_ALERT",
-    title: "Telemetry Online: Ranchi Rural Solar Field Testbed",
-    description: "Sensor node cluster #04 at Sukhurhutu Community Center Ground commenced live telemetry data broadcasting.",
-    severity: "SUCCESS",
-    relativeTime: "5 hours ago",
-    timestamp: new Date(Date.now() - 300 * 60000).toISOString(),
-    read: false,
-    referenceEntityType: "TESTBED",
-    referenceEntityId: 1,
-  },
-  {
-    id: 104,
-    eventType: "PROPOSAL_MATCH",
-    title: "New Matching Capstone: Tribal Tele-Diagnostic IoT Array",
-    description: "NIT Jamshedpur published an AI-assisted diagnostic prototype seeking corporate co-funding under Healthcare CSR.",
-    severity: "INFO",
-    relativeTime: "1 day ago",
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    read: true,
-    referenceEntityType: "MARKETPLACE",
-  },
-  {
-    id: 105,
-    eventType: "DISBURSEMENT_COMPLETED",
-    title: "Tranche 1 Grant Disbursed: ₹15,00,000",
-    description: "Electronic transfer completed to IIT (ISM) Dhanbad Clean Water R&D escrow account with verified UTR reference.",
-    severity: "SUCCESS",
-    relativeTime: "2 days ago",
-    timestamp: new Date(Date.now() - 172800000).toISOString(),
-    read: true,
-    referenceEntityType: "PILOT",
-  },
-];
+const SAMPLE_FALLBACK_ACTIVITIES: IndustryActivity[] = [];
 
 export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotificationsTabProps) {
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const [activities, setActivities] = useState<IndustryActivity[]>(SAMPLE_FALLBACK_ACTIVITIES);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,6 +79,100 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
       setIsLoading(false);
     }
   }, [token]);
+
+  const { pitches: storePitches, addPitch, acceptPitch, rejectPitch } = useIndustryPitchStore();
+  const [localPitches, setLocalPitches] = useState<any[]>([]);
+
+  const syncLocalPitches = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const allPitches: any[] = [];
+      const seenIds = new Set<string>();
+
+      // 1. Read from raw pitch array key (written by addPitch)
+      try {
+        const stored = localStorage.getItem("social_issues_csr_pitches_v1");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p) => { if (p?.id && !seenIds.has(p.id)) { seenIds.add(p.id); allPitches.push(p); } });
+          }
+        }
+      } catch (e) {}
+
+      // 2. Also read from zustand persist key (format: { state: { pitches: [] }, version: 0 })
+      try {
+        const zustandStored = localStorage.getItem("social_issues_industry_pitch_store_v1");
+        if (zustandStored) {
+          const parsed = JSON.parse(zustandStored);
+          const pitchArray = parsed?.state?.pitches;
+          if (Array.isArray(pitchArray)) {
+            pitchArray.forEach((p) => { if (p?.id && !seenIds.has(p.id)) { seenIds.add(p.id); allPitches.push(p); } });
+          }
+        }
+      } catch (e) {}
+
+      if (allPitches.length > 0) setLocalPitches(allPitches);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncLocalPitches();
+    const interval = setInterval(syncLocalPitches, 2000);
+    return () => clearInterval(interval);
+  }, [syncLocalPitches]);
+
+  const pitches = useMemo(() => {
+    const map = new Map<string, any>();
+    localPitches.forEach((p) => map.set(p.id, p));
+    storePitches.forEach((p) => map.set(p.id, p));
+    return Array.from(map.values());
+  }, [localPitches, storePitches]);
+
+  const handleAcceptCsrPitch = (pitchId: string) => {
+    const accepted = acceptPitch(pitchId);
+    if (accepted) {
+      const createdThread = registerProjectPitchThread({
+        id: accepted.threadId,
+        pilotId: accepted.threadId,
+        title: accepted.projectTitle,
+        partnerName: accepted.universityName,
+        partnerRole: `Lead PI • ${accepted.universityName}`,
+        sector: accepted.category || "CSR Grant",
+        lastMessage: "Pitch accepted by Industry CSR Committee.",
+        timestamp: "Just now",
+        unreadCount: 0,
+        type: "PILOT",
+        avatarBg: "bg-indigo-600",
+        universityName: accepted.universityName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: accepted.targetCompany || user?.name || "Corporate CSR Sponsor",
+      });
+
+      try {
+        postThreadMessage(
+          token,
+          createdThread.id,
+          `🤝 CSR GRANT PROPOSAL ACCEPTED\n\nCorporate Partner (${user?.name || accepted.targetCompany || "Industry CSR Committee"}) has officially accepted the grant pitch for "${accepted.projectTitle}".\n\nActive communication channel is now open for prototype review, technical mentorship, and milestone disbursements.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || "Industry CSR SPOC",
+          "INDUSTRY_SPOC",
+          accepted.projectTitle,
+          "INDUSTRY"
+        );
+      } catch {}
+
+      toast.success(`Accepted CSR Pitch for "${accepted.projectTitle}"! Moved to My Co-Funded Projects.`);
+      if (onNavigateTab) {
+        onNavigateTab("collaborations");
+      }
+    }
+  };
+
+  const handleRejectCsrPitch = (pitchId: string) => {
+    rejectPitch(pitchId);
+    toast.info("CSR Pitch Proposal declined.");
+  };
 
   useEffect(() => {
     loadNotifications();
@@ -155,28 +197,59 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
   const handleSendTestAlert = async () => {
     setIsTriggeringTest(true);
     try {
-      await triggerTestNotification(token, {
-        title: "Test Industry Notification",
-        message: "Real-time SSE and Redis notification verified successfully at " + new Date().toLocaleTimeString(),
+      const threadId = Date.now();
+      addPitch({
+        id: `pitch-${threadId}`,
+        threadId: threadId,
+        projectCode: "BIT-WATER-2024-01",
+        projectTitle: "Arsenic & Turbidity Inline Filtration Unit",
+        universityName: "Birla Institute of Technology, Mesra",
+        targetCompany: "Registered Corporate Partner",
+        requestedAmount: 350000,
+        category: "Direct Hardware & Lab Equipment Grant",
+        description: "Req for IoT water quality sensors & field testbed modems for Ramgarh district deployment.",
+        mentorNeeds: "Senior IoT firmware architect for telemetry review",
+        submittedAt: new Date().toISOString(),
       });
-      toast.success("Redis Pub/Sub alert broadcasted successfully.");
-      await loadNotifications();
+      syncLocalPitches();
+      toast.success("Simulated incoming University CSR pitch requisition!");
     } catch {
-      toast.info("Test event simulated in dashboard feed.");
+      toast.info("Test event simulated.");
     } finally {
       setIsTriggeringTest(false);
     }
   };
 
+  // Dynamically map all pitches into Industry Notifications Activity Feed
+  const dynamicPitchActivities = useMemo(() => {
+    return pitches.map((pitch, idx) => ({
+      id: 990000 + idx,
+      title: `🏛️ ${pitch.universityName} Pitched CSR Proposal: "${pitch.projectTitle}"`,
+      description: `Target Sponsor: ${pitch.targetCompany} • Requisition: ₹${pitch.requestedAmount.toLocaleString()} (${pitch.category}). ${pitch.description}`,
+      eventType: "UNIVERSITY_PITCH",
+      severity: pitch.status === "PENDING" ? ("ACTION_REQUIRED" as const) : ("SUCCESS" as const),
+      timestamp: pitch.submittedAt || new Date().toISOString(),
+      relativeTime: "Just now",
+      read: pitch.status !== "PENDING",
+      referenceEntityId: String(pitch.id),
+      referenceEntityType: "PILOT",
+      actionUrl: "/dashboard?tab=collaborations",
+    }));
+  }, [pitches]);
+
+  const combinedActivities = useMemo(() => {
+    return [...dynamicPitchActivities, ...activities];
+  }, [dynamicPitchActivities, activities]);
+
   const filteredActivities = useMemo(() => {
-    return activities.filter((act) => {
+    return combinedActivities.filter((act) => {
       // Category filter
       if (selectedCategory === "MILESTONE") {
         if (!act.eventType.includes("MILESTONE") && !act.eventType.includes("DISBURSEMENT")) return false;
       } else if (selectedCategory === "COMPLIANCE") {
         if (!act.eventType.includes("COMPLIANCE") && !act.eventType.includes("CSR")) return false;
       } else if (selectedCategory === "PROJECTS") {
-        if (!act.eventType.includes("PROPOSAL") && !act.eventType.includes("PROJECT")) return false;
+        if (!act.eventType.includes("PROPOSAL") && !act.eventType.includes("PROJECT") && !act.eventType.includes("PITCH")) return false;
       } else if (selectedCategory === "TELEMETRY") {
         if (!act.eventType.includes("TESTBED") && !act.eventType.includes("TELEMETRY")) return false;
       }
@@ -192,9 +265,9 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
       }
       return true;
     });
-  }, [activities, selectedCategory, searchQuery]);
+  }, [combinedActivities, selectedCategory, searchQuery]);
 
-  const unreadCount = activities.filter((a) => !a.read).length;
+  const unreadCount = combinedActivities.filter((a) => !a.read).length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -237,71 +310,85 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
         </div>
       </div>
 
-      {/* 2. Statutory Compliance Deadline Countdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Urgent Compliance</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                Due in 7 Days
-              </span>
-            </div>
-            <h4 className="text-xs font-bold text-slate-900">Milestone Tranche 2 Sign-Off</h4>
-            <p className="text-[11px] text-slate-600">
-              BIT Mesra Microgrid verification report pending corporate mentor approval before fund release.
-            </p>
-          </div>
-          <button
-            onClick={() => onNavigateTab && onNavigateTab("collaborations")}
-            className="mt-3 text-xs font-bold text-rose-700 hover:text-rose-900 inline-flex items-center gap-1 cursor-pointer"
-          >
-            Review Milestone Documents →
-          </button>
-        </div>
 
-        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Annual Statutory</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                Due in 18 Days
-              </span>
-            </div>
-            <h4 className="text-xs font-bold text-slate-900">MCA Form CSR-1 Annual Audit</h4>
-            <p className="text-[11px] text-slate-600">
-              Schedule VII Item (ix) statutory utilization certificate must be filed on the MCA portal.
-            </p>
-          </div>
-          <button
-            onClick={() => onNavigateTab && onNavigateTab("funding")}
-            className="mt-3 text-xs font-bold text-amber-700 hover:text-amber-900 inline-flex items-center gap-1 cursor-pointer"
-          >
-            Export Compliance Pack →
-          </button>
-        </div>
 
-        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Field Observability</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                All 4 Online
+      {/* ── INCOMING UNIVERSITY CSR PITCH PROPOSALS ── */}
+      {pitches.filter((p) => p.status === "PENDING").length > 0 && (
+        <div className="space-y-3 bg-indigo-950 text-white p-5 rounded-2xl border border-indigo-700 shadow-md">
+          <div className="flex items-center justify-between border-b border-indigo-800 pb-3">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                Action Required • University CSR Requisitions
               </span>
+              <h3 className="text-base font-black text-white">
+                Incoming University CSR Grant Pitches
+              </h3>
             </div>
-            <h4 className="text-xs font-bold text-slate-900">Quarterly Testbed Audit</h4>
-            <p className="text-[11px] text-slate-600">
-              Ranchi, Dhanbad, and East Singhbhum telemetry endpoints broadcasting normal telemetry.
-            </p>
+            <span className="bg-indigo-600 text-white text-xs px-3 py-1 rounded-full font-bold">
+              {pitches.filter((p) => p.status === "PENDING").length} Pending Proposal(s)
+            </span>
           </div>
-          <button
-            onClick={() => onNavigateTab && onNavigateTab("testbeds")}
-            className="mt-3 text-xs font-bold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1 cursor-pointer"
-          >
-            View Live Testbeds →
-          </button>
+
+          <div className="space-y-3 pt-1">
+            {pitches
+              .filter((p) => p.status === "PENDING")
+              .map((pitch) => (
+                <div
+                  key={pitch.id}
+                  className="p-4 rounded-xl bg-slate-900/90 border border-indigo-600/50 space-y-3 text-xs"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-800 pb-2.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-[10px] bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded border border-indigo-400/30">
+                          {pitch.projectCode}
+                        </span>
+                        <span className="text-xs font-bold text-slate-200">{pitch.universityName}</span>
+                      </div>
+                      <h4 className="text-sm font-black text-white mt-1">{pitch.projectTitle}</h4>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-base font-black text-emerald-400 font-mono">
+                        ₹{pitch.requestedAmount.toLocaleString()}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Requested CSR Grant</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 text-slate-300">
+                    <p><strong>Category:</strong> <span className="text-indigo-200">{pitch.category}</span></p>
+                    <p className="text-slate-300 leading-relaxed bg-slate-800/80 p-2.5 rounded border border-slate-700/80">
+                      "{pitch.description}"
+                    </p>
+                    {pitch.mentorNeeds && (
+                      <p className="text-slate-400 text-[11px]">
+                        <strong>Mentor Needs:</strong> {pitch.mentorNeeds}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleRejectCsrPitch(pitch.id)}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-rose-500/40 text-rose-300 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      ✕ Decline / Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAcceptCsrPitch(pitch.id)}
+                      className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                    >
+                      ✓ Accept Pitch &amp; Co-Fund
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Filter Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
