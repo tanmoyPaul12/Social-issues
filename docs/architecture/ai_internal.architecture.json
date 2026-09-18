@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AI Service Internal Files & Crawling",
+    "output": "AI_Internal_Architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "scripts", "type": "backend", "label": "Crawling Scripts", "sublabel": "crawl_bitmesra_*.py", "pos": [550, 100], "size": [180, 60] },
+    { "id": "engine", "type": "backend", "label": "Crawler Engine", "sublabel": "crawler/engine.py", "pos": [550, 300], "size": [180, 60] },
+    { "id": "crawl4ai", "type": "cloud", "label": "Crawl4AI Adapter", "sublabel": "crawl4ai_adapter.py", "pos": [800, 300], "size": [180, 60] },
+    
+    { "id": "schema", "type": "backend", "label": "Crawler Schema", "sublabel": "003_crawler_schema.sql", "pos": [50, 500], "size": [180, 60] },
+    { "id": "seed", "type": "backend", "label": "Seed Configs", "sublabel": "crawl_config_seed.py", "pos": [300, 500], "size": [180, 60] },
+    { "id": "extractor", "type": "backend", "label": "LangGraph Extractor", "sublabel": "extractor/langgraph_pipeline.py", "pos": [550, 500], "size": [180, 60] },
+    
+    { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "DB Server", "pos": [50, 700], "size": [180, 60] },
+    { "id": "db_client", "type": "backend", "label": "Database Client", "sublabel": "infrastructure/database/", "pos": [550, 700], "size": [180, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "AI Microservice Internals", "wraps": ["scripts", "engine", "crawl4ai", "schema", "seed", "extractor", "db_client"] }
+  ],
+  "connections": [
+    { "from": "scripts", "to": "engine", "label": "runs", "fromSide": "bottom", "toSide": "top", "labelAt": [640, 230] },
+    { "from": "engine", "to": "crawl4ai", "label": "delegates", "fromSide": "right", "toSide": "left" },
+    { "from": "engine", "to": "extractor", "label": "sends raw HTML", "fromSide": "bottom", "toSide": "top", "labelAt": [640, 430] },
+    { "from": "extractor", "to": "db_client", "label": "stores structured data", "fromSide": "bottom", "toSide": "top", "labelAt": [640, 630] },
+    { "from": "db_client", "to": "db", "label": "SQL", "fromSide": "left", "toSide": "right" },
+    { "from": "schema", "to": "db", "label": "defines tables", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [140, 630] },
+    { "from": "seed", "to": "db_client", "label": "inserts config", "fromSide": "bottom", "toSide": "left", "labelAt": [470, 645] }
+  ]
+}

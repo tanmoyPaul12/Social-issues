@@ -183,7 +183,7 @@ dmypy.json
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# AI / ML model artifacts (large binary files — store in DVC or S3)
+# AI / ML model artifacts & datasets (large binary/crawled files — store in DB/S3)
 ai-service/**/*.bin
 ai-service/**/*.pt
 ai-service/**/*.pth
@@ -192,6 +192,10 @@ ai-service/**/*.pkl
 ai-service/**/*.joblib
 ai-service/**/*.h5
 ai-service/models/
+ai-service/app/data/dataset-university/
+ai-service/structured_kb/
+ai-service/reports/
+ai-service/scripts/rich_kb/
 
 # Celery
 celerybeat-schedule

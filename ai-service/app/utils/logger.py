@@ -26,3 +26,4 @@ except ImportError:
         format="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s"
     )
     log = logging.getLogger("ai_service")
+    logger = log
