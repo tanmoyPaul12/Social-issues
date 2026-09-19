@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AI Microservice Context Diagram",
+    "output": "AI_Microservice_Context.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "gateway", "type": "cloud", "label": "API Gateway", "sublabel": "Spring Security", "pos": [50, 100], "size": [150, 60] },
+    { "id": "backend", "type": "backend", "label": "Core Backend", "sublabel": "Java/Spring Boot", "pos": [50, 300], "size": [150, 60] },
+    { "id": "ai", "type": "backend", "label": "AI Microservice", "sublabel": "Python/FastAPI", "pos": [350, 200], "size": [150, 60] },
+    { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "pgvector+PostGIS", "pos": [650, 100], "size": [150, 60] },
+    { "id": "redis", "type": "database", "label": "Redis", "sublabel": "Cache/Queue", "pos": [650, 300], "size": [150, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Platform Environment", "wraps": ["gateway", "backend", "ai", "db", "redis"] }
+  ],
+  "connections": [
+    { "from": "gateway", "to": "ai", "fromSide": "right", "toSide": "left" },
+    { "from": "backend", "to": "ai", "label": "async tasks", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "from": "ai", "to": "db", "label": "pgvector", "fromSide": "right", "toSide": "left" },
+    { "from": "ai", "to": "redis", "label": "Celery", "fromSide": "right", "toSide": "left" }
+  ]
+}
