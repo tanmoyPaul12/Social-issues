@@ -186,15 +186,68 @@ export function CitizenDashboardView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
 
-  // Fetch real submissions from backend on mount
+  // Fetch real submissions from backend on mount and setup live SSE status updates + polling
   useEffect(() => {
     fetchMyIssues();
-  }, [token]);
+
+    // 1. Setup SSE stream for live ticket updates
+    const userId = user?.id || "1";
+    const sseBase = API_BASE_URL.replace(/\/api$/, "");
+    const sseUrl = `${sseBase}/api/notifications/stream?userId=${encodeURIComponent(userId)}`;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (
+            payload.eventType === "ISSUE_STATUS_UPDATED" ||
+            payload.eventType === "TICKET_UPDATE" ||
+            payload.eventType === "AI_TRIAGE_COMPLETE" ||
+            payload.eventType === "STATUS_CHANGED"
+          ) {
+            toast.info(`Ticket Update: ${payload.title || payload.message || "Status updated"}`);
+            fetchMyIssues();
+          }
+        } catch {
+          // ignore heartbeat parse
+        }
+      };
+
+      eventSource.addEventListener("ticket_update", () => {
+        fetchMyIssues();
+      });
+
+      eventSource.addEventListener("issue_status_updated", () => {
+        fetchMyIssues();
+      });
+
+      eventSource.onerror = () => {
+        // SSE closed or reconnecting; fallback polling maintains sync
+      };
+    } catch (e) {
+      console.warn("SSE connection error:", e);
+    }
+
+    // 2. Fallback live polling every 30 seconds
+    const pollTimer = setInterval(() => {
+      fetchMyIssues();
+    }, 30000);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearInterval(pollTimer);
+    };
+  }, [token, user?.id]);
 
   const fetchMyIssues = async () => {
     setIsLoadingIssues(true);
     try {
-      const endpoint = token ? `${API_BASE_URL}/issues/my?page=0&size=20` : `${API_BASE_URL}/issues?page=0&size=20`;
+      const endpoint = token ? `${API_BASE_URL}/issues/my?page=0&size=50` : `${API_BASE_URL}/issues?page=0&size=50`;
       const res = await fetch(endpoint, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -210,15 +263,22 @@ export function CitizenDashboardView({
             domain: sectorToDomainMap[item.sector] || item.sector || "Grassroot Need",
             district: item.district,
             block: item.block,
+            villageOrWard: item.villageOrWard,
+            addressDescription: item.addressDescription,
+            latitude: item.latitude,
+            longitude: item.longitude,
             date: item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "Recent",
             status: item.status,
+            assignedHEI: item.assignedHEI,
+            fundingPartner: item.fundingPartner,
             progress: item.status === "RESOLVED" ? 100 : item.status === "IN_PROGRESS" ? 60 : item.status === "ASSIGNED_HEI" ? 40 : 15,
-            description: item.snippet || item.title,
+            description: item.description || item.snippet || item.title,
             upvotes: 1,
             priority: item.priority,
             affectedPopulation: item.affectedPopulation,
-            attachmentCount: item.attachmentCount || 0,
-            primaryThumbnailUrl: item.primaryThumbnailUrl,
+            attachments: item.attachments || [],
+            attachmentCount: (item.attachments && item.attachments.length) || item.attachmentCount || 0,
+            primaryThumbnailUrl: item.primaryThumbnailUrl || (item.attachments && item.attachments[0]?.fileUrl),
             validationStatus: item.validationStatus || "PASS"
           }));
           setSubmissions(mapped);

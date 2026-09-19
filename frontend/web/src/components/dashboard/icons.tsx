@@ -223,3 +223,28 @@ export function ArrowRight({ className = "w-4 h-4", ...props }: IconProps) {
     </svg>
   );
 }
+
+export function RefreshCw({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  );
+}
+
+export function Trash2({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+export function Loader2({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v4m0 12v4m-7.071-3.071l2.828-2.828m8.486-8.486l2.828-2.828M2 12h4m12 0h4m-3.071 7.071l-2.828-2.828m-8.486-8.486L3.929 4.929" />
+    </svg>
+  );
+}
+

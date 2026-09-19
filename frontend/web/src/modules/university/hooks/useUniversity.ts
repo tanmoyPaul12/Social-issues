@@ -67,7 +67,7 @@ function updateLocalProject(proj: UniversityProject) {
 }
 
 export function useUniversity(aisheCode: string = "U-0205", token?: string | null) {
-  const { issues } = useIssueStore();
+  const { issues, updateIssue } = useIssueStore();
   const { user } = useAuthStore();
   const currentUniversityName = user?.orgName || "Birla Institute of Technology, Mesra";
 
@@ -83,8 +83,8 @@ export function useUniversity(aisheCode: string = "U-0205", token?: string | nul
     setIsLoading(true);
     setError(null);
     try {
-      const [routed, open, proj, offers, acc] = await Promise.allSettled([
-        universityApi.getRoutedChallenges(aisheCode, token),
+      const [challenges, open, proj, offers, acc] = await Promise.allSettled([
+        universityApi.getChallenges(currentUniversityName, aisheCode, token),
         universityApi.getAllOpenChallenges({}, token),
         universityApi.getProjects(aisheCode, token),
         universityApi.getIndustryOffers(aisheCode, token),
@@ -92,8 +92,8 @@ export function useUniversity(aisheCode: string = "U-0205", token?: string | nul
       ]);
 
       let apiRouted: RoutedChallenge[] = [];
-      if (routed.status === "fulfilled" && Array.isArray(routed.value)) {
-        apiRouted = routed.value;
+      if (challenges.status === "fulfilled" && Array.isArray(challenges.value)) {
+        apiRouted = challenges.value;
       }
 
       let apiOpen: RoutedChallenge[] = [];
@@ -212,13 +212,60 @@ export function useUniversity(aisheCode: string = "U-0205", token?: string | nul
   };
 
   const createProject = async (data: CreateProjectRequest) => {
-    const newProj = await universityApi.createProject(data, token);
+    let newProj: UniversityProject;
+    try {
+      if (data.issueId && typeof data.issueId === "number" && data.issueId < 9000) {
+        newProj = await universityApi.acceptChallenge(data.issueId, data, token);
+      } else {
+        newProj = await universityApi.createProject(data, token);
+      }
+    } catch (e) {
+      newProj = await universityApi.createProject(data, token);
+    }
+
     // Persist the project and accepted challenge ID to localStorage
     saveLocalProject(newProj);
-    if (data.ticketId) addAcceptedChallengeId(data.ticketId);
+    if (data.ticketId) {
+      addAcceptedChallengeId(data.ticketId);
+      updateIssue(data.ticketId, { status: "IN_PROGRESS" });
+    }
     setProjects((prev) => [newProj, ...prev]);
-    setRoutedChallenges((prev) => prev.filter((c) => c.ticketId !== data.ticketId));
+    setRoutedChallenges((prev) => prev.filter((c) => c.ticketId !== data.ticketId && c.id !== data.issueId));
     return newProj;
+  };
+
+  const acceptChallenge = async (challengeId: number, projectData: CreateProjectRequest) => {
+    return createProject(projectData);
+  };
+
+  const declineChallenge = async (challengeId: number, ticketId?: string, reason?: string) => {
+    if (challengeId < 9000) {
+      try {
+        await universityApi.declineChallenge(challengeId, reason, token);
+      } catch (e) {
+        console.warn("Decline API note:", e);
+      }
+    }
+    if (ticketId) {
+      updateIssue(ticketId, { status: "TRIAGED", assignedHEI: undefined });
+    }
+    setRoutedChallenges((prev) => prev.filter((c) => c.id !== challengeId && c.ticketId !== ticketId));
+  };
+
+  const submitProposal = async (
+    projectId: number,
+    data: {
+      title?: string;
+      abstractDescription?: string;
+      domain?: string;
+      allocatedGrant?: number;
+      methodology?: string;
+    }
+  ) => {
+    const updated = await universityApi.submitProposal(projectId, data, token);
+    updateLocalProject(updated);
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+    return updated;
   };
 
   const updateStage = async (
@@ -299,6 +346,9 @@ export function useUniversity(aisheCode: string = "U-0205", token?: string | nul
     refresh: fetchAll,
     claimChallenge,
     createProject,
+    acceptChallenge,
+    declineChallenge,
+    submitProposal,
     updateStage,
     submitCsrPitch,
     recordCitizenVerification,

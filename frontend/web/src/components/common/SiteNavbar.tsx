@@ -2,20 +2,22 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 
-interface DropdownItem {
+interface NavDropdownItem {
   label: string;
   href: string;
   hasArrow?: boolean;
-  isFirstActive?: boolean;
 }
 
 export function SiteNavbar() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobilePortalsOpen, setMobilePortalsOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const { isAuthenticated, user, logout } = useAuthStore();
 
   const handleMouseEnter = (menuKey: string) => {
@@ -63,73 +65,29 @@ export function SiteNavbar() {
     return "/dashboard?role=citizen";
   };
 
-  const opportunitiesItems: DropdownItem[] = isAuthenticated
-    ? [
-        { label: "Student Capstone Grants", href: "/#opportunities", hasArrow: true, isFirstActive: true },
-        { label: "Faculty & Lab R&D Funding", href: "/#opportunities", hasArrow: true },
-        { label: "State STI Innovation Challenges", href: "/#opportunities", hasArrow: true },
-        { label: "Patent & IPR Filing Support", href: "/#opportunities", hasArrow: false },
-        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true },
-        { label: "District Pilot Opportunities", href: "/#opportunities", hasArrow: false },
-      ]
-    : [
-        { label: "College & University (HEI) Sign In", href: "/auth/login/university", hasArrow: true, isFirstActive: true },
-        { label: "Register College / University (AISHE)", href: "/onboarding/university", hasArrow: true },
-        { label: "Student Capstone Grants", href: "/onboarding/university", hasArrow: true },
-        { label: "Faculty & Lab R&D Funding", href: "/onboarding/university", hasArrow: true },
-        { label: "Government Opportunities & POC", href: "/onboarding/government", hasArrow: true },
-        { label: "CSR Co-Funding Marketplace", href: "/onboarding/industry", hasArrow: true },
-        { label: "State STI Innovation Challenges", href: "/#opportunities", hasArrow: false },
-        { label: "Patent & IPR Filing Support", href: "/#opportunities", hasArrow: false },
-      ];
+  const handleTrackClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      const inputEl = document.getElementById("ticket-search-input");
+      if (inputEl) {
+        inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        inputEl.focus();
+      }
+    }
+  };
 
-  const industryItems: DropdownItem[] = isAuthenticated
-    ? [
-        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true, isFirstActive: true },
-        { label: "Industry R&D Portal Overview", href: "/industry-rd", hasArrow: false },
-        { label: "Lab Technology Licensing & POCs", href: "/industry-rd#licensing", hasArrow: true },
-        { label: "Active District Pilot Projects", href: "/dashboard?role=industry", hasArrow: true },
-      ]
-    : [
-        { label: "Industry & CSR Sign In", href: "/auth/login/industry", hasArrow: true, isFirstActive: true },
-        { label: "Register Corporate / CSR Partner", href: "/onboarding/industry", hasArrow: true },
-        { label: "CSR Co-Funding Marketplace", href: "/dashboard?role=industry", hasArrow: true },
-        { label: "Lab Technology Licensing & POCs", href: "/onboarding/industry", hasArrow: true },
-        { label: "Industry R&D Portal Overview", href: "/industry-rd", hasArrow: false },
-      ];
-
-  const segmentsItems: DropdownItem[] = isAuthenticated
-    ? [
-        { label: "Government Opportunities & POC", href: "/#segments", hasArrow: true, isFirstActive: true },
-        { label: "International Partnerships", href: "/#international", hasArrow: false },
-        { label: "Women in STEM", href: "/#women-stem", hasArrow: false },
-        { label: "School Innovation", href: "/#school-innovation", hasArrow: true },
-        { label: "AMRIT - RuTAGe Smart Village Centres", href: "/#rsvc-amrit", hasArrow: true },
-        { label: "Impact Assessment Partners", href: "/#impact", hasArrow: false },
-        { label: "City STI Clusters", href: "/#clusters", hasArrow: false },
-      ]
-    : [
-        { label: "Government Opportunities and POC", href: "/onboarding/government", hasArrow: true, isFirstActive: true },
-        { label: "International Partnerships", href: "/#international", hasArrow: false },
-        { label: "Women in STEM", href: "/#women-stem", hasArrow: false },
-        { label: "School Innovation", href: "/#school-innovation", hasArrow: true },
-        { label: "AMRIT - RuTAGe Smart Village Centres", href: "/#rsvc-amrit", hasArrow: true },
-        { label: "Impact Assessment Partners", href: "/#impact", hasArrow: false },
-        { label: "City STI Clusters", href: "/#clusters", hasArrow: false },
-      ];
-
-  const eventsItems: DropdownItem[] = [
-    { label: "Jharkhand Innovation Hackathon 2026", href: "/#events", hasArrow: true, isFirstActive: true },
-    { label: "NEP 2020 Capstone Showcase", href: "/#events", hasArrow: true },
-    { label: "District Triage & Triage Workshops", href: "/#events", hasArrow: true },
-    { label: "Grassroots Technology Demo Day", href: "/#events", hasArrow: false },
-    { label: "State Annual Science & Tech Exhibition", href: "/#exhibitions", hasArrow: false },
+  const portalItems: NavDropdownItem[] = [
+    { label: "College & University (HEI) Portal", href: "/onboarding/university", hasArrow: true },
+    { label: "Industry & CSR Partnership Gateway", href: "/onboarding/industry", hasArrow: true },
+    { label: "Government Nodal Officer Portal", href: "/onboarding/government", hasArrow: true },
+    { label: "Citizen Problem Submission", href: "/auth/login", hasArrow: true },
+    { label: "Academic & CSR Consortium", href: "/#institutions-section", hasArrow: false },
   ];
 
   return (
     <header ref={navRef} className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 font-sans text-slate-800 shadow-2xs select-none">
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-6">
-        <div className="flex items-center justify-between h-[66px] gap-2 lg:gap-3">
+        <div className="flex items-center justify-between h-[66px] gap-2 lg:gap-4">
           
           {/* Left Brand Identity: Official State Emblem & Bilingual Typography */}
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group py-1">
@@ -142,7 +100,7 @@ export function SiteNavbar() {
               />
             </div>
             <div className="flex flex-col text-left justify-center">
-              <span className="text-[12.5px] sm:text-[13.5px] xl:text-[14.5px] font-black text-slate-950 tracking-tight leading-tight">
+              <span className="text-[12px] sm:text-[13px] xl:text-[14px] font-black text-slate-950 tracking-tight leading-tight">
                 झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
               </span>
               <span className="text-[10px] sm:text-[11px] xl:text-[11.5px] font-bold text-slate-700 tracking-tight leading-tight mt-0.5">
@@ -151,211 +109,56 @@ export function SiteNavbar() {
             </div>
           </Link>
 
-          {/* Center Navigation Links (With hover box stack dropdowns) */}
-          <nav className="hidden xl:flex items-center h-full text-[12.5px] 2xl:text-[13px] font-medium text-[#004b75] whitespace-nowrap shrink-0">
+          {/* Center Navigation Links: Clean, Meaningful & Exact Rectangular Underline Hover Effect */}
+          <nav className="hidden lg:flex items-center h-[66px] text-[13px] 2xl:text-[13.5px] font-medium text-[#004b75] whitespace-nowrap shrink-0">
             <Link
               href="/"
-              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              className="px-3 2xl:px-4 h-full flex items-center transition-colors border-b-2 border-transparent hover:bg-[#dff0fa] hover:text-[#00486c] hover:border-[#004b75]"
             >
               Home
             </Link>
 
             <Link
-              href="/#co-partners"
-              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              href="/#challenges-feed"
+              className="px-3 2xl:px-4 h-full flex items-center transition-colors border-b-2 border-transparent hover:bg-[#dff0fa] hover:text-[#00486c] hover:border-[#004b75]"
             >
-              Co-Partners
-            </Link>
-
-            {/* Opportunities Dropdown */}
-            <div
-              className="relative h-full flex items-center shrink-0"
-              onMouseEnter={() => handleMouseEnter("opportunities")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                type="button"
-                onClick={() => setActiveMenu(activeMenu === "opportunities" ? null : "opportunities")}
-                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
-                  activeMenu === "opportunities" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
-                }`}
-              >
-                <span>Opportunities</span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${activeMenu === "opportunities" ? "rotate-180 text-[#00486c]" : "text-[#004b75]"}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {activeMenu === "opportunities" && (
-                <div
-                  className="absolute left-0 top-full w-84 bg-white border border-[#cbe3f1] border-t-0 shadow-2xl z-50 animate-in fade-in duration-100"
-                  onMouseEnter={() => handleMouseEnter("opportunities")}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {opportunitiesItems.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={() => setActiveMenu(null)}
-                      className={`px-5 py-3.5 flex items-center justify-between text-[13.5px] font-medium transition-colors border-b border-[#edf4f9] last:border-0 ${
-                        item.isFirstActive
-                          ? "bg-[#dff0fa] text-[#00486c] hover:bg-[#d3e9f5]"
-                          : "bg-white text-[#00486c] hover:bg-[#f0f7fb]"
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                      {item.hasArrow && (
-                        <svg className="w-4 h-4 text-[#00486c] shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                        </svg>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Industry R&D Dropdown with Direct Login & Register Options */}
-            <div
-              className="relative h-full flex items-center shrink-0"
-              onMouseEnter={() => handleMouseEnter("industry")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                type="button"
-                onClick={() => setActiveMenu(activeMenu === "industry" ? null : "industry")}
-                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
-                  activeMenu === "industry" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
-                }`}
-              >
-                <span>Industry R&amp;D</span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${activeMenu === "industry" ? "rotate-180 text-[#00486c]" : "text-[#004b75]"}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {activeMenu === "industry" && (
-                <div
-                  className="absolute left-0 top-full w-88 bg-white border border-[#cbe3f1] border-t-0 shadow-2xl z-50 animate-in fade-in duration-100"
-                  onMouseEnter={() => handleMouseEnter("industry")}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {industryItems.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={() => setActiveMenu(null)}
-                      className={`px-5 py-3.5 flex items-center justify-between text-[13.5px] font-medium transition-colors border-b border-[#edf4f9] last:border-0 ${
-                        item.isFirstActive
-                          ? "bg-[#dff0fa] text-[#00486c] hover:bg-[#d3e9f5]"
-                          : "bg-white text-[#00486c] hover:bg-[#f0f7fb]"
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                      {item.hasArrow && (
-                        <svg className="w-4 h-4 text-[#00486c] shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                        </svg>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Segments Dropdown (Box Stack design) */}
-            <div
-              className="relative h-full flex items-center shrink-0"
-              onMouseEnter={() => handleMouseEnter("segments")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                type="button"
-                onClick={() => setActiveMenu(activeMenu === "segments" ? null : "segments")}
-                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
-                  activeMenu === "segments" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
-                }`}
-              >
-                <span>Segments</span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${activeMenu === "segments" ? "rotate-180 text-[#00486c]" : "text-[#004b75]"}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {activeMenu === "segments" && (
-                <div
-                  className="absolute left-0 top-full w-88 bg-white border border-[#cbe3f1] border-t-0 shadow-2xl z-50 animate-in fade-in duration-100"
-                  onMouseEnter={() => handleMouseEnter("segments")}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {segmentsItems.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={() => setActiveMenu(null)}
-                      className={`px-5 py-3.5 flex items-center justify-between text-[13.5px] font-medium transition-colors border-b border-[#edf4f9] last:border-0 ${
-                        item.isFirstActive
-                          ? "bg-[#dff0fa] text-[#00486c] hover:bg-[#d3e9f5]"
-                          : "bg-white text-[#00486c] hover:bg-[#f0f7fb]"
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                      {item.hasArrow && (
-                        <svg className="w-4 h-4 text-[#00486c] shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                        </svg>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Link
-              href="/#rsvc-amrit"
-              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
-            >
-              RSVC - Amrit
+              Explore Challenges
             </Link>
 
             <Link
-              href="/#exhibitions"
-              className="px-1.5 2xl:px-2 py-2 hover:text-blue-700 transition-colors h-full flex items-center whitespace-nowrap shrink-0"
+              href="/#pipeline-section"
+              className="px-3 2xl:px-4 h-full flex items-center transition-colors border-b-2 border-transparent hover:bg-[#dff0fa] hover:text-[#00486c] hover:border-[#004b75]"
             >
-              Exhibitions
+              How It Works
             </Link>
 
-            {/* Events Dropdown */}
+            <Link
+              href="/industry-rd"
+              className="px-3 2xl:px-4 h-full flex items-center transition-colors border-b-2 border-transparent hover:bg-[#dff0fa] hover:text-[#00486c] hover:border-[#004b75]"
+            >
+              Industry &amp; CSR
+            </Link>
+
+            {/* Portals & Roles Dropdown with Exact Active/Hover Box Design */}
             <div
-              className="relative h-full flex items-center shrink-0"
-              onMouseEnter={() => handleMouseEnter("events")}
+              className="relative h-full flex items-center"
+              onMouseEnter={() => handleMouseEnter("portals")}
               onMouseLeave={handleMouseLeave}
             >
               <button
                 type="button"
-                onClick={() => setActiveMenu(activeMenu === "events" ? null : "events")}
-                className={`flex items-center gap-1 px-1.5 2xl:px-2 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap shrink-0 ${
-                  activeMenu === "events" ? "bg-[#dff0fa] text-[#00486c]" : "hover:text-blue-700"
+                onClick={() => setActiveMenu(activeMenu === "portals" ? null : "portals")}
+                className={`flex items-center gap-1.5 px-3 2xl:px-4 h-full transition-colors cursor-pointer outline-none font-medium whitespace-nowrap border-b-2 ${
+                  activeMenu === "portals"
+                    ? "bg-[#dff0fa] text-[#00486c] border-[#004b75]"
+                    : "border-transparent hover:bg-[#dff0fa] hover:text-[#00486c] hover:border-[#004b75]"
                 }`}
               >
-                <span>Events</span>
+                <span>Portals &amp; Roles</span>
                 <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${activeMenu === "events" ? "rotate-180 text-[#00486c]" : "text-[#004b75]"}`}
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    activeMenu === "portals" ? "rotate-180 text-[#00486c]" : "text-[#004b75]"
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -364,22 +167,18 @@ export function SiteNavbar() {
                 </svg>
               </button>
 
-              {activeMenu === "events" && (
+              {activeMenu === "portals" && (
                 <div
-                  className="absolute right-0 top-full w-88 bg-white border border-[#cbe3f1] border-t-0 shadow-2xl z-50 animate-in fade-in duration-100"
-                  onMouseEnter={() => handleMouseEnter("events")}
+                  className="absolute left-0 top-full w-80 bg-white border border-[#cbe3f1] border-t-0 shadow-2xl z-50 animate-in fade-in duration-100"
+                  onMouseEnter={() => handleMouseEnter("portals")}
                   onMouseLeave={handleMouseLeave}
                 >
-                  {eventsItems.map((item, idx) => (
+                  {portalItems.map((item, idx) => (
                     <Link
                       key={idx}
                       href={item.href}
                       onClick={() => setActiveMenu(null)}
-                      className={`px-5 py-3.5 flex items-center justify-between text-[13.5px] font-medium transition-colors border-b border-[#edf4f9] last:border-0 ${
-                        item.isFirstActive
-                          ? "bg-[#dff0fa] text-[#00486c] hover:bg-[#d3e9f5]"
-                          : "bg-white text-[#00486c] hover:bg-[#f0f7fb]"
-                      }`}
+                      className="px-5 py-3.5 flex items-center justify-between text-[13.5px] font-medium transition-colors border-b border-[#edf4f9] last:border-0 bg-white text-[#00486c] hover:bg-[#f0f7fb]"
                     >
                       <span>{item.label}</span>
                       {item.hasArrow && (
@@ -394,14 +193,27 @@ export function SiteNavbar() {
             </div>
           </nav>
 
-          {/* Right Action Area */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
+          {/* Right Action Area: Track Ticket + Auth Controls */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+            {/* Quick Track Ticket Action */}
+            <Link
+              href="/#ticket-search-input"
+              onClick={handleTrackClick}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-slate-300 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/50 text-[#004b75] text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Track Submitted Problem Ticket"
+            >
+              <svg className="w-3.5 h-3.5 text-[#004b75]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Track Ticket</span>
+            </Link>
+
             {isAuthenticated ? (
               /* Authenticated View: Role-based Portal Dashboard & Profile & Sign Out */
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 {/* User chip */}
-                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors shrink-0 whitespace-nowrap shadow-2xs">
-                  <div className="w-5.5 h-5.5 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-[10.5px] flex items-center justify-center shadow-xs shrink-0">
+                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors shrink-0 whitespace-nowrap shadow-2xs">
+                  <div className="w-5.5 h-5.5 rounded bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-[10.5px] flex items-center justify-center shadow-xs shrink-0">
                     {(user?.name || "U").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col text-left leading-none">
@@ -413,7 +225,7 @@ export function SiteNavbar() {
                 {/* Role-based Portal Dashboard Button */}
                 <Link
                   href={getRoleDashboardUrl()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0077b6] to-[#0096c7] hover:from-[#005f92] hover:to-[#0077b6] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200 shrink-0 whitespace-nowrap group active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#0077b6] to-[#0096c7] hover:from-[#005f92] hover:to-[#0077b6] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200 shrink-0 whitespace-nowrap group active:scale-95"
                 >
                   <svg className="w-3.5 h-3.5 text-blue-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -425,7 +237,7 @@ export function SiteNavbar() {
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200/70 hover:border-rose-300 transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200/70 hover:border-rose-300 transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
                   title="Sign Out"
                 >
                   <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -439,13 +251,13 @@ export function SiteNavbar() {
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 <Link
                   href="/auth/login"
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-all shadow-2xs shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center px-3.5 py-1.5 rounded border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-all shadow-2xs shrink-0 whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
-                  href="/auth/signup"
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg border border-[#0077b6] bg-[#0077b6] hover:bg-[#005f92] text-white text-xs font-medium transition-all shadow-2xs shrink-0 whitespace-nowrap"
+                  href="/onboarding"
+                  className="inline-flex items-center px-3.5 py-1.5 rounded border border-[#0077b6] bg-[#0077b6] hover:bg-[#005f92] text-white text-xs font-medium transition-all shadow-2xs shrink-0 whitespace-nowrap"
                 >
                   Register
                 </Link>
@@ -456,7 +268,7 @@ export function SiteNavbar() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="lg:hidden p-2 rounded text-slate-700 hover:bg-slate-100 cursor-pointer"
               aria-label="Toggle navigation"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,36 +285,94 @@ export function SiteNavbar() {
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-slate-200 py-4 px-2 space-y-2 text-sm text-[#004b75] bg-white animate-in fade-in duration-150">
-            <Link href="/" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
+            <Link
+              href="/"
+              className="block px-3 py-2 rounded hover:bg-slate-100 font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Home
             </Link>
-            <Link href="/#co-partners" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              Co-Partners
+
+            <Link
+              href="/#challenges-feed"
+              className="block px-3 py-2 rounded hover:bg-slate-100 font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Explore Challenges
             </Link>
-            <Link href="/onboarding/university" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              Opportunities
+
+            <Link
+              href="/#pipeline-section"
+              className="block px-3 py-2 rounded hover:bg-slate-100 font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              How It Works
             </Link>
-            <Link href="/industry-rd" className="block px-3 py-2 rounded hover:bg-slate-100 font-semibold" onClick={() => setMobileMenuOpen(false)}>
-              Industry R&amp;D Portal
+
+            <Link
+              href="/industry-rd"
+              className="block px-3 py-2 rounded hover:bg-slate-100 font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Industry &amp; CSR
             </Link>
-            <Link href="/#segments" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              Segments
+
+            {/* Mobile Portals Accordion */}
+            <div className="border border-slate-200 rounded p-2 bg-[#f8fbfe]">
+              <button
+                type="button"
+                onClick={() => setMobilePortalsOpen(!mobilePortalsOpen)}
+                className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-bold text-[#00486c] uppercase tracking-wider"
+              >
+                <span>Portals &amp; Roles</span>
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform ${mobilePortalsOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {mobilePortalsOpen && (
+                <div className="mt-2 space-y-1 pt-1 border-t border-[#cbe3f1]">
+                  {portalItems.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 rounded hover:bg-[#dff0fa] text-xs font-medium text-[#00486c]"
+                    >
+                      <span>{item.label}</span>
+                      {item.hasArrow && (
+                        <svg className="w-3.5 h-3.5 text-[#00486c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Link
+              href="/#ticket-search-input"
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleTrackClick(e);
+              }}
+              className="block px-3 py-2 rounded bg-[#dff0fa] text-[#00486c] font-semibold"
+            >
+              Track Ticket
             </Link>
-            <Link href="/#rsvc-amrit" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              RSVC - Amrit
-            </Link>
-            <Link href="/#exhibitions" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              Exhibitions
-            </Link>
-            <Link href="/#events" className="block px-3 py-2 rounded hover:bg-slate-100" onClick={() => setMobileMenuOpen(false)}>
-              Events
-            </Link>
-            <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
               {isAuthenticated ? (
                 <>
                   <Link
                     href={getRoleDashboardUrl()}
-                    className="block px-3 py-2 rounded bg-blue-600 text-white text-center font-medium"
+                    className="block px-3 py-2 rounded bg-[#0077b6] text-white text-center font-semibold"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Portal Dashboard ({user?.role || "Citizen"})
@@ -513,20 +383,28 @@ export function SiteNavbar() {
                       logout();
                       setMobileMenuOpen(false);
                     }}
-                    className="block w-full px-3 py-2 rounded bg-red-50 text-red-600 text-center font-medium"
+                    className="block w-full px-3 py-2 rounded bg-red-50 text-red-600 text-center font-semibold"
                   >
                     Sign Out
                   </button>
                 </>
               ) : (
-                <>
-                  <Link href="/auth/login" className="block px-3 py-2 rounded bg-slate-50 text-center font-medium" onClick={() => setMobileMenuOpen(false)}>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/auth/login"
+                    className="block px-3 py-2 rounded bg-slate-100 text-slate-800 text-center font-semibold"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     Sign In
                   </Link>
-                  <Link href="/auth/signup" className="block px-3 py-2 rounded bg-blue-600 text-white text-center font-medium" onClick={() => setMobileMenuOpen(false)}>
+                  <Link
+                    href="/onboarding"
+                    className="block px-3 py-2 rounded bg-[#0077b6] text-white text-center font-semibold"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     Register
                   </Link>
-                </>
+                </div>
               )}
             </div>
           </div>

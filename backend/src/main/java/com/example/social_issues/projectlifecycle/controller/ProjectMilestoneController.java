@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/projects/{projectId}/milestones")
+@RequestMapping({"/projects/{projectId}/milestones", "/milestones/{projectId}"})
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"}, allowCredentials = "true")
 public class ProjectMilestoneController {
 
@@ -30,8 +30,9 @@ public class ProjectMilestoneController {
     }
 
     /**
-     * 1. Get all milestones and deliverables for a project
+     * 1. Get all milestones and deliverables for a project / workspace
      * GET /api/projects/{projectId}/milestones
+     * GET /api/milestones/{workspaceId}
      */
     @GetMapping
     public ResponseEntity<List<MilestoneDto>> getProjectMilestones(@PathVariable("projectId") Long projectId) {
@@ -41,8 +42,10 @@ public class ProjectMilestoneController {
     /**
      * 2. Initialize default 4-stage TRL milestone roadmap for a project
      * POST /api/projects/{projectId}/milestones/init-roadmap
+     * POST /api/projects/{projectId}/milestones/setup-defaults
+     * POST /api/milestones/{workspaceId}/setup-defaults
      */
-    @PostMapping("/init-roadmap")
+    @PostMapping({"/init-roadmap", "/setup-defaults"})
     public ResponseEntity<List<MilestoneDto>> initDefaultRoadmap(@PathVariable("projectId") Long projectId) {
         log.info("API: Initializing default milestone roadmap for project ID: {}", projectId);
         return ResponseEntity.status(HttpStatus.CREATED).body(milestoneService.setupDefaultMilestones(projectId));

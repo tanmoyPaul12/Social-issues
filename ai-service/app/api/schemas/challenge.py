@@ -59,7 +59,7 @@ class ChallengeInput(BaseModel):
     )
 
     latitude: float = Field(
-        ...,
+        default=23.3441,
         ge=-90.0,
         le=90.0,
         description="WGS84 latitude coordinate of the problem location.",
@@ -67,7 +67,7 @@ class ChallengeInput(BaseModel):
     )
 
     longitude: float = Field(
-        ...,
+        default=85.3096,
         ge=-180.0,
         le=180.0,
         description="WGS84 longitude coordinate of the problem location.",

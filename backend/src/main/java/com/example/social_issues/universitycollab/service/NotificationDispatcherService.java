@@ -53,4 +53,21 @@ public class NotificationDispatcherService {
             return false;
         }
     }
+
+    public boolean dispatchCitizenVerificationNotice(Long projectId, String recipientUserId, String issueTitle, String district) {
+        String title = "🎓 University Adopted Your Issue for R&D!";
+        String message = String.format("A university research team has adopted '%s' in %s for active development and field verification.",
+                issueTitle != null ? issueTitle : "your reported issue",
+                district != null ? district : "your area");
+        String actionUrl = "/issues/" + (projectId != null ? projectId : "");
+        return publishNotification(
+                "CITIZEN_CHALLENGE_ADOPTED",
+                title,
+                message,
+                recipientUserId,
+                "SUCCESS",
+                actionUrl
+        );
+    }
 }
+

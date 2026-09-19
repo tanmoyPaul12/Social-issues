@@ -13,11 +13,18 @@ class TextEmbeddingModel:
         self.dimension = 384
 
     def encode(self, text: str) -> List[float]:
-        """Generates dense vector representation for input string."""
-        # Simulated feature vector calculation (normalizable float array)
-        np.random.seed(abs(hash(text)) % (2**32))
-        vec = np.random.uniform(-1.0, 1.0, size=self.dimension)
+        """Generates dense vector representation using word-token feature hashing."""
+        words = [w.strip() for w in text.lower().replace(",", " ").replace(".", " ").replace("-", " ").split() if len(w.strip()) > 2]
+        if not words:
+            return [0.0] * self.dimension
+        vec = np.zeros(self.dimension, dtype=np.float32)
+        for w in words:
+            idx = abs(hash(w)) % self.dimension
+            sign = 1.0 if (abs(hash(w + "_sign")) % 2 == 0) else -1.0
+            vec[idx] += sign
         norm = np.linalg.norm(vec)
-        return (vec / norm).tolist()
+        if norm > 0:
+            vec = vec / norm
+        return vec.tolist()
 
 text_embedder = TextEmbeddingModel()

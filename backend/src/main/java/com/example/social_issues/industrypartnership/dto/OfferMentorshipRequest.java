@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 
 public class OfferMentorshipRequest {
 
+    private Long projectId;
+
     @NotBlank(message = "Mentor nominee name is required")
     private String mentorName;
 
@@ -14,6 +16,9 @@ public class OfferMentorshipRequest {
     private String messageNotes;
 
     public OfferMentorshipRequest() {}
+
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
 
     public String getMentorName() { return mentorName; }
     public void setMentorName(String mentorName) { this.mentorName = mentorName; }

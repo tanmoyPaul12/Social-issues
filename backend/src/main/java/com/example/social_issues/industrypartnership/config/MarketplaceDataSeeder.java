@@ -15,13 +15,6 @@ import java.time.LocalDate;
 import com.example.social_issues.universitycollab.model.UniversityProject;
 import com.example.social_issues.universitycollab.model.UniversityProjectStage;
 import com.example.social_issues.universitycollab.repository.UniversityProjectRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 @Component

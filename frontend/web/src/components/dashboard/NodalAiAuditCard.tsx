@@ -46,7 +46,9 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   // Media Viewer Sub-tab inside Citizen Tab: "image" | "pdf"
   const [mediaView, setMediaView] = useState<'image' | 'pdf'>('image');
   // Nodal Action State
-  const [decisionState, setDecisionState] = useState<'NONE' | 'APPROVED' | 'CLARIFICATION' | 'ESCALATED'>('NONE');
+  const [decisionState, setDecisionState] = useState<'NONE' | 'VALIDATED' | 'ASSIGNED' | 'REJECTED' | 'CLARIFICATION' | 'ESCALATED'>('NONE');
+  const [actionNotes, setActionNotes] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // Extract raw issue fields without synthetic mock overrides
   const title = issue?.title || "Citizen Grievance Submission";
@@ -87,38 +89,113 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   const priorityLevel = consensus?.final_priority_level || issue?.priority || 'MEDIUM';
   const priorityScore = consensus?.average_priority_score ?? (priorityLevel === 'CRITICAL' ? 85 : priorityLevel === 'HIGH' ? 70 : 50);
 
-  const handleAction = async (actionType: 'APPROVED' | 'CLARIFICATION' | 'ESCALATED') => {
-    setDecisionState(actionType);
-    if (actionType === 'APPROVED') {
+  const numId = issue?.numericId;
+
+  // Action Handlers
+  const handleValidate = async () => {
+    setIsProcessing(true);
+    try {
+      if (numId) {
+        const res = await fetch(`${API_BASE_URL}/triage/${numId}/validate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ notes: actionNotes || "Verified and confirmed by State Nodal Officer." }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to validate grievance');
+        }
+      }
+      setDecisionState('VALIDATED');
+      updateIssue(issueId, {
+        status: 'TRIAGED',
+        validationStatus: 'PASS',
+      });
+      toast.success(`Grievance #${issueId} Validated! Status transitioned to TRIAGED.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to validate grievance.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedHei) {
+      toast.warning("Please select a target Higher Education Institution (HEI).");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      if (numId) {
+        const res = await fetch(`${API_BASE_URL}/triage/${numId}/assign`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ heiName: selectedHei, notes: actionNotes || "Approved and routed to HEI by Nodal Officer." }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to assign grievance to HEI');
+        }
+      }
+      setDecisionState('ASSIGNED');
       updateIssue(issueId, {
         assignedHEI: selectedHei,
         status: 'ASSIGNED_HEI',
       });
-
-      try {
-        const numId = issue?.numericId;
-        if (numId) {
-          await fetch(`${API_BASE_URL}/issues/${numId}/assign`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ assignedHEI: selectedHei }),
-          });
-        }
-      } catch (err) {
-        console.warn('Backend issue assignment update note:', err);
-      }
-
       toast.success(`Grievance #${issueId} Approved! Dispatched to ${selectedHei}.`);
-    } else if (actionType === 'CLARIFICATION') {
-      updateIssue(issueId, { status: 'CLARIFICATION_REQUESTED' });
-      toast.info(`Clarification notice dispatched to citizen (${citizenEmail}).`);
-    } else if (actionType === 'ESCALATED') {
-      updateIssue(issueId, { status: 'ESCALATED_CABINET' });
-      toast.warning(`Grievance #${issueId} Escalated to State Secretariat.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to route grievance.");
+    } finally {
+      setIsProcessing(false);
     }
+  };
+
+  const handleReject = async () => {
+    setIsProcessing(true);
+    try {
+      if (numId) {
+        const res = await fetch(`${API_BASE_URL}/triage/${numId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ reason: actionNotes || "Submission does not meet civic verification guidelines." }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to reject grievance');
+        }
+      }
+      setDecisionState('REJECTED');
+      updateIssue(issueId, {
+        status: 'REJECTED',
+        validationStatus: 'REJECT',
+      });
+      toast.warning(`Grievance #${issueId} Rejected.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject grievance.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClarification = () => {
+    setDecisionState('CLARIFICATION');
+    updateIssue(issueId, { status: 'UNDER_REVIEW' });
+    toast.info(`Clarification notice dispatched to citizen (${citizenEmail}).`);
+  };
+
+  const handleEscalate = () => {
+    setDecisionState('ESCALATED');
+    updateIssue(issueId, { status: 'ESCALATED' });
+    toast.warning(`Grievance #${issueId} Escalated to State Secretariat.`);
   };
 
   return (
@@ -170,7 +247,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
         </div>
       </div>
 
-      {/* Main Structural Tabs Bar (Simple Black & White Styling) */}
+      {/* Main Structural Tabs Bar */}
       <div className="flex border-b border-slate-200 bg-slate-100 px-6">
         <button
           type="button"
@@ -181,7 +258,12 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>📋 1. Citizen Submission &amp; Attachments</span>
+          <span>1. Citizen Submission &amp; Attachments</span>
+          {issue?.isDuplicate && (
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-800">
+              Duplicate
+            </span>
+          )}
         </button>
 
         <button
@@ -193,7 +275,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>🤖 2. AI Multimodal Verification</span>
+          <span>2. AI Multimodal Verification</span>
           {hasAiData ? (
             <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-800">
               Ready
@@ -214,7 +296,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>⚖️ 3. Nodal Decision &amp; Allocation</span>
+          <span>3. Nodal Decision &amp; Allocation</span>
         </button>
       </div>
 
@@ -224,6 +306,24 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
         {/* ==================== TAB 1: CITIZEN SUBMISSION & ATTACHMENTS ==================== */}
         {mainTab === 'citizen' && (
           <div className="space-y-6">
+
+            {/* Potential Duplicate Banner */}
+            {issue?.isDuplicate && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+                  !
+                </div>
+                <div className="flex-1 text-xs">
+                  <div className="font-bold text-amber-900">
+                    AI Deduplication Alert: Potential Duplicate Challenge Detected
+                  </div>
+                  <p className="text-amber-800 mt-1 leading-relaxed">
+                    This grievance matches existing submissions within spatial proximity or semantic vector threshold.
+                    {issue.duplicateClusterId && <span className="block mt-1 font-mono font-bold">Cluster ID: {issue.duplicateClusterId}</span>}
+                  </p>
+                </div>
+              </div>
+            )}
             
             {/* Citizen Submitter Info Box */}
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -315,7 +415,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                       mediaView === 'image' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'
                     }`}
                   >
-                    📷 Image File
+                    Image File
                   </button>
                   <button
                     type="button"
@@ -324,7 +424,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                       mediaView === 'pdf' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'
                     }`}
                   >
-                    📄 PDF Document
+                    PDF Document
                   </button>
                 </div>
               </div>
@@ -366,10 +466,12 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                     <>
                       <div className="flex items-center justify-between p-3 bg-white rounded border border-slate-300 text-xs">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">📄</span>
+                          <div className="w-8 h-8 rounded bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                            PDF
+                          </div>
                           <div>
                             <strong className="text-slate-900 block">{pdfFileName}</strong>
-                            <span className="text-slate-500 font-mono text-[11px]">PDF Attachment</span>
+                            <span className="text-slate-500 font-mono text-[11px]">Official Document Attachment</span>
                           </div>
                         </div>
                         <a
@@ -378,7 +480,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                           rel="noopener noreferrer"
                           className="px-3 py-1.5 rounded bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors"
                         >
-                          Open PDF in New Window ↗
+                          Open PDF in New Window →
                         </a>
                       </div>
 
@@ -480,7 +582,11 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               </>
             ) : (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-8 text-center space-y-3">
-                <div className="text-3xl">🤖</div>
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
                 <h3 className="text-sm font-bold text-amber-900">
                   AI Multimodal Verification In Progress
                 </h3>
@@ -514,9 +620,9 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
 
                 <div className="p-4 bg-white rounded border border-slate-300 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500 font-bold uppercase">Assigned R&amp;D University (AI Recommendation)</span>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase">Assigned R&amp;D University (Target HEI)</span>
                     <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded border border-indigo-200">
-                      🤖 AI Suggested Target
+                      Target Center
                     </span>
                   </div>
                   <select
@@ -539,6 +645,20 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               </div>
             </div>
 
+            {/* Review Notes Input */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                Nodal Review / Action Notes (Optional Audit Trail)
+              </label>
+              <textarea
+                value={actionNotes}
+                onChange={(e) => setActionNotes(e.target.value)}
+                placeholder="Enter review notes, specific R&D requirements, or rejection reason..."
+                rows={3}
+                className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 outline-none focus:ring-2 focus:ring-slate-900"
+              />
+            </div>
+
             {/* Action Terminal */}
             <div className="rounded-xl border border-slate-300 bg-white p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -553,44 +673,66 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
               </div>
 
               <p className="text-xs text-slate-600">
-                Select an official administrative action to route this citizen grievance:
+                Execute an official administrative action to route, validate, or reject this citizen grievance:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => handleAction('APPROVED')}
+                  disabled={isProcessing}
+                  onClick={handleAssign}
                   className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
-                    decisionState === 'APPROVED'
+                    decisionState === 'ASSIGNED'
                       ? 'bg-emerald-700 text-white border-emerald-800 shadow-md'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-700'
-                  }`}
+                  } disabled:opacity-50`}
                 >
-                  ✓ Approve &amp; Route to HEI R&amp;D
+                  Approve &amp; Route to HEI
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleAction('CLARIFICATION')}
+                  disabled={isProcessing}
+                  onClick={handleValidate}
                   className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
-                    decisionState === 'CLARIFICATION'
-                      ? 'bg-amber-700 text-white border-amber-800 shadow-md'
-                      : 'bg-amber-600 text-white hover:bg-amber-700 border-amber-700'
-                  }`}
+                    decisionState === 'VALIDATED'
+                      ? 'bg-blue-800 text-white border-blue-900 shadow-md'
+                      : 'bg-blue-700 text-white hover:bg-blue-800 border-blue-800'
+                  } disabled:opacity-50`}
                 >
-                  💬 Request Citizen Clarification
+                  Validate &amp; Confirm
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleAction('ESCALATED')}
+                  disabled={isProcessing}
+                  onClick={handleReject}
                   className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
-                    decisionState === 'ESCALATED'
+                    decisionState === 'REJECTED'
                       ? 'bg-red-800 text-white border-red-900 shadow-md'
                       : 'bg-red-700 text-white hover:bg-red-800 border-red-800'
-                  }`}
+                  } disabled:opacity-50`}
                 >
-                  ⚡ Escalate to Cabinet
+                  Reject Grievance
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={handleClarification}
+                  className="py-2 px-3 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                >
+                  Request Citizen Clarification
+                </button>
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={handleEscalate}
+                  className="py-2 px-3 text-xs font-semibold text-red-700 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                >
+                  Escalate to Cabinet
                 </button>
               </div>
             </div>

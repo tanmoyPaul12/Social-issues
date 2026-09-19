@@ -31,7 +31,19 @@ public class UniversityCollabController {
     }
 
     /**
-     * 1. Get challenges routed/recommended to this university by the AI Matchmaking Engine.
+     * 1. Get challenges routed/assigned to this university.
+     * GET /api/university/challenges?assignedTo={heiId}&aisheCode=U-0205
+     */
+    @GetMapping("/challenges")
+    public ResponseEntity<List<RoutedChallengeDto>> getChallenges(
+            @RequestParam(name = "assignedTo", required = false) String assignedTo,
+            @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
+        log.info("API: getChallenges for assignedTo: {}, aisheCode: {}", assignedTo, aisheCode);
+        return ResponseEntity.ok(collabService.getChallengesForUniversity(assignedTo, aisheCode));
+    }
+
+    /**
+     * 1b. Get challenges routed/recommended to this university by the AI Matchmaking Engine.
      * GET /api/university/challenges/routed?aisheCode=U-0012
      */
     @GetMapping("/challenges/routed")
@@ -39,6 +51,31 @@ public class UniversityCollabController {
             @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
         log.info("API: getRoutedChallenges for aisheCode: {}", aisheCode);
         return ResponseEntity.ok(collabService.getRoutedChallenges(aisheCode));
+    }
+
+    /**
+     * 1c. Accept challenge assignment and initiate capstone workspace project.
+     * POST /api/university/challenges/{id}/accept
+     */
+    @PostMapping("/challenges/{id}/accept")
+    public ResponseEntity<UniversityProjectResponse> acceptChallenge(
+            @PathVariable("id") Long id,
+            @RequestBody(required = false) CreateUniversityProjectRequest request) {
+        log.info("API: acceptChallenge for issue ID: {}", id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(collabService.acceptChallenge(id, request));
+    }
+
+    /**
+     * 1d. Decline challenge assignment.
+     * POST /api/university/challenges/{id}/decline
+     */
+    @PostMapping("/challenges/{id}/decline")
+    public ResponseEntity<?> declineChallenge(
+            @PathVariable("id") Long id,
+            @RequestBody(required = false) DeclineChallengeRequest request) {
+        log.info("API: declineChallenge for issue ID: {}", id);
+        collabService.declineChallenge(id, request);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Challenge assignment declined and released back to triage."));
     }
 
     /**
@@ -116,10 +153,24 @@ public class UniversityCollabController {
     }
 
     /**
+     * 8b. Submit formal R&D proposal for project/workspace.
+     * POST /api/university/projects/{id}/proposal
+     * POST /api/university/workspace/{id}/proposal
+     */
+    @PostMapping({"/projects/{id}/proposal", "/workspace/{id}/proposal"})
+    public ResponseEntity<UniversityProjectResponse> submitProposal(
+            @PathVariable("id") Long id,
+            @RequestBody SubmitProposalRequest request) {
+        log.info("API: submitProposal for project workspace ID: {}", id);
+        return ResponseEntity.ok(collabService.submitProposal(id, request));
+    }
+
+    /**
      * 9. Add Faculty or Student member to project team.
      * POST /api/university/projects/{projectId}/team
+     * POST /api/university/workspace/{projectId}/team
      */
-    @PostMapping("/projects/{projectId}/team")
+    @PostMapping({"/projects/{projectId}/team", "/workspace/{projectId}/team"})
     public ResponseEntity<TeamMemberDto> addTeamMember(
             @PathVariable("projectId") Long projectId,
             @Valid @RequestBody TeamMemberDto memberDto) {
@@ -129,8 +180,9 @@ public class UniversityCollabController {
     /**
      * 10. Remove team member from project.
      * DELETE /api/university/projects/{projectId}/team/{memberId}
+     * DELETE /api/university/workspace/{projectId}/team/{memberId}
      */
-    @DeleteMapping("/projects/{projectId}/team/{memberId}")
+    @DeleteMapping({"/projects/{projectId}/team/{memberId}", "/workspace/{projectId}/team/{memberId}"})
     public ResponseEntity<Void> removeTeamMember(
             @PathVariable("projectId") Long projectId,
             @PathVariable("memberId") Long memberId) {

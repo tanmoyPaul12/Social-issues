@@ -26,7 +26,7 @@ import {
 } from "../services/csrComplianceApi";
 import { toast } from "@/components/dashboard/ToastStack";
 
-export type CsrSubTab = "overview" | "ledger" | "certificates" | "reports" | "audit";
+export type CsrSubTab = "overview" | "mentorship" | "ledger" | "certificates" | "reports" | "audit";
 
 const DEFAULT_LEDGER_FILTERS: CsrLedgerFilterState = {
   financialYear: "2026-2027",

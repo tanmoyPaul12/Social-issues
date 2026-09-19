@@ -8,6 +8,8 @@ public interface UniversityCollabService {
 
     List<RoutedChallengeDto> getRoutedChallenges(String aisheCode);
 
+    List<RoutedChallengeDto> getChallengesForUniversity(String assignedTo, String aisheCode);
+
     List<RoutedChallengeDto> getAllOpenChallenges(String sector, String district);
 
     ChallengeClaimResponse claimChallenge(ChallengeClaimRequest request);
@@ -16,11 +18,17 @@ public interface UniversityCollabService {
 
     UniversityProjectResponse createProject(CreateUniversityProjectRequest request);
 
+    UniversityProjectResponse acceptChallenge(Long issueId, CreateUniversityProjectRequest request);
+
+    void declineChallenge(Long issueId, DeclineChallengeRequest request);
+
     List<UniversityProjectResponse> getUniversityProjects(String aisheCode);
 
     UniversityProjectResponse getProjectById(Long id);
 
     UniversityProjectResponse updateProjectStage(Long id, UpdateProjectStageRequest request);
+
+    UniversityProjectResponse submitProposal(Long projectId, SubmitProposalRequest request);
 
     TeamMemberDto addTeamMember(Long projectId, TeamMemberDto memberDto);
 

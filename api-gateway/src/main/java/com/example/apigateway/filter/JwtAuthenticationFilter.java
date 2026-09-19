@@ -24,7 +24,6 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
@@ -35,15 +34,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Value("${app.jwt.secret:jharkhand_innovation_portal_secure_jwt_secret_key_2026_very_long_secret}")
     private String jwtSecret;
-
-    // Public routes that bypass mandatory authentication
-    private static final List<String> PUBLIC_PATH_PREFIXES = List.of(
-            "/api/auth/",
-            "/api/onboarding/",
-            "/actuator/",
-            "/health",
-            "/notifications/"
-    );
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
@@ -127,10 +117,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .build();
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
-    }
-
-    private boolean isPublicPath(String path) {
-        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     @SuppressWarnings("null")

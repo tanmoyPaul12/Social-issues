@@ -84,49 +84,36 @@ public class IssueServiceImpl implements IssueService {
         issue.setEstimatedImpactScore(calculateImpactScore(issue));
         issue.setValidationStatus("PASS");
 
+        // Step 1: AI Vector & Spatial Deduplication Check (Runs before persist)
+        try {
+            Map<String, Object> dupResult = aiServiceClient.checkDuplicates(issue);
+            if (dupResult != null) {
+                Boolean isDup = (Boolean) dupResult.get("is_duplicate");
+                issue.setIsDuplicate(Boolean.TRUE.equals(isDup));
+                if (dupResult.get("cluster_id") instanceof String cId) {
+                    issue.setDuplicateClusterId(cId);
+                }
+                if (dupResult.get("potential_duplicates") instanceof List<?> list && !list.isEmpty()) {
+                    issue.setPotentialDuplicatesJson(list.toString());
+                }
+                if (Boolean.TRUE.equals(isDup)) {
+                    log.info("AI Deduplication flagged issue #{} as duplicate (Cluster: {})", issue.getIssueNumber(), issue.getDuplicateClusterId());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("AI Deduplication pre-check exception for issue #{}: {}", issue.getIssueNumber(), e.getMessage());
+        }
+
         GrassrootIssue saved = issueRepository.save(issue);
         Long savedIssueId = saved.getId();
 
-        // Async AI Multimodal Intelligence processing in background (Non-blocking response)
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            try {
-                GrassrootIssue issueToAudit = issueRepository.findById(savedIssueId).orElse(null);
-                if (issueToAudit != null) {
-                    Map<String, Object> aiResult = aiServiceClient.processMultimodalIntelligence(issueToAudit, null, null);
-                    if (aiResult != null && aiResult.get("generalized_consensus") instanceof Map<?, ?> consensus) {
-                        Object levelObj = consensus.get("final_priority_level");
-                        String level = levelObj instanceof String str ? str : "MEDIUM";
-                        if ("CRITICAL".equalsIgnoreCase(level)) {
-                            issueToAudit.setPriority(IssuePriority.CRITICAL);
-                        } else if ("HIGH".equalsIgnoreCase(level)) {
-                            issueToAudit.setPriority(IssuePriority.HIGH);
-                        } else if ("LOW".equalsIgnoreCase(level)) {
-                            issueToAudit.setPriority(IssuePriority.LOW);
-                        }
-                        issueToAudit.setValidationReportJson(aiResult.toString());
-                    }
+        // Step 2: Async AI Multimodal Intelligence & HEI Routing (Non-blocking background pipeline)
+        if (!isDraft) {
+            triggerAsyncAiPipeline(savedIssueId);
+        }
 
-                    // Route challenge to matching university HEIs via AI engine
-                    Map<String, Object> routeResult = aiServiceClient.routeChallengeToHEIs(issueToAudit);
-                    if (routeResult != null && routeResult.get("recommended_heis") instanceof List<?> recsList && !recsList.isEmpty()) {
-                        Object firstItem = recsList.get(0);
-                        if (firstItem instanceof Map<?, ?> topMatch && topMatch.get("hei_name") instanceof String topHeiName) {
-                            issueToAudit.setAssignedHEI(topHeiName);
-                            log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
-                        }
-                        issueToAudit.setRecommendedHeisJson(recsList.toString());
-                    }
-
-                    issueRepository.save(issueToAudit);
-                    log.info("Async AI Intelligence & HEI Routing finished for issue #{}: Priority={}, AssignedHEI={}",
-                            issueToAudit.getIssueNumber(), issueToAudit.getPriority(), issueToAudit.getAssignedHEI());
-                }
-            } catch (Exception e) {
-                log.warn("Async AI processing exception: {}", e.getMessage());
-            }
-        });
-
-        log.info("Created grassroot issue #{}: {} (Status: {}, Validation: PASS)", saved.getIssueNumber(), saved.getTitle(), saved.getStatus());
+        log.info("Created grassroot issue #{}: {} (Status: {}, Duplicate: {}, Validation: PASS)",
+                saved.getIssueNumber(), saved.getTitle(), saved.getStatus(), saved.getIsDuplicate());
         return IssueResponse.fromEntity(saved);
     }
 
@@ -207,8 +194,29 @@ public class IssueServiceImpl implements IssueService {
         }
 
         issue.setStatus(IssueStatus.SUBMITTED);
+
+        // Deduplication check on draft promotion
+        try {
+            Map<String, Object> dupResult = aiServiceClient.checkDuplicates(issue);
+            if (dupResult != null) {
+                Boolean isDup = (Boolean) dupResult.get("is_duplicate");
+                issue.setIsDuplicate(Boolean.TRUE.equals(isDup));
+                if (dupResult.get("cluster_id") instanceof String cId) {
+                    issue.setDuplicateClusterId(cId);
+                }
+                if (dupResult.get("potential_duplicates") instanceof List<?> list && !list.isEmpty()) {
+                    issue.setPotentialDuplicatesJson(list.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("AI Deduplication check error on draft submission for issue #{}: {}", issue.getIssueNumber(), e.getMessage());
+        }
+
         GrassrootIssue saved = issueRepository.save(issue);
-        log.info("Draft issue #{} transitioned to SUBMITTED", saved.getIssueNumber());
+        Long savedIssueId = saved.getId();
+        triggerAsyncAiPipeline(savedIssueId);
+
+        log.info("Draft issue #{} transitioned to SUBMITTED (Duplicate: {})", saved.getIssueNumber(), saved.getIsDuplicate());
         return IssueResponse.fromEntity(saved);
     }
 
@@ -439,5 +447,45 @@ public class IssueServiceImpl implements IssueService {
 
         if (issue.getLatitude() != null && issue.getLongitude() != null) score += 10;
         return score;
+    }
+
+    private void triggerAsyncAiPipeline(Long savedIssueId) {
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                GrassrootIssue issueToAudit = issueRepository.findById(savedIssueId).orElse(null);
+                if (issueToAudit != null) {
+                    Map<String, Object> aiResult = aiServiceClient.processMultimodalIntelligence(issueToAudit, null, null);
+                    if (aiResult != null && aiResult.get("generalized_consensus") instanceof Map<?, ?> consensus) {
+                        Object levelObj = consensus.get("final_priority_level");
+                        String level = levelObj instanceof String str ? str : "MEDIUM";
+                        if ("CRITICAL".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.CRITICAL);
+                        } else if ("HIGH".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.HIGH);
+                        } else if ("LOW".equalsIgnoreCase(level)) {
+                            issueToAudit.setPriority(IssuePriority.LOW);
+                        }
+                        issueToAudit.setValidationReportJson(aiResult.toString());
+                    }
+
+                    // Route challenge to matching university HEIs via AI engine
+                    Map<String, Object> routeResult = aiServiceClient.routeChallengeToHEIs(issueToAudit);
+                    if (routeResult != null && routeResult.get("recommended_heis") instanceof List<?> recsList && !recsList.isEmpty()) {
+                        Object firstItem = recsList.get(0);
+                        if (firstItem instanceof Map<?, ?> topMatch && topMatch.get("hei_name") instanceof String topHeiName) {
+                            issueToAudit.setAssignedHEI(topHeiName);
+                            log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
+                        }
+                        issueToAudit.setRecommendedHeisJson(recsList.toString());
+                    }
+
+                    issueRepository.save(issueToAudit);
+                    log.info("Async AI Intelligence & HEI Routing finished for issue #{}: Priority={}, AssignedHEI={}",
+                            issueToAudit.getIssueNumber(), issueToAudit.getPriority(), issueToAudit.getAssignedHEI());
+                }
+            } catch (Exception e) {
+                log.warn("Async AI processing exception for issue id {}: {}", savedIssueId, e.getMessage());
+            }
+        });
     }
 }

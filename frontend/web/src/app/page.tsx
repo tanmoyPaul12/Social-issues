@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
 import { JharkhandHeroMap } from "@/components/landing/JharkhandHeroMap";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 
 // Types
 type RoleType = "citizen" | "officer" | "university" | "industry";
@@ -55,61 +57,209 @@ export const OFFICIAL_RESEARCH_DOMAINS = [
 
 export type ResearchDomain = (typeof OFFICIAL_RESEARCH_DOMAINS)[number];
 
-const SCENARIOS: (ScenarioData & { domain: ResearchDomain })[] = [];
-
-const SAMPLE_TICKETS: Record<string, TicketRecord> = {};
+const SECTOR_TO_DOMAIN_MAP: Record<string, ResearchDomain> = {
+  WATER: "Water Resources",
+  HEALTH: "Healthcare",
+  EDUCATION: "Education",
+  INFRASTRUCTURE: "Urban Development",
+  AGRICULTURE: "Agriculture",
+  ELECTRICITY: "Energy",
+  SANITATION: "Accessibility",
+  LIVELIHOOD: "Rural Livelihoods",
+  ENVIRONMENT: "Environment",
+  GOVERNANCE: "Public Administration",
+  OTHER: "Rural Livelihoods"
+};
 
 export default function LandingPage() {
   const [activeRole] = useState<RoleType>("citizen");
+  const [scenarios, setScenarios] = useState<(ScenarioData & { domain: ResearchDomain })[]>([]);
+  const [isLoadingChallenges, setIsLoadingChallenges] = useState(true);
   const [selectedScenario, setSelectedScenario] = useState<ScenarioData | null>(null);
   const [ticketInput, setTicketInput] = useState("");
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackError, setTrackError] = useState<string | null>(null);
   const [activeTicketModal, setActiveTicketModal] = useState<TicketRecord | null>(null);
   const [selectedFilterCategory, setSelectedFilterCategory] = useState("All");
 
-  const handleTrackTicket = (idToTrack?: string) => {
+  useEffect(() => {
+    async function loadChallenges() {
+      setIsLoadingChallenges(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/issues?page=0&size=20&sortBy=createdAt&sortDir=desc`);
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.content || [];
+          if (Array.isArray(items) && items.length > 0) {
+            const mapped: (ScenarioData & { domain: ResearchDomain })[] = items.map((item: any) => {
+              const domain: ResearchDomain = SECTOR_TO_DOMAIN_MAP[item.sector] || "Rural Livelihoods";
+              const progress =
+                item.status === "RESOLVED"
+                  ? 100
+                  : item.status === "IN_PROGRESS"
+                  ? 65
+                  : item.status === "ASSIGNED_HEI"
+                  ? 40
+                  : 20;
+              const stage =
+                item.status === "RESOLVED"
+                  ? "Field Deployment & Impact"
+                  : item.status === "IN_PROGRESS"
+                  ? "Lab Prototype Testing"
+                  : item.status === "ASSIGNED_HEI"
+                  ? "Assigned to University Lab"
+                  : "Under AI Triage";
+              const funding =
+                item.status === "RESOLVED" || item.status === "IN_PROGRESS"
+                  ? "Govt Grant & CSR Supported"
+                  : "Sandbox Under Review";
+              const ticketId = item.issueNumber || `JH-${item.id}`;
+              return {
+                id: String(item.id),
+                title: item.title,
+                tag: domain,
+                domain,
+                district: item.district || "Jharkhand",
+                problem: item.snippet || item.description || item.title,
+                aiClustering: item.validationStatus || "PASS",
+                assignedTo: item.assignedHEI || "Matching University Lab (AI Triage)",
+                funding,
+                stage,
+                stageProgress: progress,
+                impact: `Est. ${item.affectedPopulation || 1200}+ Citizens`,
+                ticketId,
+              };
+            });
+            setScenarios(mapped);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch challenges for landing page:", e);
+      } finally {
+        setIsLoadingChallenges(false);
+      }
+    }
+    loadChallenges();
+  }, []);
+
+  const handleTrackTicket = async (idToTrack?: string) => {
     const searchId = (idToTrack || ticketInput).trim().toUpperCase();
     if (!searchId) return;
 
-    if (SAMPLE_TICKETS[searchId]) {
-      setActiveTicketModal(SAMPLE_TICKETS[searchId]);
-    } else {
-      // Dynamic fallback for any ticket ID entered
-      setActiveTicketModal({
-        id: searchId,
-        district: "Ranchi",
-        title: "Grassroots Innovation Request: " + searchId,
-        category: "Cross-Disciplinary Community Challenge",
-        submittedBy: "Verified Citizen Contributor",
-        date: "Recent",
-        status: "Under AI Triage",
-        progress: 35,
-        assignedInstitute: "Jharkhand University R&D Consortium",
-        leadInvestigator: "Pending Lab Matching",
-        csrPartner: "Govt Innovation Sandbox",
-        grantAmount: "Evaluation in progress",
-        aiSummary:
-          "Ticket is undergoing automated NLP classification, duplicate grouping, and multi-criteria research capability mapping.",
-        timeline: [
+    setIsTracking(true);
+    setTrackError(null);
+
+    try {
+      let res = await fetch(`${API_BASE_URL}/issues/ticket/${encodeURIComponent(searchId)}`);
+      if (!res.ok) {
+        res = await fetch(`${API_BASE_URL}/issues/number/${encodeURIComponent(searchId)}`);
+      }
+      if (!res.ok && !isNaN(Number(searchId))) {
+        res = await fetch(`${API_BASE_URL}/issues/${encodeURIComponent(searchId)}`);
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        const domainName = SECTOR_TO_DOMAIN_MAP[data.sector] || data.sector || "Grassroot Need";
+        const progress =
+          data.status === "RESOLVED"
+            ? 100
+            : data.status === "IN_PROGRESS"
+            ? 75
+            : data.status === "ASSIGNED_HEI"
+            ? 50
+            : 25;
+
+        let statusLabel: TicketRecord["status"] = "Under AI Triage";
+        if (data.status === "RESOLVED") statusLabel = "Resolved";
+        else if (data.status === "IN_PROGRESS") statusLabel = "Prototype Testing";
+        else if (data.status === "ASSIGNED_HEI") statusLabel = "Assigned to Lab";
+
+        const formattedDate = data.createdAt
+          ? new Date(data.createdAt).toLocaleDateString("en-IN", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Recent";
+
+        const timeline = [
           {
             title: "Problem Logged in System",
-            date: "Today",
+            date: formattedDate,
             done: true,
             desc: "Recorded in Jharkhand Grassroots Registry.",
           },
           {
-            title: "AI Semantic Structuring",
-            date: "In Progress",
-            done: true,
-            desc: "Categorizing technical scope and estimating research complexity.",
+            title: "AI Semantic Structuring & Validation",
+            date: data.validationStatus ? "Validated" : "In Progress",
+            done: Boolean(data.validationStatus && data.validationStatus !== "PENDING"),
+            desc: `Categorized under ${domainName}. AI Validation: ${data.validationStatus || "PASS"}.`,
           },
           {
-            title: "HEI Faculty Review & Allocation",
-            date: "Upcoming (48h)",
-            done: false,
-            desc: "Matching with leading engineering and scientific faculty across Jharkhand.",
+            title: "University Lab Allocation & R&D",
+            date: data.assignedHEI ? "Assigned" : "Pending Match",
+            done: Boolean(
+              data.assignedHEI ||
+                data.status === "ASSIGNED_HEI" ||
+                data.status === "IN_PROGRESS" ||
+                data.status === "RESOLVED"
+            ),
+            desc: data.assignedHEI
+              ? `Allocated to ${data.assignedHEI}`
+              : "Matching with leading state university faculty & labs across Jharkhand.",
           },
-        ],
-      });
+          {
+            title: "Field Deployment & Resolution",
+            date: data.resolvedAt
+              ? new Date(data.resolvedAt).toLocaleDateString("en-IN", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "Pending",
+            done: data.status === "RESOLVED",
+            desc:
+              data.status === "RESOLVED"
+                ? "Solution verified and deployed in community."
+                : "Field validation and final deployment in progress.",
+          },
+        ];
+
+        setActiveTicketModal({
+          id: data.issueNumber || `JH-${data.id}`,
+          district: data.district || "Jharkhand",
+          title: data.title,
+          category: domainName,
+          submittedBy:
+            data.submitterName || (data.isAnonymous ? "Anonymous Citizen" : "Verified Citizen"),
+          date: formattedDate,
+          status: statusLabel,
+          progress: progress,
+          assignedInstitute: data.assignedHEI || "Matching State University Lab",
+          leadInvestigator: data.assignedHEI
+            ? `${data.assignedHEI} Principal Investigator`
+            : "Pending Lab Matching",
+          csrPartner: data.fundingPartner || "State Innovation Sandbox / CSR",
+          grantAmount:
+            data.status === "IN_PROGRESS" || data.status === "RESOLVED"
+              ? "Grant Allocated"
+              : "Evaluation in progress",
+          aiSummary:
+            data.description ||
+            "Ticket is undergoing automated NLP classification, duplicate grouping, and multi-criteria research capability mapping.",
+          timeline,
+        });
+      } else {
+        setTrackError(
+          `Ticket "${searchId}" was not found in the official registry. Please verify the ticket number and try again.`
+        );
+      }
+    } catch (err) {
+      console.error("Error tracking ticket:", err);
+      setTrackError("Unable to reach the registry server. Please try again in a moment.");
+    } finally {
+      setIsTracking(false);
     }
   };
 
@@ -226,49 +376,67 @@ export default function LandingPage() {
                     id="ticket-search-input"
                     type="text"
                     value={ticketInput}
-                    onChange={(e) => setTicketInput(e.target.value)}
+                    onChange={(e) => {
+                      setTicketInput(e.target.value);
+                      if (trackError) setTrackError(null);
+                    }}
                     placeholder="Enter Ticket ID (e.g. JH-2026-00784)..."
                     className="w-full bg-transparent text-xs sm:text-sm font-mono text-slate-800 placeholder-slate-400 outline-none"
                   />
 
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-full bg-[#1d63ed] hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex-shrink-0 cursor-pointer"
+                    disabled={isTracking}
+                    className="px-4 py-2 rounded-full bg-[#1d63ed] hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex-shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
                   >
-                    Track
+                    {isTracking ? (
+                      <>
+                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Searching...</span>
+                      </>
+                    ) : (
+                      <span>Track</span>
+                    )}
                   </button>
                 </form>
+
+                {/* Track Error Alert */}
+                {trackError && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2 text-left">
+                    <svg className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1 text-xs text-red-700 font-medium">
+                      {trackError}
+                    </div>
+                    <button
+                      onClick={() => setTrackError(null)}
+                      className="text-red-500 hover:text-red-800 text-xs font-bold"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
 
                 {/* Quick Ticket Pill Triggers */}
                 <div className="flex items-center justify-center lg:justify-start flex-wrap gap-1.5 mt-2.5 text-[11px] text-slate-500">
                   <span>Active District Tracking:</span>
-                  <button
-                    onClick={() => {
-                      setTicketInput("JH-2026-00784");
-                      handleTrackTicket("JH-2026-00784");
-                    }}
-                    className="text-blue-600 hover:underline font-mono font-medium bg-blue-50 px-2 py-0.5 rounded-md cursor-pointer"
-                  >
-                    JH-2026-00784 (Dumka)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTicketInput("JH-2026-01429");
-                      handleTrackTicket("JH-2026-01429");
-                    }}
-                    className="text-blue-600 hover:underline font-mono font-medium bg-blue-50 px-2 py-0.5 rounded-md cursor-pointer"
-                  >
-                    JH-2026-01429 (Gumla)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTicketInput("JH-2026-02105");
-                      handleTrackTicket("JH-2026-02105");
-                    }}
-                    className="text-blue-600 hover:underline font-mono font-medium bg-blue-50 px-2 py-0.5 rounded-md cursor-pointer"
-                  >
-                    JH-2026-02105 (Dhanbad)
-                  </button>
+                  {(scenarios.length > 0 ? scenarios.slice(0, 3) : [
+                    { ticketId: "JH-2026-00784", district: "Dumka" },
+                    { ticketId: "JH-2026-01429", district: "Gumla" },
+                    { ticketId: "JH-2026-02105", district: "Dhanbad" }
+                  ]).map((item) => (
+                    <button
+                      key={item.ticketId}
+                      onClick={() => {
+                        setTicketInput(item.ticketId);
+                        handleTrackTicket(item.ticketId);
+                      }}
+                      className="text-blue-600 hover:underline font-mono font-medium bg-blue-50 px-2 py-0.5 rounded-md cursor-pointer"
+                    >
+                      {item.ticketId} ({item.district})
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -513,8 +681,23 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Cards Grid or Clean Live Registry State */}
-          {SCENARIOS.filter((item) =>
+          {/* Cards Grid, Loading Skeletons, or Clean Live Registry State */}
+          {isLoadingChallenges ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs animate-pulse space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="h-5 w-24 bg-slate-200 rounded-full" />
+                    <div className="h-4 w-28 bg-slate-200 rounded" />
+                  </div>
+                  <div className="h-6 w-3/4 bg-slate-200 rounded" />
+                  <div className="h-12 w-full bg-slate-100 rounded" />
+                  <div className="h-16 w-full bg-slate-100 rounded-xl" />
+                  <div className="h-9 w-full bg-slate-200 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : scenarios.filter((item) =>
             selectedFilterCategory === "All" ? true : item.domain === selectedFilterCategory
           ).length === 0 ? (
             <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl shadow-xs">
@@ -544,7 +727,7 @@ export default function LandingPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {SCENARIOS.filter((item) =>
+              {scenarios.filter((item) =>
                 selectedFilterCategory === "All" ? true : item.domain === selectedFilterCategory
               ).map((item) => (
                 <div

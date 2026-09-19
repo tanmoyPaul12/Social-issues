@@ -140,6 +140,8 @@ export function UniversityDashboardView({
     industryOffers,
     claimChallenge,
     createProject,
+    declineChallenge,
+    submitProposal,
     updateStage,
     recordCitizenVerification,
     addTeamMember,
@@ -154,8 +156,18 @@ export function UniversityDashboardView({
 
   // Modals State
   const [selectedChallengeForAccept, setSelectedChallengeForAccept] = useState<RoutedChallenge | null>(null);
+  const [selectedChallengeForDecline, setSelectedChallengeForDecline] = useState<RoutedChallenge | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
   const [selectedChallengeForClaim, setSelectedChallengeForClaim] = useState<RoutedChallenge | null>(null);
   const [selectedProjectForDetail, setSelectedProjectForDetail] = useState<UniversityProject | null>(null);
+  const [selectedProjectForProposal, setSelectedProjectForProposal] = useState<UniversityProject | null>(null);
+  const [proposalForm, setProposalForm] = useState({
+    title: "",
+    abstractDescription: "",
+    domain: "",
+    allocatedGrant: 250000,
+    methodology: "",
+  });
   const [isTeamRosterModalOpen, setIsTeamRosterModalOpen] = useState(false);
   const [selectedProjectForRoster, setSelectedProjectForRoster] = useState<UniversityProject | null>(null);
 
@@ -767,6 +779,57 @@ export function UniversityDashboardView({
     }
   };
 
+  // Handler: Confirm Decline of an Assigned Challenge
+  const handleConfirmDecline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedChallengeForDecline) return;
+
+    try {
+      await declineChallenge(
+        selectedChallengeForDecline.id,
+        selectedChallengeForDecline.ticketId,
+        declineReason || "Institutional capacity or domain allocation constraints"
+      );
+      toast.info(`Challenge #${selectedChallengeForDecline.ticketId} declined and returned to statewide triage pool.`);
+      setSelectedChallengeForDecline(null);
+      setDeclineReason("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to decline challenge");
+    }
+  };
+
+  // Handler: Open Proposal Modal for an Active Project
+  const handleOpenProposalModal = (project: UniversityProject) => {
+    setSelectedProjectForProposal(project);
+    setProposalForm({
+      title: project.title || "",
+      abstractDescription: project.abstractDescription || "",
+      domain: project.domain || "Applied Sciences & Engineering",
+      allocatedGrant: project.allocatedGrant || 250000,
+      methodology: project.milestoneDesc || "4-Stage TRL Capstone execution methodology.",
+    });
+  };
+
+  // Handler: Confirm Proposal Submission / Update
+  const handleConfirmProposal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProjectForProposal) return;
+
+    try {
+      await submitProposal(selectedProjectForProposal.id, {
+        title: proposalForm.title,
+        abstractDescription: proposalForm.abstractDescription,
+        domain: proposalForm.domain,
+        allocatedGrant: Number(proposalForm.allocatedGrant) || 250000,
+        methodology: proposalForm.methodology,
+      });
+      setSelectedProjectForProposal(null);
+      toast.success("Institutional capstone proposal successfully updated and submitted!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to submit proposal");
+    }
+  };
+
   // Handler: Confirm Claim for an Open Challenge
   const handleConfirmClaim = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -949,13 +1012,22 @@ export function UniversityDashboardView({
                       <td className="py-3 px-4 text-slate-600">{ch.district}</td>
                       <td className="py-3 px-4 font-medium text-slate-700">{ch.matchScore}</td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedChallengeForAccept(ch)}
-                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs transition-colors cursor-pointer"
-                        >
-                          Accept Challenge
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChallengeForDecline(ch)}
+                            className="px-2.5 py-1.5 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded font-medium text-xs transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChallengeForAccept(ch)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs transition-colors cursor-pointer"
+                          >
+                            Accept
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1081,7 +1153,14 @@ export function UniversityDashboardView({
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 pt-1">
+                    <div className="flex-shrink-0 pt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedChallengeForDecline(ch)}
+                        className="px-3 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded text-xs font-semibold cursor-pointer"
+                      >
+                        Decline
+                      </button>
                       <button
                         type="button"
                         onClick={() => setSelectedChallengeForAccept(ch)}
@@ -1233,6 +1312,14 @@ export function UniversityDashboardView({
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenProposalModal(proj)}
+                        className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium text-xs cursor-pointer shadow-2xs"
+                      >
+                        Proposal &amp; Grant
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setSelectedProjectForDetail(proj)}
@@ -2235,6 +2322,161 @@ export function UniversityDashboardView({
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold cursor-pointer"
                 >
                   Confirm Project Activation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DECLINE ASSIGNED CHALLENGE */}
+      {selectedChallengeForDecline && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6 border border-slate-300 shadow-xl space-y-4 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Decline Challenge Assignment</h3>
+                <span className="text-slate-500 font-mono text-[11px]">Ticket #{selectedChallengeForDecline.ticketId}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedChallengeForDecline(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmDecline} className="space-y-4 font-medium">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-1">
+                <div className="font-semibold text-slate-900">{selectedChallengeForDecline.title}</div>
+                <div className="text-slate-600 text-[11px]">{selectedChallengeForDecline.domain} • Location: {selectedChallengeForDecline.district}</div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Reason for Declining (Optional):</label>
+                <textarea
+                  rows={3}
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="e.g. Domain capacity constraints, ongoing semester lab saturation, or alternative HEI specialization recommended..."
+                  className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Declining returns this challenge to the Statewide Open Pool and State Nodal Triage for re-routing.
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setSelectedChallengeForDecline(null)}
+                  className="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded font-semibold cursor-pointer"
+                >
+                  Confirm Decline
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PROPOSAL REQUISITION & GRANT ALLOCATION */}
+      {selectedProjectForProposal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 border border-slate-300 shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Capstone Project Proposal &amp; Grant Requisition</h3>
+                <span className="text-slate-500 font-mono text-[11px]">Project: {selectedProjectForProposal.projectCode || `PROJ-${selectedProjectForProposal.id}`}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedProjectForProposal(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmProposal} className="space-y-4 font-medium">
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Project / Capstone Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={proposalForm.title}
+                  onChange={(e) => setProposalForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 mb-1 font-semibold">Domain / Specialization</label>
+                  <input
+                    type="text"
+                    value={proposalForm.domain}
+                    onChange={(e) => setProposalForm((prev) => ({ ...prev, domain: e.target.value }))}
+                    placeholder="e.g. Water Treatment & IoT Sensors"
+                    className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 mb-1 font-semibold">Allocated Seed Grant (₹)</label>
+                  <input
+                    type="number"
+                    min={50000}
+                    step={10000}
+                    value={proposalForm.allocatedGrant}
+                    onChange={(e) => setProposalForm((prev) => ({ ...prev, allocatedGrant: Number(e.target.value) || 250000 }))}
+                    className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Executive Abstract &amp; Problem Statement</label>
+                <textarea
+                  rows={3}
+                  value={proposalForm.abstractDescription}
+                  onChange={(e) => setProposalForm((prev) => ({ ...prev, abstractDescription: e.target.value }))}
+                  placeholder="Detailed problem formulation and proposed technology solution..."
+                  className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Technical Methodology &amp; Execution Roadmap</label>
+                <textarea
+                  rows={3}
+                  value={proposalForm.methodology}
+                  onChange={(e) => setProposalForm((prev) => ({ ...prev, methodology: e.target.value }))}
+                  placeholder="Describe phase-wise prototyping steps, testing benchmarks, and expected civic outcome..."
+                  className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProjectForProposal(null)}
+                  className="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold cursor-pointer"
+                >
+                  Save &amp; Submit Proposal
                 </button>
               </div>
             </form>

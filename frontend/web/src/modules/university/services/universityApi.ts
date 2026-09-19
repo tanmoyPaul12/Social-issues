@@ -28,7 +28,30 @@ function getHeaders(token?: string | null): HeadersInit {
 
 export const universityApi = {
   /**
-   * 1. Get challenges routed/matched by AI engine to this university
+   * 1. Get challenges routed/assigned to this university
+   * GET /api/university/challenges?assignedTo={heiId}
+   */
+  async getChallenges(assignedTo?: string, aisheCode: string = "U-0205", token?: string | null): Promise<RoutedChallenge[]> {
+    try {
+      const query = new URLSearchParams();
+      if (assignedTo) query.set("assignedTo", assignedTo);
+      if (aisheCode) query.set("aisheCode", aisheCode);
+
+      const res = await fetch(`${API_BASE_URL}/university/challenges?${query.toString()}`, {
+        headers: getHeaders(token),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+      }
+    } catch (err) {
+      console.warn("API Gateway getChallenges note:", err);
+    }
+    return [];
+  },
+
+  /**
+   * 1b. Get challenges routed/matched by AI engine to this university
    */
   async getRoutedChallenges(aisheCode: string, token?: string | null): Promise<RoutedChallenge[]> {
     try {
@@ -43,6 +66,45 @@ export const universityApi = {
       console.warn("API Gateway getRoutedChallenges note:", err);
     }
     return [];
+  },
+
+  /**
+   * 1c. Accept challenge assignment
+   * POST /api/university/challenges/{id}/accept
+   */
+  async acceptChallenge(
+    issueId: number,
+    data?: Partial<CreateProjectRequest>,
+    token?: string | null
+  ): Promise<UniversityProject> {
+    const res = await fetch(`${API_BASE_URL}/university/challenges/${issueId}/accept`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(data || {}),
+    });
+    if (!res.ok) {
+      throw new Error("Failed to accept challenge assignment");
+    }
+    return res.json();
+  },
+
+  /**
+   * 1d. Decline challenge assignment
+   * POST /api/university/challenges/{id}/decline
+   */
+  async declineChallenge(
+    issueId: number,
+    reason?: string,
+    token?: string | null
+  ): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/university/challenges/${issueId}/decline`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify({ reason: reason || "Declined by university" }),
+    });
+    if (!res.ok) {
+      throw new Error("Failed to decline challenge assignment");
+    }
   },
 
   /**
@@ -182,7 +244,32 @@ export const universityApi = {
   },
 
   /**
-   * 7. Add team member to project
+   * 6b. Submit R&D Proposal for workspace
+   * POST /api/university/workspace/{id}/proposal
+   */
+  async submitProposal(
+    projectId: number,
+    data: {
+      title?: string;
+      abstractDescription?: string;
+      domain?: string;
+      allocatedGrant?: number;
+      methodology?: string;
+    },
+    token?: string | null
+  ): Promise<UniversityProject> {
+    const res = await fetch(`${API_BASE_URL}/university/workspace/${projectId}/proposal`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to submit proposal");
+    return res.json();
+  },
+
+  /**
+   * 7. Add team member to project workspace
+   * POST /api/university/workspace/{id}/team
    */
   async addTeamMember(
     projectId: number,
@@ -190,7 +277,7 @@ export const universityApi = {
     token?: string | null
   ): Promise<TeamMember> {
     try {
-      const res = await fetch(`${API_BASE_URL}/university/projects/${projectId}/team`, {
+      const res = await fetch(`${API_BASE_URL}/university/workspace/${projectId}/team`, {
         method: "POST",
         headers: getHeaders(token),
         body: JSON.stringify(member),
@@ -203,7 +290,8 @@ export const universityApi = {
   },
 
   /**
-   * 8. Remove team member
+   * 8. Remove team member from workspace
+   * DELETE /api/university/workspace/{id}/team/{memberId}
    */
   async removeTeamMember(
     projectId: number,
@@ -211,7 +299,7 @@ export const universityApi = {
     token?: string | null
   ): Promise<void> {
     try {
-      await fetch(`${API_BASE_URL}/university/projects/${projectId}/team/${memberId}`, {
+      await fetch(`${API_BASE_URL}/university/workspace/${projectId}/team/${memberId}`, {
         method: "DELETE",
         headers: getHeaders(token),
       });
@@ -306,4 +394,3 @@ export const universityApi = {
     return res.json();
   },
 };
-

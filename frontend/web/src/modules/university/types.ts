@@ -41,6 +41,7 @@ export interface UniversityProject {
   facultyMentor?: string;
   studentLead?: string;
   grantFunded?: number;
+  allocatedGrant?: number;
   csrPartner?: string;
   milestoneDesc?: string;
   
