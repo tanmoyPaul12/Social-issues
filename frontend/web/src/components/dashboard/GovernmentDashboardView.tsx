@@ -8,6 +8,7 @@ import { toast } from "@/components/dashboard/ToastStack";
 import { NodalAiAuditCard } from "@/components/dashboard/NodalAiAuditCard";
 import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 import { GovernmentAnalyticsOverview } from "./government/GovernmentAnalyticsOverview";
+import { AiRoutingMasterOversight } from "./government/AiRoutingMasterOversight";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -235,6 +236,11 @@ export function GovernmentDashboardView({
         />
       )}
 
+      {/* ── TAB: MASTER AI ROUTING & HEI ALLOCATIONS ── */}
+      {activeTab === "routing" && (
+        <AiRoutingMasterOversight />
+      )}
+
       {/* ── TAB 2: DISTRICT INGESTION & REGISTRY TABLE ── */}
       {activeTab === "districts" && (
         <div className="space-y-4 pt-2">
@@ -445,6 +451,7 @@ export function GovernmentDashboardView({
       {/* Catch-all fallback for unrecognized government tabs */}
       {![
         "overview",
+        "routing",
         "districts",
         "heatmap",
         "escalations",

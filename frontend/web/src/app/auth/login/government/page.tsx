@@ -99,10 +99,16 @@ export default function GovernmentLoginPage() {
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2">
-                  <span className="text-sm shrink-0 mt-0.5">
-                    {errorCode === "ACCOUNT_NOT_FOUND" ? "⚠️" : "✕"}
-                  </span>
+                <div className="flex items-start gap-2.5">
+                  {errorCode === "ACCOUNT_NOT_FOUND" ? (
+                    <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
                   <div className="space-y-1.5">
                     <p className="font-semibold leading-normal">{error}</p>
                     {errorCode === "ACCOUNT_NOT_FOUND" && (
@@ -118,9 +124,12 @@ export default function GovernmentLoginPage() {
                 <button
                   type="button"
                   onClick={clearError}
-                  className="text-slate-400 hover:text-slate-700 font-bold ml-1 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+                  aria-label="Dismiss error"
                 >
-                  ✕
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>

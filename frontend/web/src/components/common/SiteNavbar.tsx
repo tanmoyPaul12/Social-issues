@@ -87,11 +87,11 @@ export function SiteNavbar() {
   return (
     <header ref={navRef} className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 font-sans text-slate-800 shadow-2xs select-none">
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-6">
-        <div className="flex items-center justify-between h-[66px] gap-2 lg:gap-4">
+        <div className="flex items-center justify-between h-[58px] sm:h-[66px] gap-2 lg:gap-4">
           
           {/* Left Brand Identity: Official State Emblem & Bilingual Typography */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group py-1">
-            <div className="w-7 sm:w-8 h-10 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink group py-1">
+            <div className="w-7 sm:w-8 h-9 sm:h-10 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/emblem.png"
@@ -99,11 +99,11 @@ export function SiteNavbar() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="flex flex-col text-left justify-center">
-              <span className="text-[12px] sm:text-[13px] xl:text-[14px] font-black text-slate-950 tracking-tight leading-tight">
+            <div className="flex flex-col text-left justify-center min-w-0">
+              <span className="text-[11px] xs:text-[12px] sm:text-[13px] xl:text-[14px] font-black text-slate-950 tracking-tight leading-tight truncate sm:whitespace-normal">
                 झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
               </span>
-              <span className="text-[10px] sm:text-[11px] xl:text-[11.5px] font-bold text-slate-700 tracking-tight leading-tight mt-0.5">
+              <span className="text-[9px] xs:text-[10px] sm:text-[11px] xl:text-[11.5px] font-bold text-slate-700 tracking-tight leading-tight mt-0.5 truncate sm:whitespace-normal">
                 Jharkhand Science, Technology and Innovation Portal
               </span>
             </div>
@@ -194,7 +194,7 @@ export function SiteNavbar() {
           </nav>
 
           {/* Right Action Area: Track Ticket + Auth Controls */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 whitespace-nowrap">
             {/* Quick Track Ticket Action */}
             <Link
               href="/#ticket-search-input"
@@ -212,11 +212,11 @@ export function SiteNavbar() {
               /* Authenticated View: Role-based Portal Dashboard & Profile & Sign Out */
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 {/* User chip */}
-                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors shrink-0 whitespace-nowrap shadow-2xs">
+                <div className="flex items-center gap-1.5 pl-1.5 pr-2 py-0.5 sm:pr-2.5 sm:py-1 rounded bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors shrink-0 whitespace-nowrap shadow-2xs">
                   <div className="w-5.5 h-5.5 rounded bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-[10.5px] flex items-center justify-center shadow-xs shrink-0">
                     {(user?.name || "U").charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex flex-col text-left leading-none">
+                  <div className="hidden sm:flex flex-col text-left leading-none">
                     <span className="text-[11px] font-bold text-slate-800 max-w-[85px] xl:max-w-[110px] truncate">{user?.name}</span>
                     <span className="text-[8.5px] font-semibold text-blue-600 uppercase tracking-wider mt-0.5">{user?.role || "Citizen"}</span>
                   </div>
@@ -225,19 +225,19 @@ export function SiteNavbar() {
                 {/* Role-based Portal Dashboard Button */}
                 <Link
                   href={getRoleDashboardUrl()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#0077b6] to-[#0096c7] hover:from-[#005f92] hover:to-[#0077b6] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200 shrink-0 whitespace-nowrap group active:scale-95"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#0077b6] to-[#0096c7] hover:from-[#005f92] hover:to-[#0077b6] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200 shrink-0 whitespace-nowrap group active:scale-95"
                 >
                   <svg className="w-3.5 h-3.5 text-blue-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
-                  <span>Portal Dashboard</span>
+                  <span>Dashboard</span>
                 </Link>
 
                 {/* Sign Out Button */}
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200/70 hover:border-rose-300 transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
+                  className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200/70 hover:border-rose-300 transition-all duration-150 cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
                   title="Sign Out"
                 >
                   <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,8 +247,8 @@ export function SiteNavbar() {
                 </button>
               </div>
             ) : (
-              /* Unauthenticated View: Sign In & Register Buttons Only */
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
+              /* Unauthenticated View: Sign In & Register Buttons Hidden on Mobile (Visible in Drawer) */
+              <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap">
                 <Link
                   href="/auth/login"
                   className="inline-flex items-center px-3.5 py-1.5 rounded border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-all shadow-2xs shrink-0 whitespace-nowrap"
@@ -268,10 +268,10 @@ export function SiteNavbar() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="lg:hidden p-1.5 sm:p-2 rounded text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
               aria-label="Toggle navigation"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {mobileMenuOpen ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 ) : (

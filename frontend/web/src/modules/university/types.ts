@@ -65,6 +65,30 @@ export interface UniversityProject {
   updatedAt: string;
 }
 
+export interface ModalityBreakdownData {
+  text_analysis?: { category?: string; priority_score?: number; confidence?: number; keywords?: string[] };
+  image_analysis?: { category?: string; priority_score?: number; confidence?: number; detected_hazards?: string[]; visual_verification?: string };
+  document_analysis?: { category?: string; priority_score?: number; confidence?: number; extracted_metrics?: string };
+  location_analysis?: { is_valid?: boolean; district?: string; is_in_jharkhand?: boolean; urgency_bonus?: number; geofence_status?: string };
+}
+
+export interface GeneralizedConsensusData {
+  final_category: string;
+  average_priority_score: number;
+  final_priority_level: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | string;
+  consensus_reason: string;
+}
+
+export interface AiTriageRecommendation {
+  recommendedTechnology?: string;
+  suggestedDepartment?: string;
+  targetTechStack?: string[];
+  requiredSkills?: string[];
+  estimatedTimelineWeeks?: number;
+  seedBudgetINR?: number;
+  deliverables?: string[];
+}
+
 export interface RoutedChallenge {
   id: number;
   ticketId: string;
@@ -74,12 +98,61 @@ export interface RoutedChallenge {
   sector: string;
   district: string;
   block?: string;
+  villageOrWard?: string;
+  addressDescription?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   urgency: string;
   matchScore: string;
   problemSnippet: string;
   affectedPopulation?: number;
   status: string;
   createdAt: string;
+
+  // Citizen Voice & Origin
+  originalText?: string;
+  normalizedText?: string;
+  citizenName?: string;
+  citizenPhone?: string;
+  citizenEmail?: string;
+
+  // Two-Track & Societal Challenge Cluster Fields
+  track?: "RESEARCH_INNOVATION" | "MUNICIPAL_DISPATCH";
+  clusterCode?: string;
+  clusterTitle?: string;
+  clusterIncidentCount?: number;
+  clusterTotalPopulation?: number;
+  clusterDistricts?: string[];
+  clusterFacilities?: string[];
+  clusterEvidence?: Array<{
+    id: string;
+    ticketId: string;
+    location: string;
+    reporter: string;
+    date: string;
+    summary: string;
+    originalQuote?: string;
+    imageUrl?: string;
+    status: string;
+    isPrimary?: boolean;
+  }>;
+  patentPotential?: string;
+
+  // Attachments & Evidence
+  imageUrl?: string | null;
+  pdfUrl?: string | null;
+  pdfFileName?: string;
+  pdfExtractedText?: string;
+  attachmentCount?: number;
+
+  // AI Multimodal Intelligence & Triage
+  validationStatus?: string;
+  validationReportJson?: string;
+  isDuplicate?: boolean;
+  duplicateClusterId?: string;
+  modalityBreakdown?: ModalityBreakdownData;
+  generalizedConsensus?: GeneralizedConsensusData;
+  aiRecommendation?: AiTriageRecommendation;
 }
 
 export interface ChallengeClaimRequest {

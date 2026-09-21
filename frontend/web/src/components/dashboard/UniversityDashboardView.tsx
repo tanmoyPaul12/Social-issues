@@ -14,6 +14,7 @@ import {
   IndustryOffer,
 } from "@/modules/university/types";
 import { ProjectMilestoneTimeline } from "./university/ProjectMilestoneTimeline";
+import { ChallengeAiDossierCard } from "./university/ChallengeAiDossierCard";
 import { CommunicationWorkspace } from "./common/CommunicationWorkspace";
 import {
   registerProjectPitchThread,
@@ -61,7 +62,17 @@ export function getLocalInstitutionalUsers(): InstitutionalUser[] {
     const raw = localStorage.getItem(INSTITUTIONAL_USERS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    const deduplicated: InstitutionalUser[] = [];
+    for (const u of parsed) {
+      const key = u.id || u.identifier || u.email;
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        deduplicated.push(u);
+      }
+    }
+    return deduplicated;
   } catch {
     return [];
   }
@@ -691,6 +702,87 @@ export function UniversityDashboardView({
     toast.success(`Accepted partnership with ${offer.company}. Legal MOU dispatched.`);
   };
 
+  // Handler: Claim challenge and transition directly to Team Formation & Allocation Workspace
+  const handleAcceptAndFormTeam = async (challenge: RoutedChallenge) => {
+    try {
+      const defaultFacultyName = user?.name || "Dr. S. K. Mahato";
+      const dept = challenge.aiRecommendation?.suggestedDepartment || (challenge.domain ? `Dept of ${challenge.domain}` : "Department of Civil & Environmental Engineering");
+
+      const initialTeam: TeamMember[] = [
+        {
+          role: "FACULTY_MENTOR",
+          name: defaultFacultyName,
+          department: dept,
+          email: user?.email || "faculty.lead@bitmesra.ac.in",
+          isLead: true,
+        },
+      ];
+
+      const created = await createProject({
+        issueId: challenge.id,
+        ticketId: challenge.ticketId,
+        aisheCode: aisheCode,
+        universityName: institutionName,
+        title: challenge.clusterTitle || challenge.title,
+        abstractDescription: challenge.description,
+        domain: challenge.domain,
+        district: challenge.district,
+        leadFacultyMentor: defaultFacultyName,
+        leadStudentInnovator: "Pending Student Roster Allocation",
+        allocatedGrant: 250000,
+        csrPartner: "State Innovation Grant",
+        milestoneDesc: "Project activated. Proceed with student innovator allocation and lab prototyping setup.",
+        teamMembers: initialTeam,
+      });
+
+      // Register communication channel
+      const threadId = challenge.id || Date.now();
+      const projTitle = challenge.clusterTitle || challenge.title;
+      const createdThread = registerProjectPitchThread({
+        id: threadId,
+        pilotId: threadId,
+        title: projTitle,
+        partnerName: "State Nodal CSR Cell",
+        partnerRole: "Nodal Authority & Corporate Sponsor",
+        sector: challenge.domain || "Civic Innovation",
+        lastMessage: "Project challenge accepted and activated.",
+        timestamp: "Just now",
+        unreadCount: 0,
+        type: "PILOT",
+        avatarBg: "bg-emerald-600",
+        universityName: institutionName || "Birla Institute of Technology (BIT) Mesra",
+        companyName: "State Nodal CSR Cell",
+      });
+
+      try {
+        await postThreadMessage(
+          token,
+          createdThread.id,
+          `🚀 PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${challenge.ticketId}\nLead Faculty: ${defaultFacultyName}\nAcademic Track: Capstone R&D (4 NEP Credits)\n\nDiscussion channel initialized for project milestones and deliverables.`,
+          undefined,
+          undefined,
+          createdThread.pilotId,
+          user?.name || defaultFacultyName,
+          "FACULTY_PI",
+          projTitle,
+          "UNIVERSITY"
+        );
+      } catch {}
+
+      // Select the newly formed project in the Team Allocator
+      setSelectedProjectIdForAllocation(created.id);
+
+      // Navigate to dedicated team formation tab
+      if (onNavigateTab) {
+        onNavigateTab("teams");
+      }
+
+      toast.success(`Challenge ${challenge.ticketId} claimed! Transitioned to Team Formation & Allocation Workspace.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to accept challenge");
+    }
+  };
+
   // Handler: Confirm Acceptance of an Assigned Challenge
   const handleConfirmAccept = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -918,7 +1010,7 @@ export function UniversityDashboardView({
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen text-slate-800 text-sm">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-[#f1f5f9] min-h-full text-slate-800 text-sm">
       {/* Institutional Top Bar */}
       <div className="bg-white border border-slate-200 rounded p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -1022,10 +1114,10 @@ export function UniversityDashboardView({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedChallengeForAccept(ch)}
+                            onClick={() => handleAcceptAndFormTeam(ch)}
                             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs transition-colors cursor-pointer"
                           >
-                            Accept
+                            Accept &amp; Form Team
                           </button>
                         </div>
                       </td>
@@ -1106,74 +1198,42 @@ export function UniversityDashboardView({
       {/* VIEW 2: ASSIGNED CHALLENGES TAB (AI-ROUTED DIRECTLY TO COLLEGE) */}
       {activeTab === "inbox" && (
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="bg-white border border-slate-200 rounded-xl p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
             <div>
               <h2 className="font-bold text-slate-900 text-base">Assigned Institutional Challenges</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                These challenges were analyzed by the state matchmaking engine and routed exclusively to {institutionName} based on departmental expertise.
+                Official government civic problem statements routed to {institutionName} by the State Nodal Department for university resolution and student capstones.
               </p>
             </div>
-            <div className="text-xs font-mono text-slate-600 bg-slate-100 px-3 py-1 rounded">
+            <div className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg shrink-0">
               {routedChallenges.length} Challenges Assigned
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded overflow-hidden">
-            {routedChallenges.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 text-xs">
-                No pending assigned challenges. Check back when new citizen problems are submitted.
+          {routedChallenges.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-500 text-xs shadow-xs space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            ) : (
-              <div className="divide-y divide-slate-200">
-                {routedChallenges.map((ch) => (
-                  <div key={ch.id} className="p-5 hover:bg-slate-50/70 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="space-y-2 max-w-3xl">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-mono font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-                          {ch.ticketId}
-                        </span>
-                        <span className="text-slate-600 font-medium px-2 py-0.5 bg-slate-100 rounded">
-                          {ch.domain}
-                        </span>
-                        <span className="text-slate-500">
-                          Location: {ch.district}{ch.block ? `, ${ch.block}` : ""}
-                        </span>
-                        <span className="text-slate-700 font-semibold bg-slate-200/80 px-2 py-0.5 rounded text-[11px]">
-                          {ch.matchScore}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-slate-900 text-sm">{ch.title}</h3>
-                      <p className="text-xs text-slate-600 leading-relaxed">{ch.description || ch.problemSnippet}</p>
-
-                      <div className="text-[11px] text-slate-500 flex items-center gap-4 pt-1">
-                        <span>Pre-allocated seed budget: ₹2,50,000</span>
-                        <span>•</span>
-                        <span>Date Reported: {new Date(ch.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0 pt-1 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChallengeForDecline(ch)}
-                        className="px-3 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded text-xs font-semibold cursor-pointer"
-                      >
-                        Decline
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChallengeForAccept(ch)}
-                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer"
-                      >
-                        Accept &amp; Assign Team
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              <div className="font-semibold text-slate-700">All Assigned Challenges Processed</div>
+              <p className="max-w-md mx-auto text-slate-500">
+                There are no pending unaccepted challenges in your institution inbox. Check back when new citizen problems are submitted.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {routedChallenges.map((ch) => (
+                <ChallengeAiDossierCard
+                  key={ch.id}
+                  challenge={ch}
+                  onAccept={handleAcceptAndFormTeam}
+                  onDecline={(challenge) => setSelectedChallengeForDecline(challenge)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1219,48 +1279,25 @@ export function UniversityDashboardView({
           </div>
 
           {/* List of Problems */}
-          <div className="bg-white border border-slate-200 rounded overflow-hidden">
-            <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-xs font-medium text-slate-600">
-              <span>Showing {filteredStatewideChallenges.length} open problems</span>
-              <span>Filter: {sectorFilter} • {districtFilter}</span>
+          <div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-4 flex justify-between items-center text-xs font-medium text-slate-600">
+              <span>Showing {filteredStatewideChallenges.length} open problems across Jharkhand</span>
+              <span>Filter: <strong>{sectorFilter}</strong> • <strong>{districtFilter}</strong></span>
             </div>
 
             {filteredStatewideChallenges.length === 0 ? (
-              <div className="p-10 text-center text-slate-500 text-xs">
+              <div className="p-10 text-center text-slate-500 text-xs bg-white border border-slate-200 rounded-xl">
                 No challenges found matching the selected search and filter criteria.
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="space-y-4">
                 {filteredStatewideChallenges.map((item) => (
-                  <div key={item.id} className="p-4 hover:bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-                    <div className="space-y-1 max-w-3xl">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-semibold text-slate-800">{item.ticketId}</span>
-                        <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-700 font-medium">
-                          {item.domain || item.sector}
-                        </span>
-                        <span className="text-slate-500">
-                          {item.district}{item.block ? ` • ${item.block}` : ""}
-                        </span>
-                        <span className="text-[11px] font-semibold text-slate-600 bg-slate-200/70 px-1.5 py-0.5 rounded">
-                          Priority: {item.urgency}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-slate-900 text-sm">{item.title}</h3>
-                      <p className="text-slate-600 line-clamp-2 leading-relaxed">{item.description || item.problemSnippet}</p>
-                    </div>
-
-                    <div className="flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChallengeForClaim(item)}
-                        className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs cursor-pointer"
-                      >
-                        Request to Solve
-                      </button>
-                    </div>
-                  </div>
+                  <ChallengeAiDossierCard
+                    key={item.id}
+                    challenge={item}
+                    onAccept={handleAcceptAndFormTeam}
+                    onDecline={(challenge) => setSelectedChallengeForDecline(challenge)}
+                  />
                 ))}
               </div>
             )}
@@ -1497,45 +1534,47 @@ export function UniversityDashboardView({
               </span>
             </div>
 
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Student Innovator</th>
-                  <th className="py-3 px-4">Department / Program</th>
-                  <th className="py-3 px-4">Project Code</th>
-                  <th className="py-3 px-4">ABC Credits</th>
-                  <th className="py-3 px-4">Evaluation Grade</th>
-                  <th className="py-3 px-4 text-right">Certificate</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {studentCreditRecords.map((st, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{st.name}</div>
-                      <div className="text-[11px] font-mono text-slate-500">{st.identifier}</div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">{st.department}</td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-800">{st.projectCode}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                        {st.abcCredits} Credits
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700 font-medium">{st.grade}</td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStudentForCertificate(st)}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs cursor-pointer"
-                      >
-                        View Verified Certificate
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 whitespace-nowrap">Student Innovator</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Department / Program</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Project Code</th>
+                    <th className="py-3 px-4 whitespace-nowrap">ABC Credits</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Evaluation Grade</th>
+                    <th className="py-3 px-4 text-right whitespace-nowrap">Certificate</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {studentCreditRecords.map((st, i) => (
+                    <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="font-semibold text-slate-900">{st.name}</div>
+                        <div className="text-[11px] font-mono text-slate-500">{st.identifier}</div>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{st.department}</td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-800 whitespace-nowrap">{st.projectCode}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="font-semibold text-indigo-900 bg-indigo-50/80 px-2 py-0.5 rounded border border-indigo-100 text-[11px]">
+                          {st.abcCredits} NEP Credits
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 font-medium whitespace-nowrap">{st.grade}</td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStudentForCertificate(st)}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium text-xs cursor-pointer transition-colors"
+                        >
+                          View Verified Certificate
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1774,17 +1813,17 @@ export function UniversityDashboardView({
           <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-black text-slate-900 text-base">Capstone Project Team Allocator</h2>
-                <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800 rounded-md">
+                <h2 className="font-bold text-slate-950 text-base">Capstone Project Team Allocator</h2>
+                <span className="px-2.5 py-0.5 text-[10.5px] font-bold uppercase bg-blue-50 text-blue-800 border border-blue-200 rounded-md whitespace-nowrap">
                   NEP 2020 Allocation
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-1">
                 Assign and manage institutional faculty mentors, student innovators, and research assistants across active Capstone Projects.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">
+              <span className="text-xs font-mono bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
                 <strong>{projects.length}</strong> Active Projects
               </span>
             </div>
@@ -1792,8 +1831,10 @@ export function UniversityDashboardView({
 
           {projects.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-xl p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl mx-auto font-bold">
-                👥
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
               </div>
               <h3 className="font-bold text-slate-900 text-sm">No Active Capstone Projects</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
@@ -1810,44 +1851,47 @@ export function UniversityDashboardView({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: Projects Selector (4 cols) */}
-              <div className="lg:col-span-4 space-y-3">
-                <div className="font-bold text-xs uppercase tracking-wider text-slate-500">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Left Column: Compact Projects Selector (3 cols) */}
+              <div className="lg:col-span-3 space-y-2">
+                <div className="font-bold text-[11px] uppercase tracking-wider text-slate-500">
                   Select Project to Manage ({projects.length})
                 </div>
-                <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-0.5">
                   {projects.map((proj) => {
                     const currentSelectedId = selectedProjectIdForAllocation || projects[0]?.id;
                     const isSelected = proj.id === currentSelectedId;
-                    const teamCount = (proj.teamMembers?.length || 0) + (proj.facultyMentor ? 1 : 0);
+                    const projAdditionalMembers = (proj.teamMembers || []).filter(
+                      (m) => !(m.name === proj.facultyMentor && m.role === "FACULTY_MENTOR")
+                    );
+                    const teamCount = (proj.facultyMentor ? 1 : 0) + projAdditionalMembers.length;
 
                     return (
                       <button
                         key={proj.id}
                         type="button"
                         onClick={() => setSelectedProjectIdForAllocation(proj.id)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                        className={`w-full text-left p-2.5 rounded-lg border transition-all cursor-pointer space-y-1 ${
                           isSelected
-                            ? "bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs"
+                            ? "bg-white border-blue-600 ring-1 ring-blue-600/20 shadow-2xs border-l-[3px] border-l-blue-600"
                             : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-[11px] font-bold text-slate-600">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-mono text-[10.5px] font-bold text-slate-700 whitespace-nowrap">
                             {proj.projectCode || `PROJ-${proj.id}`}
                           </span>
-                          <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                          <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
                             {STAGE_LABELS[proj.stage] || proj.stage}
                           </span>
                         </div>
-                        <h4 className="font-bold text-xs text-slate-900 line-clamp-2">
+                        <h4 className="font-bold text-[11.5px] text-slate-900 line-clamp-1 leading-snug">
                           {proj.title}
                         </h4>
-                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 text-[11px] text-slate-500">
-                          <span>{proj.domain || "Civic R&D"}</span>
-                          <span className="font-semibold text-indigo-700">
-                            {teamCount} Members
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] text-slate-500">
+                          <span className="truncate max-w-[100px]">{proj.domain || "Civic R&D"}</span>
+                          <span className="font-semibold text-blue-700 whitespace-nowrap">
+                            {teamCount} {teamCount === 1 ? "Member" : "Members"}
                           </span>
                         </div>
                       </button>
@@ -1856,8 +1900,8 @@ export function UniversityDashboardView({
                 </div>
               </div>
 
-              {/* Right Column: Selected Project Team Roster & Allocation Form (8 cols) */}
-              <div className="lg:col-span-8 space-y-6">
+              {/* Right Column: Selected Project Team Roster & Allocation Form (9 cols) */}
+              <div className="lg:col-span-9 space-y-5">
                 {(() => {
                   const targetProj =
                     projects.find((p) => p.id === (selectedProjectIdForAllocation || projects[0]?.id)) ||
@@ -1865,106 +1909,143 @@ export function UniversityDashboardView({
 
                   if (!targetProj) return null;
 
+                  const additionalMembers = (targetProj.teamMembers || []).filter(
+                    (m) => !(m.name === targetProj.facultyMentor && m.role === "FACULTY_MENTOR")
+                  );
+                  const totalRosterCount = (targetProj.facultyMentor ? 1 : 0) + additionalMembers.length;
+
                   return (
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                       {/* Project Header Summary */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                           <div>
                             <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
                               {targetProj.projectCode || `PROJ-${targetProj.id}`} • {targetProj.district}
                             </span>
-                            <h3 className="font-bold text-slate-900 text-base mt-0.5">
+                            <h3 className="font-bold text-slate-900 text-sm mt-0.5">
                               {targetProj.title}
                             </h3>
                           </div>
-                          <span className="font-mono text-xs font-bold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shrink-0">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 shrink-0 whitespace-nowrap">
                             Progress: {targetProj.progress}%
                           </span>
                         </div>
 
-                        {/* Team Roster Table */}
-                        <div className="space-y-2">
+                        {/* Team Roster Table without horizontal scroll */}
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
-                              Assigned Research Team ({ (targetProj.teamMembers?.length || 0) + (targetProj.facultyMentor ? 1 : 0) })
+                            <h4 className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">
+                              Assigned Research Team ({totalRosterCount})
                             </h4>
                           </div>
 
-                          <div className="border border-slate-200 rounded-lg overflow-hidden">
-                            <table className="w-full text-left text-xs">
-                              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 text-[11px]">
+                          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                            <table className="w-full text-left text-xs border-collapse table-auto">
+                              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[10.5px] uppercase tracking-wider">
                                 <tr>
-                                  <th className="py-2.5 px-3">Member Name</th>
-                                  <th className="py-2.5 px-3">Role</th>
-                                  <th className="py-2.5 px-3">Department</th>
-                                  <th className="py-2.5 px-3">Roll / ID</th>
-                                  <th className="py-2.5 px-3">NEP Credits</th>
-                                  <th className="py-2.5 px-3 text-right">Action</th>
+                                  <th className="py-2.5 px-3 whitespace-nowrap">Member Name</th>
+                                  <th className="py-2.5 px-2.5 whitespace-nowrap">Assigned Role</th>
+                                  <th className="py-2.5 px-2.5 whitespace-nowrap">Department</th>
+                                  <th className="py-2.5 px-2.5 whitespace-nowrap">Roll / ID</th>
+                                  <th className="py-2.5 px-2.5 whitespace-nowrap">NEP Credits</th>
+                                  <th className="py-2.5 px-3 whitespace-nowrap text-right">Action</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
-                                {/* Faculty Lead Row */}
+                                {/* Lead Faculty Row */}
                                 {targetProj.facultyMentor && (
-                                  <tr className="bg-purple-50/40">
-                                    <td className="py-2.5 px-3 font-bold text-slate-900">
-                                      {targetProj.facultyMentor}
+                                  <tr className="bg-slate-50/60 hover:bg-slate-100/60 transition-colors">
+                                    <td className="py-2.5 px-3 whitespace-nowrap font-semibold text-slate-900">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0 border border-slate-200">
+                                          PI
+                                        </div>
+                                        <span>{targetProj.facultyMentor}</span>
+                                      </div>
                                     </td>
-                                    <td className="py-2.5 px-3">
-                                      <span className="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded text-[10px]">
-                                        LEAD FACULTY PI
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap">
+                                      <span className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-slate-100 text-slate-800 border border-slate-200 whitespace-nowrap">
+                                        Lead Faculty PI
                                       </span>
                                     </td>
-                                    <td className="py-2.5 px-3 text-slate-600">
-                                      {targetProj.domain ? `Dept of ${targetProj.domain}` : "Academic Faculty"}
+                                    <td className="py-2.5 px-2.5 text-slate-700 font-medium">
+                                      <span className="truncate block max-w-[140px] xl:max-w-[200px]" title={targetProj.domain ? `Dept of ${targetProj.domain}` : "Academic Faculty"}>
+                                        {targetProj.domain ? (targetProj.domain.startsWith("Dept") ? targetProj.domain : `Dept of ${targetProj.domain}`) : "Academic Faculty"}
+                                      </span>
                                     </td>
-                                    <td className="py-2.5 px-3 font-mono text-slate-600">PI-LEAD</td>
-                                    <td className="py-2.5 px-3 font-mono text-slate-600">Faculty Guide</td>
-                                    <td className="py-2.5 px-3 text-right text-slate-400 font-medium text-[11px]">
-                                      Lead PI
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-slate-600 font-medium">
+                                      <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 text-[10.5px]">PI-LEAD</span>
+                                    </td>
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap text-slate-600 font-medium text-[11px]">
+                                      Faculty Guide
+                                    </td>
+                                    <td className="py-2.5 px-3 whitespace-nowrap text-right text-slate-400 font-medium text-[10.5px]">
+                                      Primary Lead
                                     </td>
                                   </tr>
                                 )}
 
                                 {/* Team Members Rows */}
-                                {(targetProj.teamMembers || []).map((member, idx) => (
-                                  <tr key={member.id || idx} className="hover:bg-slate-50">
-                                    <td className="py-2.5 px-3 font-semibold text-slate-900">
-                                      {member.name}
+                                {additionalMembers.map((member, idx) => (
+                                  <tr key={member.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                                    <td className="py-2.5 px-3 whitespace-nowrap font-semibold text-slate-900">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0 border border-slate-200">
+                                          {member.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span>{member.name}</span>
+                                      </div>
                                     </td>
-                                    <td className="py-2.5 px-3">
-                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                        member.role === "FACULTY_MENTOR"
-                                          ? "bg-purple-100 text-purple-800"
-                                          : "bg-blue-100 text-blue-800"
-                                      }`}>
-                                        {member.role?.replace(/_/g, " ") || "STUDENT INNOVATOR"}
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap">
+                                      <span className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-slate-100 text-slate-800 border border-slate-200 whitespace-nowrap">
+                                        {member.role === "FACULTY_MENTOR" || member.role === "CO_FACULTY_GUIDE"
+                                          ? "Faculty Co-Mentor"
+                                          : member.role === "LAB_TECHNICIAN"
+                                          ? "Lab Technician"
+                                          : member.role === "DEPARTMENT_HEAD"
+                                          ? "Department Head"
+                                          : "Student Innovator"}
                                       </span>
                                     </td>
-                                    <td className="py-2.5 px-3 text-slate-600">
-                                      {member.department || "Engineering"}
+                                    <td className="py-2.5 px-2.5 text-slate-700 font-medium">
+                                      <span className="truncate block max-w-[140px] xl:max-w-[200px]" title={member.department || "Engineering"}>
+                                        {member.department || "Engineering"}
+                                      </span>
                                     </td>
-                                    <td className="py-2.5 px-3 font-mono text-slate-600">
-                                      {member.identifier || `22BTECH${100 + idx}`}
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-slate-600 font-medium">
+                                      <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 text-[10.5px]">
+                                        {member.identifier || `22BTECH${100 + idx}`}
+                                      </span>
                                     </td>
-                                    <td className="py-2.5 px-3 font-mono text-slate-800 font-bold">
-                                      {member.abcCredits ? `${member.abcCredits} Credits` : "—"}
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap">
+                                      <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-[10.5px]">
+                                        {member.abcCredits ? `${member.abcCredits} NEP Credits` : "4 NEP Credits"}
+                                      </span>
                                     </td>
-                                    <td className="py-2.5 px-3 text-right">
+                                    <td className="py-2.5 px-3 whitespace-nowrap text-right">
                                       {member.id ? (
                                         <button
                                           type="button"
                                           onClick={() => handleUnassignMember(targetProj.id, member.id!, member.name)}
-                                          className="text-rose-600 hover:text-rose-800 font-bold text-[11px] hover:underline cursor-pointer"
+                                          className="px-2 py-0.5 text-rose-700 hover:text-rose-900 hover:bg-rose-50 border border-rose-200 rounded text-[10.5px] font-semibold transition-all cursor-pointer whitespace-nowrap"
                                         >
                                           Unassign
                                         </button>
                                       ) : (
-                                        <span className="text-slate-400 text-[11px]">Assigned</span>
+                                        <span className="text-slate-400 text-[10.5px]">Assigned</span>
                                       )}
                                     </td>
                                   </tr>
                                 ))}
+
+                                {additionalMembers.length === 0 && !targetProj.facultyMentor && (
+                                  <tr>
+                                    <td colSpan={6} className="py-5 px-4 text-center text-slate-500">
+                                      No team members allocated to this capstone project yet.
+                                    </td>
+                                  </tr>
+                                )}
                               </tbody>
                             </table>
                           </div>
@@ -1972,13 +2053,13 @@ export function UniversityDashboardView({
                       </div>
 
                       {/* Quick Allocate Form Card */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3.5 shadow-xs">
+                        <div className="flex items-start justify-between border-b border-slate-100 pb-2.5">
                           <div>
-                            <h4 className="font-bold text-slate-900 text-sm">
+                            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
                               + Allocate Researcher to &ldquo;{targetProj.title}&rdquo;
                             </h4>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-[11px] text-slate-500 mt-0.5">
                               Register and assign a faculty guide or student innovator to this capstone project roster.
                             </p>
                           </div>
@@ -1990,8 +2071,8 @@ export function UniversityDashboardView({
                         >
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                              <label className="block font-bold text-slate-700 mb-1">
-                                Researcher / Student Name *
+                              <label className="block font-bold text-slate-700 mb-1 whitespace-nowrap text-[11px]">
+                                Researcher / Student Name <span className="text-rose-500">*</span>
                               </label>
                               <input
                                 type="text"
@@ -1999,41 +2080,43 @@ export function UniversityDashboardView({
                                 placeholder="e.g. Vikas Mahato"
                                 value={allocMemberName}
                                 onChange={(e) => setAllocMemberName(e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-medium"
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-900/10 font-medium text-slate-900 text-xs transition-all"
                               />
                             </div>
 
                             <div>
-                              <label className="block font-bold text-slate-700 mb-1">
-                                Allocation Role *
+                              <label className="block font-bold text-slate-700 mb-1 whitespace-nowrap text-[11px]">
+                                Allocation Role <span className="text-rose-500">*</span>
                               </label>
                               <select
                                 value={allocMemberRole}
                                 onChange={(e: any) => setAllocMemberRole(e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded-lg outline-none cursor-pointer bg-white font-medium"
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-900/10 cursor-pointer font-medium text-slate-900 text-xs transition-all"
                               >
-                                <option value="STUDENT_INNOVATOR">Student Innovator</option>
-                                <option value="FACULTY_MENTOR">Faculty Co-Mentor</option>
-                                <option value="TECHNICAL_SPECIALIST">Technical Specialist</option>
+                                <option value="STUDENT_INNOVATOR">Student Innovator (NEP ABC Track)</option>
+                                <option value="CO_FACULTY_GUIDE">Faculty Co-Guide / Mentor</option>
+                                <option value="LAB_TECHNICIAN">Lab Technician / Technical Specialist</option>
+                                <option value="DEPARTMENT_HEAD">Department Head / Advisor</option>
                               </select>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                              <label className="block font-bold text-slate-700 mb-1">
+                              <label className="block font-bold text-slate-700 mb-1 whitespace-nowrap text-[11px]">
                                 Academic Department
                               </label>
                               <input
                                 type="text"
+                                placeholder="e.g. Computer Science & Engineering"
                                 value={allocMemberDept}
                                 onChange={(e) => setAllocMemberDept(e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-medium"
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-900/10 font-medium text-slate-900 text-xs transition-all"
                               />
                             </div>
 
                             <div>
-                              <label className="block font-bold text-slate-700 mb-1">
+                              <label className="block font-bold text-slate-700 mb-1 whitespace-nowrap text-[11px]">
                                 Roll / Employee ID
                               </label>
                               <input
@@ -2041,12 +2124,12 @@ export function UniversityDashboardView({
                                 placeholder="e.g. 22BTECH042"
                                 value={allocMemberId}
                                 onChange={(e) => setAllocMemberId(e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-medium"
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-900/10 font-medium text-slate-900 text-xs transition-all"
                               />
                             </div>
 
                             <div>
-                              <label className="block font-bold text-slate-700 mb-1">
+                              <label className="block font-bold text-slate-700 mb-1 whitespace-nowrap text-[11px]">
                                 NEP 2020 ABC Credits
                               </label>
                               <input
@@ -2055,17 +2138,20 @@ export function UniversityDashboardView({
                                 max={12}
                                 value={allocMemberCredits}
                                 onChange={(e) => setAllocMemberCredits(Number(e.target.value))}
-                                className="w-full p-2 border border-slate-300 rounded-lg outline-none font-bold"
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-900/10 font-bold text-slate-900 text-xs transition-all"
                               />
                             </div>
                           </div>
 
-                          <div className="flex justify-end pt-2">
+                          <div className="flex items-center justify-end pt-1.5 border-t border-slate-100">
                             <button
                               type="submit"
-                              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
+                              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                             >
-                              Allocate to Project Roster
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                              <span>Allocate to Project Roster</span>
                             </button>
                           </div>
                         </form>
@@ -2157,54 +2243,58 @@ export function UniversityDashboardView({
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Researcher Name</th>
-                    <th className="py-3 px-4">Role</th>
-                    <th className="py-3 px-4">Department</th>
-                    <th className="py-3 px-4">Roll / Employee ID</th>
-                    <th className="py-3 px-4">Institutional Email</th>
-                    <th className="py-3 px-4">Assigned Project</th>
-                    <th className="py-3 px-4">Credits / Allocation</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredInstitutionalUsers.map((userItem) => (
-                    <tr key={userItem.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4 font-bold text-slate-900">{userItem.name}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold ${
-                          userItem.role === "FACULTY_MENTOR"
-                            ? "bg-purple-100 text-purple-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}>
-                          {userItem.role.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-700">{userItem.department}</td>
-                      <td className="py-3 px-4 font-mono text-slate-600">{userItem.identifier}</td>
-                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{userItem.email}</td>
-                      <td className="py-3 px-4 font-mono font-medium text-slate-800">
-                        {userItem.assignedProjectCode || "General Pool"}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-slate-700">
-                        {userItem.abcCredits ? `${userItem.abcCredits} ABC Credits` : "Project Guide"}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteResearcher(userItem.id)}
-                          className="text-rose-600 hover:text-rose-800 font-bold text-xs hover:underline cursor-pointer"
-                        >
-                          Remove
-                        </button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4 whitespace-nowrap">Researcher Name</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Role</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Department</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Roll / Employee ID</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Institutional Email</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Assigned Project</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Credits / Allocation</th>
+                      <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredInstitutionalUsers.map((userItem, idx) => (
+                      <tr key={`${userItem.id || userItem.identifier || 'usr'}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">{userItem.name}</td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200 whitespace-nowrap">
+                            {userItem.role === "FACULTY_MENTOR" ? "Faculty Mentor" : userItem.role.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{userItem.department}</td>
+                        <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80 text-[11px]">
+                            {userItem.identifier}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">{userItem.email}</td>
+                        <td className="py-3 px-4 font-mono font-medium text-slate-800 whitespace-nowrap">
+                          {userItem.assignedProjectCode || "General Pool"}
+                        </td>
+                        <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
+                          <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                            {userItem.abcCredits ? `${userItem.abcCredits} ABC Credits` : "Project Guide"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteResearcher(userItem.id)}
+                            className="px-2.5 py-1 text-rose-700 hover:text-rose-900 hover:bg-rose-50 border border-rose-200 rounded-md text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -2259,7 +2349,7 @@ export function UniversityDashboardView({
               <div className="font-semibold text-slate-900">{selectedChallengeForAccept.title}</div>
               <div className="text-slate-500 text-[11px] leading-relaxed">{selectedChallengeForAccept.description}</div>
               <div className="text-[11px] text-slate-500 pt-1">
-                Location: {selectedChallengeForAccept.district} • Pre-allocated Seed Grant: ₹2,50,000
+                Location: {selectedChallengeForAccept.district} • Academic Track: Capstone R&D (4 Credits)
               </div>
             </div>
 

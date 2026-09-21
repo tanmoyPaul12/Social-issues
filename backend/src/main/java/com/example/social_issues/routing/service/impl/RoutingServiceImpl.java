@@ -228,6 +228,69 @@ public class RoutingServiceImpl implements RoutingService {
     }
 
     @Override
+    public IssueResponse revokeAllocation(Long reviewerId, Long issueId, com.example.social_issues.routing.dto.TriageRevokeRequest request) {
+        GrassrootIssue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue not found with id: " + issueId));
+
+        User reviewer = userRepository.findById(reviewerId).orElse(null);
+        String reviewerName = reviewer != null ? reviewer.getName() : "Nodal Admin #" + reviewerId;
+
+        String previousHEI = issue.getAssignedHEI() != null ? issue.getAssignedHEI() : "Assigned Institution";
+        String reason = request != null && request.getReason() != null && !request.getReason().isBlank()
+                ? request.getReason().trim()
+                : "Administrative revocation by State Nodal Department for reallocation/re-triage.";
+
+        issue.setStatus(IssueStatus.TRIAGED);
+        issue.setAssignedHEI(null);
+
+        String auditStamp = String.format("[%s] Allocation Revoked from '%s' by %s: %s",
+                LocalDateTime.now().format(TIME_FORMATTER), previousHEI, reviewerName, reason);
+
+        if (issue.getReviewNotes() == null || issue.getReviewNotes().isBlank()) {
+            issue.setReviewNotes(auditStamp);
+        } else {
+            issue.setReviewNotes(issue.getReviewNotes() + "\n" + auditStamp);
+        }
+
+        GrassrootIssue saved = issueRepository.save(issue);
+        log.info("Issue #{} allocation revoked from '{}' by reviewer {} (ID: {}): {}", saved.getIssueNumber(), previousHEI, reviewerName, reviewerId, reason);
+
+        // Notify submitter of revocation & return to pool
+        if (saved.getSubmitter() != null) {
+            NotificationEvent event = new NotificationEvent();
+            event.setEventType("ISSUE_ALLOCATION_REVOKED");
+            event.setSource("NODAL_TRIAGE");
+            event.setRecipientUserId(saved.getSubmitter().getId());
+            event.setRecipientUserType("CITIZEN");
+            event.setRecipientEmail(saved.getSubmitter().getEmail());
+            event.setRecipientPhone(saved.getSubmitter().getPhone());
+            event.setTitle("Grievance #" + saved.getIssueNumber() + " Allocation Updated");
+            event.setMessage("Your grievance #" + saved.getIssueNumber() + " allocation was recalled from " + previousHEI + " and returned to the State Nodal Triage Pool for reassignment.");
+            event.setSeverity("INFO");
+            event.setActionUrl("/citizen/dashboard");
+            event.setReferenceEntityType("ISSUE");
+            event.setReferenceEntityId(saved.getId());
+            event.setStatDeltas(Map.of("status", "TRIAGED"));
+            notificationPublisher.publishCitizenNotification(event);
+        }
+
+        // Notify university channel of revocation
+        NotificationEvent uniEvent = new NotificationEvent();
+        uniEvent.setEventType("CHALLENGE_REVOKED_FROM_HEI");
+        uniEvent.setSource("NODAL_TRIAGE");
+        uniEvent.setTitle("Challenge Recall Notice: #" + saved.getIssueNumber());
+        uniEvent.setMessage("Problem statement #" + saved.getIssueNumber() + " has been recalled by State Nodal Department. Reason: " + reason);
+        uniEvent.setSeverity("WARNING");
+        uniEvent.setActionUrl("/university/inbox");
+        uniEvent.setReferenceEntityType("ISSUE");
+        uniEvent.setReferenceEntityId(saved.getId());
+        uniEvent.setChannels(List.of("IN_APP"));
+        notificationPublisher.publishUniversityNotification(uniEvent);
+
+        return IssueResponse.fromEntity(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public IssuePageResponse getTriageQueue(IssueStatus status, String district, IssueSector sector, IssuePriority priority, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)));

@@ -69,7 +69,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="h-screen bg-[#f8fafc] text-[#090e1a] flex flex-col font-sans selection:bg-slate-200 selection:text-slate-900 overflow-hidden">
+    <div className="h-screen bg-[#f1f5f9] text-[#090e1a] flex flex-col font-sans selection:bg-slate-200 selection:text-slate-900 overflow-hidden">
       {/* Top Command Center Header */}
       <DashboardHeader activeRole={activeRole} />
 
@@ -85,8 +85,8 @@ function DashboardContent() {
           onSelectItem={(id) => setActiveSidebarItem(id)}
         />
 
-        {/* Right Main Content Panel */}
-        <main className="flex-1 bg-white h-full overflow-y-auto">
+        {/* Right Main Content Panel with eye-friendly soft grayish canvas */}
+        <main className="flex-1 bg-[#f1f5f9] h-full overflow-y-auto">
           {activeRole === "citizen" && (
             <CitizenDashboardView
               activeTab={activeSidebarItem}

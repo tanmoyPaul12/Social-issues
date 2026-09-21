@@ -162,6 +162,36 @@ public class TriageController {
     }
 
     /**
+     * Revoke and recall problem statement allocation from a university back to the statewide pool
+     * POST /api/triage/{id}/revoke
+     */
+    @PostMapping("/{id}/revoke")
+    public ResponseEntity<?> revokeIssue(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id,
+            @RequestBody(required = false) com.example.social_issues.routing.dto.TriageRevokeRequest request
+    ) {
+        UserSummaryDto user = getAuthenticatedNodalUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authentication required to revoke issue allocation"));
+        }
+        if (!isAuthorizedNodalRole(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied: Nodal Admin or Government role required"));
+        }
+
+        try {
+            Long reviewerId = Long.parseLong(user.getId());
+            IssueResponse response = routingService.revokeAllocation(reviewerId, id, request != null ? request : new com.example.social_issues.routing.dto.TriageRevokeRequest());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error revoking issue allocation #{}: ", id, e);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * Reject civic grievance with reason
      * POST /api/triage/{id}/reject
      */

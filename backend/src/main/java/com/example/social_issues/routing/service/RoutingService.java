@@ -32,6 +32,12 @@ public interface RoutingService {
     IssueResponse rejectIssue(Long reviewerId, Long issueId, TriageRejectRequest request);
 
     /**
+     * Revoke and recall problem statement allocation from a university back to the statewide pool.
+     * Transitions status back to TRIAGED, clears assignedHEI, and logs Nodal revocation audit note.
+     */
+    IssueResponse revokeAllocation(Long reviewerId, Long issueId, com.example.social_issues.routing.dto.TriageRevokeRequest request);
+
+    /**
      * Get paginated triage queue for Nodal and Government officers.
      */
     IssuePageResponse getTriageQueue(IssueStatus status, String district, IssueSector sector, IssuePriority priority, int page, int size);

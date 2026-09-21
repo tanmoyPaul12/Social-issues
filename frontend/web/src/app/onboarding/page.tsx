@@ -60,13 +60,13 @@ export default function OnboardingHubPage() {
         <SiteNavbar />
 
         <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 py-8 sm:py-12">
-          <div className="w-full max-w-[520px] bg-white border border-[#e5e7eb] rounded-2xl p-7 sm:p-9 shadow-xs">
+          <div className="w-full max-w-[520px] bg-white border border-[#e5e7eb] rounded-2xl p-4 sm:p-7 md:p-9 shadow-xs">
             {/* Header */}
-            <div className="text-center mb-6">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <div className="text-center mb-5 sm:mb-6">
+              <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
                 Create an Account
               </h1>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
                 Select your stakeholder role to begin registration
               </p>
             </div>
@@ -116,19 +116,19 @@ export default function OnboardingHubPage() {
             <div className="grid grid-cols-3 gap-2 text-xs">
               <Link
                 href="/auth/login/industry"
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
+                className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
               >
                 <span>Industry</span>
               </Link>
               <Link
                 href="/auth/login/university"
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-purple-400 hover:bg-purple-50/40 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
+                className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
               >
                 <span>University</span>
               </Link>
               <Link
                 href="/auth/login/government"
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
+                className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-center text-slate-700 font-semibold transition-all flex flex-col items-center gap-1"
               >
                 <span>Govt Officer</span>
               </Link>
