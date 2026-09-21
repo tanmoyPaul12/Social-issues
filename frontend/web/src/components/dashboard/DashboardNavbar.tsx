@@ -1,9 +1,9 @@
 "use client";
 
-
 import Link from "next/link";
 
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export type DashboardRole = "citizen" | "university" | "industry" | "government" | "admin";
 
@@ -112,6 +112,9 @@ export function DashboardNavbar({ activeRole, onRoleChange }: DashboardNavbarPro
             </svg>
             <span>{displayDistrict}</span>
           </div>
+
+          {/* Notification Bell with Live Indicator */}
+          <NotificationBell userId={user?.id || "all"} role={activeRole} />
 
           {/* User Profile Chip */}
           <div className="flex items-center gap-2.5 pl-2 sm:pl-3 sm:border-l border-slate-200">

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
@@ -260,6 +261,8 @@ export default function UniversityLoginPage() {
             </div>
           </div>
         </main>
+
+        <SiteFooter />
       </div>
     </GuestOnlyGuard>
   );

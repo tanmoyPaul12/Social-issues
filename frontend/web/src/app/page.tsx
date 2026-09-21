@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { JharkhandHeroMap } from "@/components/landing/JharkhandHeroMap";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
@@ -732,33 +733,33 @@ export default function LandingPage() {
               ).map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+                  className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between overflow-hidden min-w-0"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
-                        <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full truncate min-w-0">
+                        <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span>{item.district}</span>
+                        <span className="truncate">{item.district}</span>
                       </span>
-                      <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded shrink-0">
                         {item.ticketId}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-black text-slate-900">{item.title}</h3>
-                    <p className="text-xs text-slate-600 mt-2 leading-relaxed">{item.problem}</p>
+                    <h3 className="text-base font-black text-slate-900 break-words [overflow-wrap:anywhere]">{item.title}</h3>
+                    <p className="text-xs text-slate-600 mt-2 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-3">{item.problem}</p>
 
                     <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
                       <div>
                         <span className="text-slate-400 font-medium">Assigned R&amp;D Institute:</span>
-                        <p className="font-bold text-slate-800">{item.assignedTo}</p>
+                        <p className="font-bold text-slate-800 break-words [overflow-wrap:anywhere]">{item.assignedTo}</p>
                       </div>
                       <div>
                         <span className="text-slate-400 font-medium">CSR &amp; Grant:</span>
-                        <p className="font-semibold text-emerald-700">{item.funding}</p>
+                        <p className="font-semibold text-emerald-700 break-words [overflow-wrap:anywhere]">{item.funding}</p>
                       </div>
                     </div>
                   </div>
@@ -841,92 +842,7 @@ export default function LandingPage() {
       {/* ─────────────────────────────────────────────────────────────
           8. FOOTER
       ───────────────────────────────────────────────────────────── */}
-      <footer className="mt-auto bg-[#070b13] border-t border-[#1b2434] text-slate-400 text-xs py-10 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
-            <div className="flex items-start gap-3.5">
-              <div className="w-9 h-13 shrink-0 flex items-center justify-center pt-0.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/emblem.png"
-                  alt="State Emblem of India"
-                  className="w-full h-full object-contain filter brightness-0 invert opacity-95"
-                />
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-white font-black text-sm sm:text-[15px] leading-snug tracking-tight">
-                  झारखंड विज्ञान, प्रौद्योगिकी और नवाचार पोर्टल
-                </span>
-                <span className="text-slate-200 font-bold text-xs sm:text-[13px] leading-tight mt-0.5">
-                  Jharkhand Science, Technology and Innovation Portal
-                </span>
-                <span className="text-slate-400 text-[11px] mt-1">
-                  Department of Higher &amp; Technical Education, Government of Jharkhand
-                </span>
-              </div>
-            </div>
-            <p className="text-slate-400 text-xs mt-3.5 max-w-md leading-relaxed">
-              NEP 2020 Aligned Innovation Ecosystem uniting grassroots citizens,
-              university R&amp;D labs, MSMEs, and CSR funding for real district-wide impact.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">
-              Direct Portals
-            </h4>
-            <ul className="space-y-2.5">
-              <li>
-                <Link
-                  href="/auth/login"
-                  className="hover:text-white transition-colors block"
-                >
-                  Citizen Problem Submission (Direct)
-                </Link>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    const searchEl = document.getElementById("ticket-search-input");
-                    searchEl?.focus();
-                    searchEl?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  className="hover:text-white transition-colors text-left cursor-pointer"
-                >
-                  Ticket Resolution Tracking
-                </button>
-              </li>
-              <li>
-                <Link href="/onboarding/university" className="hover:text-white transition-colors block">
-                  College &amp; University Registration (AISHE)
-                </Link>
-              </li>
-              <li>
-                <Link href="/onboarding/industry" className="hover:text-white transition-colors block">
-                  Industry &amp; CSR Co-Funding Sandbox
-                </Link>
-              </li>
-              <li>
-                <Link href="/onboarding/government" className="hover:text-blue-400 text-blue-300 font-semibold transition-colors block">
-                  Government Nodal Officer Onboarding (SSO)
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">
-              Emergency &amp; Support
-            </h4>
-            <p className="text-slate-400">Toll-free Citizen Helpline:</p>
-            <p className="text-white font-mono font-bold text-sm mt-0.5">1800-345-6588</p>
-            <p className="text-slate-400 mt-2">Email: support-innovation@jharkhand.gov.in</p>
-            <p className="text-slate-500 text-[11px] mt-3">
-              © 2026 Government of Jharkhand. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* ─────────────────────────────────────────────────────────────
           MODAL: TICKET STATUS & RESOLUTION TIMELINE
@@ -952,8 +868,8 @@ export default function LandingPage() {
               </span>
             </div>
 
-            <h3 className="text-xl font-black text-slate-900 mt-2">{activeTicketModal.title}</h3>
-            <p className="text-xs text-slate-500 mt-1">
+            <h3 className="text-xl font-black text-slate-900 mt-2 break-words [overflow-wrap:anywhere]">{activeTicketModal.title}</h3>
+            <p className="text-xs text-slate-500 mt-1 break-words [overflow-wrap:anywhere]">
               District: {activeTicketModal.district} • Submitted by: {activeTicketModal.submittedBy} •{" "}
               {activeTicketModal.date}
             </p>
@@ -966,7 +882,7 @@ export default function LandingPage() {
                 </svg>
                 <span>AI Research Statement &amp; Formulation:</span>
               </div>
-              <p className="text-xs text-slate-700 leading-relaxed font-normal">
+              <p className="text-xs text-slate-700 leading-relaxed font-normal break-words [overflow-wrap:anywhere]">
                 {activeTicketModal.aiSummary}
               </p>
             </div>
@@ -1076,36 +992,36 @@ export default function LandingPage() {
               </span>
             </div>
 
-            <h3 className="text-xl font-black text-slate-900 mt-3">{selectedScenario.title}</h3>
-            <p className="text-xs text-slate-500 font-semibold">{selectedScenario.district}</p>
+            <h3 className="text-xl font-black text-slate-900 mt-3 break-words [overflow-wrap:anywhere]">{selectedScenario.title}</h3>
+            <p className="text-xs text-slate-500 font-semibold break-words [overflow-wrap:anywhere]">{selectedScenario.district}</p>
 
             <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-3">
               <div>
                 <span className="font-bold text-slate-500 uppercase text-[10px]">
                   Grassroots Challenge:
                 </span>
-                <p className="text-slate-800 mt-0.5">{selectedScenario.problem}</p>
+                <p className="text-slate-800 mt-0.5 break-words [overflow-wrap:anywhere]">{selectedScenario.problem}</p>
               </div>
 
               <div>
                 <span className="font-bold text-slate-500 uppercase text-[10px]">
                   AI Technology Cluster:
                 </span>
-                <p className="text-blue-700 font-semibold mt-0.5">{selectedScenario.aiClustering}</p>
+                <p className="text-blue-700 font-semibold mt-0.5 break-words [overflow-wrap:anywhere]">{selectedScenario.aiClustering}</p>
               </div>
 
               <div>
                 <span className="font-bold text-slate-500 uppercase text-[10px]">
                   University R&amp;D Team:
                 </span>
-                <p className="text-slate-900 font-bold mt-0.5">{selectedScenario.assignedTo}</p>
+                <p className="text-slate-900 font-bold mt-0.5 break-words [overflow-wrap:anywhere]">{selectedScenario.assignedTo}</p>
               </div>
 
               <div>
                 <span className="font-bold text-slate-500 uppercase text-[10px]">
                   Measured Community Impact:
                 </span>
-                <p className="text-emerald-700 font-bold mt-0.5">{selectedScenario.impact}</p>
+                <p className="text-emerald-700 font-bold mt-0.5 break-words [overflow-wrap:anywhere]">{selectedScenario.impact}</p>
               </div>
             </div>
 

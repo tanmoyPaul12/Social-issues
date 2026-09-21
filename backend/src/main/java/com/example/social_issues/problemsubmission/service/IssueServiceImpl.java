@@ -8,6 +8,8 @@ import com.example.social_issues.problemsubmission.dto.*;
 import com.example.social_issues.problemsubmission.model.*;
 import com.example.social_issues.problemsubmission.repository.GrassrootIssueRepository;
 import com.example.social_issues.problemsubmission.repository.IssueAttachmentRepository;
+import com.example.social_issues.notifications.dto.NotificationEvent;
+import com.example.social_issues.notifications.service.NotificationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,7 @@ public class IssueServiceImpl implements IssueService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final AiServiceClient aiServiceClient;
+    private final NotificationEventPublisher notificationEventPublisher;
     private final SecureRandom random = new SecureRandom();
 
     public IssueServiceImpl(
@@ -42,13 +45,15 @@ public class IssueServiceImpl implements IssueService {
             IssueAttachmentRepository attachmentRepository,
             UserRepository userRepository,
             FileStorageService fileStorageService,
-            AiServiceClient aiServiceClient
+            AiServiceClient aiServiceClient,
+            NotificationEventPublisher notificationEventPublisher
     ) {
         this.issueRepository = issueRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.aiServiceClient = aiServiceClient;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Override
@@ -110,6 +115,27 @@ public class IssueServiceImpl implements IssueService {
         // Step 2: Async AI Multimodal Intelligence & HEI Routing (Non-blocking background pipeline)
         if (!isDraft) {
             triggerAsyncAiPipeline(savedIssueId);
+
+            // Step 3: Trigger Citizen Notification Event
+            try {
+                NotificationEvent event = new NotificationEvent();
+                event.setEventType("ISSUE_SUBMITTED");
+                event.setSource("ISSUE_SERVICE");
+                event.setRecipientUserId(submitter.getId());
+                event.setRecipientUserType(submitter.getRole() != null ? submitter.getRole().name() : "CITIZEN");
+                event.setRecipientEmail(submitter.getEmail());
+                event.setRecipientPhone(saved.getContactPhone() != null ? saved.getContactPhone() : submitter.getPhone());
+                event.setTitle("Challenge Submitted: " + saved.getIssueNumber());
+                event.setMessage("Your issue #" + saved.getIssueNumber() + " ('" + saved.getTitle() + "') has been submitted and queued for AI validation and HEI routing.");
+                event.setSeverity("INFO");
+                event.setActionUrl("/challenges/" + saved.getId());
+                event.setReferenceEntityType("GRASSROOT_ISSUE");
+                event.setReferenceEntityId(saved.getId());
+                event.setChannels(List.of("IN_APP", "SMS", "EMAIL"));
+                notificationEventPublisher.publishCitizenNotification(event);
+            } catch (Exception e) {
+                log.warn("Failed to publish citizen notification for issue #{}: {}", saved.getIssueNumber(), e.getMessage());
+            }
         }
 
         log.info("Created grassroot issue #{}: {} (Status: {}, Duplicate: {}, Validation: PASS)",

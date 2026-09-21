@@ -1,6 +1,8 @@
 package com.example.social_issues.projectlifecycle.service.impl;
 
 import com.example.social_issues.common.exception.ResourceNotFoundException;
+import com.example.social_issues.notifications.dto.NotificationEvent;
+import com.example.social_issues.notifications.service.NotificationEventPublisher;
 import com.example.social_issues.projectlifecycle.dto.RecordTestResultRequest;
 import com.example.social_issues.projectlifecycle.dto.TestResultDto;
 import com.example.social_issues.projectlifecycle.model.ProjectTestResult;
@@ -22,9 +24,14 @@ public class ProjectTestingServiceImpl implements ProjectTestingService {
     private static final Logger log = LoggerFactory.getLogger(ProjectTestingServiceImpl.class);
 
     private final ProjectTestResultRepository testResultRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
-    public ProjectTestingServiceImpl(ProjectTestResultRepository testResultRepository) {
+    public ProjectTestingServiceImpl(
+            ProjectTestResultRepository testResultRepository,
+            NotificationEventPublisher notificationEventPublisher
+    ) {
         this.testResultRepository = testResultRepository;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Override
@@ -63,6 +70,26 @@ public class ProjectTestingServiceImpl implements ProjectTestingService {
 
         ProjectTestResult saved = testResultRepository.save(testResult);
         log.info("Recorded Test Result '{}' (TRL {}) for project id: {}", saved.getTestTitle(), saved.getTrlLevel(), projectId);
+
+        // Publish Notification
+        try {
+            NotificationEvent event = new NotificationEvent();
+            event.setEventType("TEST_RESULT_LOGGED");
+            event.setSource("PROJECT_TESTING_SERVICE");
+            event.setTitle("Test Result Logged (TRL " + saved.getTrlLevel() + "): " + saved.getTestTitle());
+            event.setMessage(String.format("TRL %d %s result recorded with status '%s' for project #%d at %s.",
+                    saved.getTrlLevel(), saved.getTestType(), saved.getPassStatus(), projectId,
+                    saved.getTestLocation() != null ? saved.getTestLocation() : "Lab"));
+            event.setSeverity(saved.getPassStatus() == TestPassStatus.PASSED ? "SUCCESS" : "INFO");
+            event.setActionUrl("/dashboard?role=industry&tab=active-projects");
+            event.setReferenceEntityType("PROJECT_TEST");
+            event.setReferenceEntityId(saved.getId());
+            event.setChannels(List.of("IN_APP", "EMAIL"));
+            notificationEventPublisher.publishIndustryNotification(event);
+        } catch (Exception e) {
+            log.warn("Failed to publish test result notification: {}", e.getMessage());
+        }
+
         return TestResultDto.fromEntity(saved);
     }
 

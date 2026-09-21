@@ -151,6 +151,19 @@ public class RoutingServiceImpl implements RoutingService {
             notificationPublisher.publishCitizenNotification(event);
         }
 
+        // Direct event to university channel
+        NotificationEvent uniEvent = new NotificationEvent();
+        uniEvent.setEventType("ISSUE_ROUTED_TO_HEI");
+        uniEvent.setSource("NODAL_TRIAGE");
+        uniEvent.setTitle("New Challenge Assigned: #" + saved.getIssueNumber());
+        uniEvent.setMessage("Problem statement #" + saved.getIssueNumber() + " (" + saved.getSector() + ") has been routed to " + heiName + " for proposal submission.");
+        uniEvent.setSeverity("ACTION_REQUIRED");
+        uniEvent.setActionUrl("/university/challenges");
+        uniEvent.setReferenceEntityType("ISSUE");
+        uniEvent.setReferenceEntityId(saved.getId());
+        uniEvent.setChannels(List.of("IN_APP", "EMAIL"));
+        notificationPublisher.publishUniversityNotification(uniEvent);
+
         // Broadcast general notification for university portals
         NotificationEvent generalEvent = new NotificationEvent();
         generalEvent.setEventType("NEW_CHALLENGE_ROUTED");

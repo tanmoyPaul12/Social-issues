@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 
 export default function IndustryLoginPage() {
@@ -256,6 +257,8 @@ export default function IndustryLoginPage() {
           </div>
         </div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

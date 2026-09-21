@@ -1,7 +1,43 @@
 
 
 ## Core purpose
-Keep every stakeholder (citizen, university, industry, mentor, government) informed at each stage of a challenge's lifecycle — without anyone having to manually check the portal.
+
+
+also the events trigger for notification service to get called should be using a queue so it can send it in background as well as notify the user through the event  so it doesnt crash during the time of many users together
+
+Here's a practical tech stack for the notification service, sized for a hackathon build but built on approaches that scale in production too.
+
+## In-app / real-time notifications
+- **WebSockets via Socket.IO** (Node.js) — simplest for a hackathon: push live updates ("your challenge was routed to a university") straight to the browser without polling.
+- **Server-Sent Events (SSE)** — lighter alternative if you only need one-way server→client updates and want to skip WebSocket setup entirely.
+- **Firebase Cloud Messaging (FCM)** — if you want browser push notifications that work even when the tab is closed (needs a service worker). Free tier, fast to integrate, works for both web and mobile later.
+
+## Email notifications
+- **Nodemailer** (Node.js) with **Gmail SMTP** or **SendGrid free tier** — for approval emails, digests, formal updates. SendGrid is easier to demo reliably than raw SMTP.
+- **Resend** — newer, simple API, good free tier, popular in hackathons for its clean docs.
+
+## SMS notifications
+- **Twilio** (free trial credits) — industry standard, works well for a demo.
+- **MSG91** or **Fast2SMS** — India-specific providers, often better rates/delivery for Indian numbers and free trial credits, worth it since this is a Jharkhand-focused platform.
+
+## WhatsApp (differentiator for citizen reach)
+- **Twilio WhatsApp Sandbox** — free for testing, lets you demo WhatsApp notifications without a full Business API approval, which is usually enough for a hackathon.
+
+## Backend orchestration
+- **Node.js + Express**  as the notification service, exposing simple endpoints like `POST /notify`.
+- **Redis Pub/Sub** or a lightweight **BullMQ** queue — decouples "event happened" from "notification sent," so a slow email/SMS call doesn't block your main app. Easy to set up locally, no need for Kafka at hackathon scale.
+- **MongoDB or PostgreSQL** — store notification logs (sent/delivered/read status) and user preferences (channel, frequency).
+
+## Suggested hackathon-scoped combo
+| Need | Tool |
+|---|---|
+| Real-time in-app alerts | Socket.IO |
+| Email | Nodemailer + SendGrid free tier |
+| SMS | Twilio trial or MSG91 |
+| WhatsApp | Twilio WhatsApp Sandbox | 
+| Queue/decoupling | Redis + BullMQ |
+| Notification log storage | MongoDB |
+
 
 ## 1. Trigger events (what fires a notification)
 
@@ -51,3 +87,6 @@ Keep every stakeholder (citizen, university, industry, mentor, government) infor
 - **Notification service** that consumes events, applies templates, and dispatches via the right channel
 - **Delivery status tracking** (sent/delivered/failed/read) for reliability
 - **API/webhook layer** so each module (submission, routing, project tracking) just fires an event — decoupled from delivery logic
+
+
+

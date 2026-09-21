@@ -52,3 +52,9 @@ body {
   border: none;
 }
 
+/* Global container word wrap safeguards */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

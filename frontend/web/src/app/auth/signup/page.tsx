@@ -4,6 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
 
@@ -385,6 +386,8 @@ export default function SignupPage() {
             <PublicSignupForm />
           </Suspense>
         </main>
+
+        <SiteFooter />
       </div>
     </GuestOnlyGuard>
   );

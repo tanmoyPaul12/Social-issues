@@ -17,6 +17,8 @@ public class NotificationEventPublisher {
 
     public static final String CHANNEL_INDUSTRY = "events:industry:notifications";
     public static final String CHANNEL_CITIZEN = "events:citizen:notifications";
+    public static final String CHANNEL_UNIVERSITY = "events:university:notifications";
+    public static final String CHANNEL_GOVERNMENT = "events:government:notifications";
     public static final String CHANNEL_GENERAL = "events:general:notifications";
 
     private final StringRedisTemplate redisTemplate;
@@ -39,6 +41,20 @@ public class NotificationEventPublisher {
      */
     public void publishCitizenNotification(NotificationEvent event) {
         publish(CHANNEL_CITIZEN, event);
+    }
+
+    /**
+     * Publish notification to university / HEI channel
+     */
+    public void publishUniversityNotification(NotificationEvent event) {
+        publish(CHANNEL_UNIVERSITY, event);
+    }
+
+    /**
+     * Publish notification to government / admin channel
+     */
+    public void publishGovernmentNotification(NotificationEvent event) {
+        publish(CHANNEL_GOVERNMENT, event);
     }
 
     /**
