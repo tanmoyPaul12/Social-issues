@@ -63,6 +63,7 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     title: "Government Oversight",
     items: [
       { id: "overview", label: "Overview" },
+      { id: "routing", label: "AI Routing & Allocations", badge: "MASTER" },
       { id: "districts", label: "District Ingestion" },
       { id: "heatmap", label: "Domain Heatmap" },
       { id: "escalations", label: "Escalations & Approvals" },

@@ -1,18 +1,20 @@
 import { Redis } from 'ioredis';
 import { NotificationPayload } from './types.js';
-import { sseManager } from './sseManager.js';
+import { queueManager } from './queue/queueManager.js';
 
 export class RedisSubscriber {
-  private redis: Redis | null = null;
+  public redis: Redis | null = null;
   private isConnected = false;
 
   private readonly channels = [
     'events:industry:notifications',
     'events:citizen:notifications',
+    'events:university:notifications',
+    'events:government:notifications',
     'events:general:notifications'
   ];
 
-  public init(host: string, port: number): void {
+  public init(host: string, port: number): Redis {
     console.log(`[Redis] Connecting subscriber to redis://${host}:${port}...`);
 
     this.redis = new Redis({
@@ -39,6 +41,8 @@ export class RedisSubscriber {
     this.redis.on('message', (channel, message) => {
       this.handleMessage(channel, message);
     });
+
+    return this.redis;
   }
 
   private subscribeToChannels(): void {
@@ -53,13 +57,13 @@ export class RedisSubscriber {
     });
   }
 
-  private handleMessage(channel: string, message: string): void {
+  private async handleMessage(channel: string, message: string): Promise<void> {
     try {
       const payload: NotificationPayload = JSON.parse(message);
-      console.log(`[Redis] Received event on '${channel}': ${payload.title} (${payload.eventType})`);
+      console.log(`[Redis] Ingested event on '${channel}': ${payload.title} (${payload.eventType})`);
       
-      // Dispatch immediately to active SSE browser streams
-      sseManager.dispatchNotification(payload);
+      // Decouple through BullMQ Job Queue
+      await queueManager.enqueueNotification(payload);
     } catch (err) {
       console.error(`[Redis] Error parsing JSON from channel ${channel}:`, err);
     }

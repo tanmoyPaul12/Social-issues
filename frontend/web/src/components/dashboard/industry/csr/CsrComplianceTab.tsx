@@ -5,6 +5,7 @@ import { useCsrCompliance } from "@/modules/industry/hooks/useCsrCompliance";
 import { CsrUtilizationCertificate } from "@/modules/industry/types/csrCompliance";
 
 import { CsrBudgetOverviewSection } from "./CsrBudgetOverviewSection";
+import { MentorshipEngagementsSection } from "./MentorshipEngagementsSection";
 import { CsrLedgerTable } from "./CsrLedgerTable";
 import { CsrCertificatesSection } from "./CsrCertificatesSection";
 import { McaCsr2ReportSection } from "./McaCsr2ReportSection";
@@ -146,6 +147,18 @@ export function CsrComplianceTab({ onNavigateTab }: CsrComplianceTabProps) {
 
         <button
           type="button"
+          onClick={() => setActiveSubTab("mentorship")}
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === "mentorship"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          }`}
+        >
+          <span>Corporate Mentorship &amp; Advisory</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveSubTab("ledger")}
           className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === "ledger"
@@ -222,6 +235,10 @@ export function CsrComplianceTab({ onNavigateTab }: CsrComplianceTabProps) {
             onOpenUploadModal={() => setIsUploadModalOpen(true)}
             onNavigateSubTab={setActiveSubTab}
           />
+        )}
+
+        {activeSubTab === "mentorship" && (
+          <MentorshipEngagementsSection onNavigateSubTab={(sub) => setActiveSubTab(sub as any)} />
         )}
 
         {activeSubTab === "ledger" && (

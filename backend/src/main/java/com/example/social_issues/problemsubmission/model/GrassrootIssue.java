@@ -96,6 +96,15 @@ public class GrassrootIssue {
     @Column(name = "recommended_heis_json", columnDefinition = "TEXT")
     private String recommendedHeisJson;
 
+    @Column(name = "is_duplicate")
+    private Boolean isDuplicate = false;
+
+    @Column(name = "duplicate_cluster_id", length = 100)
+    private String duplicateClusterId;
+
+    @Column(name = "potential_duplicates_json", columnDefinition = "TEXT")
+    private String potentialDuplicatesJson;
+
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
 
@@ -189,6 +198,15 @@ public class GrassrootIssue {
 
     public String getRecommendedHeisJson() { return recommendedHeisJson; }
     public void setRecommendedHeisJson(String recommendedHeisJson) { this.recommendedHeisJson = recommendedHeisJson; }
+
+    public Boolean getIsDuplicate() { return isDuplicate; }
+    public void setIsDuplicate(Boolean isDuplicate) { this.isDuplicate = isDuplicate; }
+
+    public String getDuplicateClusterId() { return duplicateClusterId; }
+    public void setDuplicateClusterId(String duplicateClusterId) { this.duplicateClusterId = duplicateClusterId; }
+
+    public String getPotentialDuplicatesJson() { return potentialDuplicatesJson; }
+    public void setPotentialDuplicatesJson(String potentialDuplicatesJson) { this.potentialDuplicatesJson = potentialDuplicatesJson; }
 
     public String getReviewNotes() { return reviewNotes; }
     public void setReviewNotes(String reviewNotes) { this.reviewNotes = reviewNotes; }

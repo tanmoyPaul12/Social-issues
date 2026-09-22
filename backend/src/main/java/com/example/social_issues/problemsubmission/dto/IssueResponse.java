@@ -39,6 +39,9 @@ public class IssueResponse {
     private String validationReportJson;
     private String assignedHEI;
     private String recommendedHeisJson;
+    private Boolean isDuplicate;
+    private String duplicateClusterId;
+    private String potentialDuplicatesJson;
     private LocalDateTime resolvedAt;
     private List<AttachmentResponse> attachments = new ArrayList<>();
     private LocalDateTime createdAt;
@@ -83,6 +86,9 @@ public class IssueResponse {
         res.setValidationReportJson(issue.getValidationReportJson());
         res.setAssignedHEI(issue.getAssignedHEI());
         res.setRecommendedHeisJson(issue.getRecommendedHeisJson());
+        res.setIsDuplicate(issue.getIsDuplicate());
+        res.setDuplicateClusterId(issue.getDuplicateClusterId());
+        res.setPotentialDuplicatesJson(issue.getPotentialDuplicatesJson());
         res.setResolvedAt(issue.getResolvedAt());
         res.setCreatedAt(issue.getCreatedAt());
         res.setUpdatedAt(issue.getUpdatedAt());
@@ -177,6 +183,15 @@ public class IssueResponse {
 
     public String getRecommendedHeisJson() { return recommendedHeisJson; }
     public void setRecommendedHeisJson(String recommendedHeisJson) { this.recommendedHeisJson = recommendedHeisJson; }
+
+    public Boolean getIsDuplicate() { return isDuplicate; }
+    public void setIsDuplicate(Boolean isDuplicate) { this.isDuplicate = isDuplicate; }
+
+    public String getDuplicateClusterId() { return duplicateClusterId; }
+    public void setDuplicateClusterId(String duplicateClusterId) { this.duplicateClusterId = duplicateClusterId; }
+
+    public String getPotentialDuplicatesJson() { return potentialDuplicatesJson; }
+    public void setPotentialDuplicatesJson(String potentialDuplicatesJson) { this.potentialDuplicatesJson = potentialDuplicatesJson; }
 
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }

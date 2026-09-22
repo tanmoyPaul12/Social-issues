@@ -28,43 +28,21 @@ const KNOWN_UNIVERSITIES = [
 ];
 
 const JHARKHAND_DISTRICTS = [
-  "Ranchi",
-  "Dhanbad",
-  "East Singhbhum (Jamshedpur)",
-  "Bokaro",
-  "Hazaribagh",
-  "Deoghar",
-  "Dumka",
-  "Ramgarh",
-  "Giridih",
-  "Palamu",
-  "West Singhbhum (Chaibasa)",
-  "Saraikela Kharsawan",
-  "Garhwa",
-  "Chatra",
-  "Koderma",
-  "Jamtara",
-  "Godda",
-  "Sahibganj",
-  "Pakur",
-  "Lohardaga",
-  "Gumla",
-  "Simdega",
-  "Latehar",
-  "Khunti",
+  "Ranchi", "Dhanbad", "East Singhbhum (Jamshedpur)", "Bokaro", "Hazaribagh",
+  "Deoghar", "Dumka", "Ramgarh", "Giridih", "Palamu", "West Singhbhum (Chaibasa)",
+  "Saraikela Kharsawan", "Garhwa", "Chatra", "Koderma", "Jamtara", "Godda",
+  "Sahibganj", "Pakur", "Lohardaga", "Gumla", "Simdega", "Latehar", "Khunti"
 ];
 
 const DISCIPLINES_LIST = [
   { id: "edtech", title: "Education & Vernacular Pedagogy", desc: "Digital classrooms, tribal dialect tools, STEM labs" },
-  { id: "agri", title: "Agritech & Soil Diagnostics", desc: "Crop disease AI, precision irrigation, organic soil test" },
-  { id: "health", title: "MedTech & Rural Health Devices", desc: "Point-of-care diagnostics, maternal health sensors" },
-  { id: "water", title: "Water Resources & IoT Sensors", desc: "Groundwater depletion sensors, arsenic/fluoride filtration" },
-  { id: "ecology", title: "Mining Ecology & Bioremediation", desc: "Coal overburden revival, dust mitigation, afforestation" },
-  { id: "clean_energy", title: "Clean Energy & Microgrids", desc: "Solar microgrids, battery storage, rural off-grid power" },
-  { id: "urban", title: "Smart City & Solid Waste Tech", desc: "Municipal GIS, decentralized composting, drainage telemetry" },
-  { id: "assistive", title: "Assistive Tech & Rural Mobility", desc: "Divyangjan assistive devices, rural transport electrification" },
-  { id: "ai_iot", title: "AI/ML & Cyber-Physical Systems", desc: "Computer vision, predictive logistics, edge sensor networks" },
-  { id: "livelihoods", title: "Forest Produce & Agri-Logistics", desc: "Minor forest produce processing, cold storage, supply chain" },
+  { id: "agri", title: "Agritech & Soil Diagnostics", desc: "Crop disease AI, precision irrigation, soil tests" },
+  { id: "health", title: "MedTech & Rural Health", desc: "Point-of-care diagnostics, maternal health sensors" },
+  { id: "water", title: "Water Resources & IoT", desc: "Groundwater monitoring, filtration systems" },
+  { id: "ecology", title: "Mining Ecology & Bioremediation", desc: "Overburden revival, dust mitigation, afforestation" },
+  { id: "clean_energy", title: "Clean Energy & Microgrids", desc: "Solar microgrids, battery storage, rural power" },
+  { id: "urban", title: "Smart City & Waste Tech", desc: "Municipal GIS, decentralized composting, drainage" },
+  { id: "ai_iot", title: "AI/ML & IoT Sensors", desc: "Computer vision, predictive logistics, sensor nets" },
 ];
 
 export default function UniversityOnboardingPage() {
@@ -94,16 +72,16 @@ export default function UniversityOnboardingPage() {
   // Form Fields - Step 3: Research Disciplines & Capabilities
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([
     "Agritech & Soil Diagnostics",
-    "Water Resources & IoT Sensors",
+    "Water Resources & IoT",
   ]);
   const [hasIncubationCenter, setHasIncubationCenter] = useState(true);
 
-  // Field validation errors object
+  // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const steps = [
     "Institution Identity",
-    "Nodal SPOC & Account Security",
+    "Nodal SPOC Details",
     "Research Disciplines",
   ];
 
@@ -123,9 +101,6 @@ export default function UniversityOnboardingPage() {
       }
       if (!aisheCode.trim()) {
         errs.aisheCode = "AISHE Code or UGC ID is required.";
-      }
-      if (!district.trim()) {
-        errs.district = "Please select the institutional district.";
       }
     } else if (step === 1) {
       if (!spocName.trim()) {
@@ -154,7 +129,7 @@ export default function UniversityOnboardingPage() {
       }
     } else if (step === 2) {
       if (selectedDisciplines.length === 0) {
-        errs.disciplines = "Please select at least 1 specialized research discipline.";
+        errs.disciplines = "Please select at least 1 research discipline.";
       }
     }
 
@@ -171,7 +146,6 @@ export default function UniversityOnboardingPage() {
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      // Final Step Submission
       const finalUnivName = getEffectiveUnivName();
       const res = await onboardUniversity({
         name: spocName.trim(),
@@ -188,7 +162,7 @@ export default function UniversityOnboardingPage() {
       });
 
       if (res.success) {
-        const generated = (res as any).referenceId || (res as any).user?.referenceId || `HEI-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
+        const generated = (res as any).referenceId || (res as any).user?.referenceId || `HEI-JH-${Math.floor(1000 + Math.random() * 9000)}`;
         setRefId(generated);
         setIsComplete(true);
       } else {
@@ -202,7 +176,7 @@ export default function UniversityOnboardingPage() {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     } else {
-      router.push("/");
+      router.push("/onboarding");
     }
   };
 
@@ -221,369 +195,294 @@ export default function UniversityOnboardingPage() {
     }
   };
 
-  // Password strength calculation
-  const getPasswordStrength = () => {
-    if (!password) return { label: "", color: "", width: "0%" };
-    if (password.length < 6) return { label: "Too Short", color: "bg-rose-500", width: "25%" };
-    if (password.length < 8) return { label: "Fair", color: "bg-amber-500", width: "50%" };
-    if (/[A-Z]/.test(password) && /[0-9]/.test(password)) {
-      return { label: "Strong", color: "bg-emerald-500", width: "100%" };
-    }
-    return { label: "Good", color: "bg-blue-500", width: "75%" };
-  };
-
-  const passwordStrength = getPasswordStrength();
-
   return (
     <GuestOnlyGuard>
       <OnboardingFormWrapper
-        roleTitle="College &amp; University (HEI) Onboarding"
-      roleTagline="Register your institution to receive routed grassroots challenges, form student capstone teams, and access NEP 2020 Capstone R&D Grants."
-      roleBadge="Academic Lab Grants"
-      trustBadge="Institutional Review"
-      timeEstimate="~3 Minutes"
-      steps={steps}
-      currentStepIndex={currentStep}
-      onPrevStep={handlePrev}
-      onNextStep={handleNext}
-      isComplete={isComplete}
-      referenceId={refId}
-      completedSummary={[
-        { label: "Institution", value: getEffectiveUnivName() },
-        { label: "AISHE Code", value: aisheCode || "-" },
-        { label: "District", value: district },
-        { label: "Nodal SPOC", value: spocName || "-" },
-        { label: "Contact Email", value: spocEmail || "-" },
-        { label: "Verification SLA", value: "Instant Active Account" },
-      ]}
-      dashboardRole="university"
-    >
-      {/* Global Server Error Banner */}
-      {serverError && (
-        <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 animate-in fade-in">
-          <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5 font-bold text-xs">
-            ✕
-          </div>
-          <div className="flex-1">
-            <h4 className="text-xs font-bold text-rose-900">Onboarding Notice</h4>
-            <p className="text-xs text-rose-700 mt-0.5">{serverError}</p>
+        roleTitle="University &amp; College Registration"
+        roleTagline="Register your institution to claim capstone problems, R&D grants, and form student research teams"
+        steps={steps}
+        currentStepIndex={currentStep}
+        onPrevStep={handlePrev}
+        onNextStep={handleNext}
+        isComplete={isComplete}
+        referenceId={refId}
+        completedSummary={[
+          { label: "Institution", value: getEffectiveUnivName() },
+          { label: "AISHE Code", value: aisheCode || "-" },
+          { label: "District", value: district },
+          { label: "Nodal SPOC", value: spocName || "-" },
+          { label: "Contact Email", value: spocEmail || "-" },
+        ]}
+        dashboardRole="university"
+      >
+        {/* Error Banner */}
+        {serverError && (
+          <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+            <p className="font-semibold">{serverError}</p>
             {serverError.includes("already registered") && (
-              <div className="mt-2">
-                <Link
-                  href="/auth/login/university"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-rose-900 underline hover:text-rose-950"
-                >
-                  Sign in to your University account instead →
-                </Link>
-              </div>
+              <Link
+                href="/auth/login/university"
+                className="inline-block mt-1 font-bold text-red-800 underline hover:text-red-950"
+              >
+                Sign in to your University account →
+              </Link>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step 0: Institution Identity */}
-      {currentStep === 0 && (
-        <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in duration-300">
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-              <span>Institution Name (UGC / AICTE Approved): <span className="text-rose-500">*</span></span>
-              <span className="text-[11px] font-normal text-slate-500">Jharkhand Higher Education Institutions</span>
-            </label>
-            <select
-              value={selectedUnivOption}
-              onChange={(e) => {
-                setSelectedUnivOption(e.target.value);
-                setErrors((prev) => {
-                  const copy = { ...prev };
-                  delete copy.customUnivName;
-                  return copy;
-                });
-              }}
-              className="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all shadow-2xs"
-            >
-              {KNOWN_UNIVERSITIES.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Conditional Custom Institution Input */}
-          {selectedUnivOption.startsWith("Other") && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                Enter Full College / Institution Name: <span className="text-rose-500">*</span>
+        {/* Step 0: Institution Identity */}
+        {currentStep === 0 && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Institution Name
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Cambridge Institute of Technology, Tatisilwai, Ranchi"
-                value={customUnivName}
+              <select
+                value={selectedUnivOption}
                 onChange={(e) => {
-                  setCustomUnivName(e.target.value);
-                  if (errors.customUnivName) {
-                    setErrors((prev) => {
-                      const copy = { ...prev };
-                      delete copy.customUnivName;
-                      return copy;
-                    });
-                  }
+                  setSelectedUnivOption(e.target.value);
+                  setErrors((prev) => {
+                    const copy = { ...prev };
+                    delete copy.customUnivName;
+                    return copy;
+                  });
                 }}
-                className={`w-full px-4 py-3 rounded-xl border text-slate-900 text-xs outline-none transition-all ${
-                  errors.customUnivName
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
-              />
-              {errors.customUnivName && (
-                <p className="text-[11px] text-rose-600 font-medium mt-1 flex items-center gap-1">
-                  <span>⚠️</span> {errors.customUnivName}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-                <span>AISHE Code / UGC ID: <span className="text-rose-500">*</span></span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. U-0284 or C-41258"
-                value={aisheCode}
-                onChange={(e) => {
-                  setAisheCode(e.target.value.toUpperCase());
-                  if (errors.aisheCode) {
-                    setErrors((prev) => {
-                      const copy = { ...prev };
-                      delete copy.aisheCode;
-                      return copy;
-                    });
-                  }
-                }}
-                className={`w-full px-4 py-2.5 rounded-xl border font-mono text-xs text-slate-900 outline-none transition-all ${
-                  errors.aisheCode
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
-              />
-              {errors.aisheCode ? (
-                <p className="text-[11px] text-rose-600 font-medium mt-1 flex items-center gap-1">
-                  <span>⚠️</span> {errors.aisheCode}
-                </p>
-              ) : (
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  Found on aishe.gov.in institutional certificate
-                </span>
-              )}
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+              >
+                {KNOWN_UNIVERSITIES.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                Institution Category:
+            {selectedUnivOption.startsWith("Other") && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Specify College / Institution Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Cambridge Institute of Technology, Ranchi"
+                  value={customUnivName}
+                  onChange={(e) => {
+                    setCustomUnivName(e.target.value);
+                    if (errors.customUnivName) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.customUnivName;
+                        return copy;
+                      });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                />
+                {errors.customUnivName && (
+                  <p className="text-[11px] text-red-600 font-medium">{errors.customUnivName}</p>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  AISHE Code / UGC ID
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. U-0205"
+                  value={aisheCode}
+                  onChange={(e) => {
+                    setAisheCode(e.target.value.toUpperCase());
+                    if (errors.aisheCode) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.aisheCode;
+                        return copy;
+                      });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all font-mono"
+                />
+                {errors.aisheCode && (
+                  <p className="text-[11px] text-red-600 font-medium">{errors.aisheCode}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Campus District
+                </label>
+                <select
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                >
+                  {JHARKHAND_DISTRICTS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Institution Category
               </label>
               <select
                 value={univCategory}
                 onChange={(e) => setUnivCategory(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
               >
                 <option>Institute of National Importance (IIT/NIT/IIM)</option>
                 <option>Deemed University / Autonomous HEI</option>
                 <option>State Public University</option>
                 <option>Affiliated Engineering College</option>
                 <option>Polytechnic / Agricultural College</option>
-                <option>Science & Research Institute</option>
+                <option>Science &amp; Research Institute</option>
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Institution Campus District: <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-            >
-              {JHARKHAND_DISTRICTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-100 flex items-start gap-3">
-            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleNext}
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Continue to SPOC Details →
+              </button>
             </div>
-            <p className="text-xs text-purple-950 leading-relaxed">
-              <strong>Institutional Policy:</strong> Registered institutions receive direct grassroots problem routing from Panchayats and ULBs, enabling eligibility for State Capstone Seed Grants (₹5L–₹25L).
-            </p>
           </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="w-full py-3.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>Continue to Nodal SPOC & Security</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
-        </div>
-      )}
+        {/* Step 1: Nodal SPOC & Account Security */}
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  SPOC Full Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dr. A. K. Sinha"
+                  value={spocName}
+                  onChange={(e) => {
+                    setSpocName(e.target.value);
+                    if (errors.spocName) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.spocName;
+                        return copy;
+                      });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                />
+                {errors.spocName && (
+                  <p className="text-[11px] text-red-600 font-medium">{errors.spocName}</p>
+                )}
+              </div>
 
-      {/* Step 1: Nodal SPOC & Account Security */}
-      {currentStep === 1 && (
-        <div className="space-y-5 max-w-2xl mx-auto animate-in fade-in duration-300">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                Nodal SPOC Full Name: <span className="text-rose-500">*</span>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Designation
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dean R&D / HOD"
+                  value={spocDesignation}
+                  onChange={(e) => {
+                    setSpocDesignation(e.target.value);
+                    if (errors.spocDesignation) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.spocDesignation;
+                        return copy;
+                      });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                />
+                {errors.spocDesignation && (
+                  <p className="text-[11px] text-red-600 font-medium">{errors.spocDesignation}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Institutional Email (for sign-in)
               </label>
               <input
-                type="text"
-                placeholder="e.g. Dr. Animesh Kumar Sinha"
-                value={spocName}
+                type="email"
+                placeholder="faculty.lead@bitmesra.ac.in"
+                value={spocEmail}
                 onChange={(e) => {
-                  setSpocName(e.target.value);
-                  if (errors.spocName) {
+                  setSpocEmail(e.target.value);
+                  if (errors.spocEmail) {
                     setErrors((prev) => {
                       const copy = { ...prev };
-                      delete copy.spocName;
+                      delete copy.spocEmail;
                       return copy;
                     });
                   }
                 }}
-                className={`w-full px-4 py-2.5 rounded-xl border text-slate-900 text-xs outline-none transition-all ${
-                  errors.spocName
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
               />
-              {errors.spocName && (
-                <p className="text-[11px] text-rose-600 font-medium mt-1">⚠️ {errors.spocName}</p>
+              {errors.spocEmail && (
+                <p className="text-[11px] text-red-600 font-medium">{errors.spocEmail}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                Institutional Designation: <span className="text-rose-500">*</span>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Contact Mobile Number
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Dean (R&D) / HOD Computer Science"
-                value={spocDesignation}
-                onChange={(e) => {
-                  setSpocDesignation(e.target.value);
-                  if (errors.spocDesignation) {
-                    setErrors((prev) => {
-                      const copy = { ...prev };
-                      delete copy.spocDesignation;
-                      return copy;
-                    });
-                  }
-                }}
-                className={`w-full px-4 py-2.5 rounded-xl border text-slate-900 text-xs outline-none transition-all ${
-                  errors.spocDesignation
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
-              />
-              {errors.spocDesignation && (
-                <p className="text-[11px] text-rose-600 font-medium mt-1">⚠️ {errors.spocDesignation}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-              <span>Official Institutional Email: <span className="text-rose-500">*</span></span>
-              <span className="text-[11px] text-purple-700 font-medium">Used for College Portal Sign In</span>
-            </label>
-            <input
-              type="email"
-              placeholder="e.g. dean.rnd@bitmesra.ac.in or dr.sinha@university.edu"
-              value={spocEmail}
-              onChange={(e) => {
-                setSpocEmail(e.target.value);
-                if (errors.spocEmail) {
-                  setErrors((prev) => {
-                    const copy = { ...prev };
-                    delete copy.spocEmail;
-                    return copy;
-                  });
-                }
-              }}
-              className={`w-full px-4 py-2.5 rounded-xl border font-mono text-xs text-slate-900 outline-none transition-all ${
-                errors.spocEmail
-                  ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                  : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              }`}
-            />
-            {errors.spocEmail ? (
-              <p className="text-[11px] text-rose-600 font-medium mt-1">⚠️ {errors.spocEmail}</p>
-            ) : (
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Official institutional email for state communication &amp; grant notifications
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Direct Contact Mobile Number: <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-xs font-bold">
-                +91
-              </span>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="9876543210"
-                value={spocPhone}
-                onChange={(e) => {
-                  const cleaned = e.target.value.replace(/\D/g, "");
-                  setSpocPhone(cleaned);
-                  if (errors.spocPhone) {
-                    setErrors((prev) => {
-                      const copy = { ...prev };
-                      delete copy.spocPhone;
-                      return copy;
-                    });
-                  }
-                }}
-                className={`w-full pl-12 pr-4 py-2.5 rounded-xl border font-mono text-xs text-slate-900 outline-none transition-all ${
-                  errors.spocPhone
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
-              />
-            </div>
-            {errors.spocPhone && (
-              <p className="text-[11px] text-rose-600 font-medium mt-1">⚠️ {errors.spocPhone}</p>
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-slate-800">
-                Create Portal Password: <span className="text-rose-500">*</span>
-              </label>
-              {password && (
-                <span className="text-[11px] font-bold text-slate-600">
-                  Strength: <span className={passwordStrength.label === "Strong" ? "text-emerald-600" : "text-amber-600"}>{passwordStrength.label}</span>
+              <div className="flex gap-2">
+                <span className="px-3.5 py-3 rounded-xl bg-slate-100 border border-slate-300 text-sm font-semibold text-slate-600 flex items-center">
+                  +91
                 </span>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={spocPhone}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, "");
+                    setSpocPhone(cleaned);
+                    if (errors.spocPhone) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.spocPhone;
+                        return copy;
+                      });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all font-mono"
+                />
+              </div>
+              {errors.spocPhone && (
+                <p className="text-[11px] text-red-600 font-medium">{errors.spocPhone}</p>
               )}
             </div>
-            <div className="relative">
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Create Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="At least 6 characters"
@@ -598,152 +497,109 @@ export default function UniversityOnboardingPage() {
                     });
                   }
                 }}
-                className={`w-full px-4 pr-12 py-2.5 rounded-xl border text-slate-900 text-xs outline-none transition-all ${
-                  errors.password
-                    ? "border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400"
-                    : "border-slate-300 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                }`}
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
               />
+              {errors.password && (
+                <p className="text-[11px] text-red-600 font-medium">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="pt-2">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
+                onClick={handleNext}
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
               >
-                {showPassword ? "Hide" : "Show"}
+                Continue to Research Focus →
               </button>
             </div>
-
-            {/* Password strength bar */}
-            {password && (
-              <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ${passwordStrength.color}`}
-                  style={{ width: passwordStrength.width }}
-                />
-              </div>
-            )}
-
-            {errors.password && (
-              <p className="text-[11px] text-rose-600 font-medium mt-1">⚠️ {errors.password}</p>
-            )}
           </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="w-full py-3.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
-          >
-            <span>Continue to Research Capabilities</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
-        </div>
-      )}
+        {/* Step 2: Research Disciplines */}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Select Research Disciplines
+                </label>
+                <span className="text-xs font-semibold text-blue-600">
+                  {selectedDisciplines.length} selected
+                </span>
+              </div>
 
-      {/* Step 2: Research Disciplines & Capabilities */}
-      {currentStep === 2 && (
-        <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in duration-300">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold text-slate-800">
-                Select Specialized Research Disciplines &amp; Laboratories: <span className="text-rose-500">*</span>
-              </label>
-              <span className="text-[11px] font-bold text-purple-700">
-                {selectedDisciplines.length} Selected
-              </span>
-            </div>
+              {errors.disciplines && (
+                <p className="text-[11px] text-red-600 font-medium">{errors.disciplines}</p>
+              )}
 
-            {errors.disciplines && (
-              <p className="text-[11px] text-rose-600 font-medium mb-3 p-2 bg-rose-50 rounded-lg border border-rose-200">
-                ⚠️ {errors.disciplines}
-              </p>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {DISCIPLINES_LIST.map((disc) => {
-                const isSelected = selectedDisciplines.includes(disc.title);
-                return (
-                  <button
-                    key={disc.id}
-                    type="button"
-                    onClick={() => toggleDiscipline(disc.title)}
-                    className={`p-3.5 rounded-2xl border text-left flex items-start justify-between gap-3 transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-purple-50/80 border-purple-500 ring-1 ring-purple-500/20 text-purple-950 shadow-2xs"
-                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50/80 hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <span className={`text-xs block font-bold ${isSelected ? "text-purple-950" : "text-slate-800"}`}>
-                        {disc.title}
-                      </span>
-                      <span className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
-                        {disc.desc}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs transition-colors ${
-                        isSelected ? "bg-purple-600 text-white font-bold" : "border border-slate-300 text-transparent"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {DISCIPLINES_LIST.map((disc) => {
+                  const isSelected = selectedDisciplines.includes(disc.title);
+                  return (
+                    <button
+                      key={disc.id}
+                      type="button"
+                      onClick={() => toggleDiscipline(disc.title)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        isSelected
+                          ? "bg-blue-50/70 border-blue-500 text-blue-900"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                       }`}
                     >
-                      ✓
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="text-xs font-semibold leading-tight">
+                        {disc.title}
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded flex items-center justify-center text-[10px] shrink-0 ${
+                          isSelected ? "bg-blue-600 text-white" : "border border-slate-300"
+                        }`}
+                      >
+                        {isSelected ? "✓" : ""}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">
+                  Active Incubation / Innovation Cell (IIC)?
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Allows student startup seed grant allocation
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={hasIncubationCenter}
+                onChange={(e) => setHasIncubationCenter(e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+              />
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={handleNext}
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Registering Institution...</span>
+                  </>
+                ) : (
+                  <span>Complete University Registration →</span>
+                )}
+              </button>
             </div>
           </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between gap-4">
-            <div>
-              <span className="font-bold text-xs text-slate-900 block">
-                Atal Incubation Centre / IIC / TBI Status:
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Enables student startup fast-track funding and prototype commercialization.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setHasIncubationCenter(!hasIncubationCenter)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
-                hasIncubationCenter
-                  ? "bg-emerald-600 text-white shadow-2xs"
-                  : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {hasIncubationCenter && <span>✓</span>}
-              <span>{hasIncubationCenter ? "Active Lab / IIC" : "No Incubation Centre"}</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={handleNext}
-            className={`w-full py-4 rounded-full bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              isLoading ? "opacity-75 cursor-not-allowed" : ""
-            }`}
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Registering College &amp; Allocating Grants...</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span>Submit College Onboarding &amp; Access Gateway</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </div>
-            )}
-          </button>
-        </div>
-      )}
-    </OnboardingFormWrapper>
-  </GuestOnlyGuard>
+        )}
+      </OnboardingFormWrapper>
+    </GuestOnlyGuard>
   );
 }

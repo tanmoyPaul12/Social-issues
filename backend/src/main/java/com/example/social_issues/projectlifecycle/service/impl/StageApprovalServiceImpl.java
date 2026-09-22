@@ -1,6 +1,8 @@
 package com.example.social_issues.projectlifecycle.service.impl;
 
 import com.example.social_issues.common.exception.ResourceNotFoundException;
+import com.example.social_issues.notifications.dto.NotificationEvent;
+import com.example.social_issues.notifications.service.NotificationEventPublisher;
 import com.example.social_issues.problemsubmission.model.GrassrootIssue;
 import com.example.social_issues.problemsubmission.model.IssueStatus;
 import com.example.social_issues.problemsubmission.repository.GrassrootIssueRepository;
@@ -34,15 +36,18 @@ public class StageApprovalServiceImpl implements StageApprovalService {
     private final StageApprovalSignoffRepository signoffRepository;
     private final UniversityProjectRepository universityProjectRepository;
     private final GrassrootIssueRepository grassrootIssueRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public StageApprovalServiceImpl(
             StageApprovalSignoffRepository signoffRepository,
             UniversityProjectRepository universityProjectRepository,
-            GrassrootIssueRepository grassrootIssueRepository
+            GrassrootIssueRepository grassrootIssueRepository,
+            NotificationEventPublisher notificationEventPublisher
     ) {
         this.signoffRepository = signoffRepository;
         this.universityProjectRepository = universityProjectRepository;
         this.grassrootIssueRepository = grassrootIssueRepository;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Override
@@ -122,6 +127,38 @@ public class StageApprovalServiceImpl implements StageApprovalService {
         log.info("Recorded digital sign-off [Role: {}, Stage: {}] for project id: {}",
                 saved.getApproverRole(), saved.getStage(), projectId);
 
+        // Publish Stage Signoff Notification
+        try {
+            NotificationEvent event = new NotificationEvent();
+            String eventType = "STAGE_APPROVED";
+            String severity = "SUCCESS";
+            if (saved.getApprovalStatus() == ApprovalStatus.REJECTED) {
+                eventType = "STAGE_REJECTED";
+                severity = "WARNING";
+            } else if (saved.getApprovalStatus() == ApprovalStatus.CHANGES_REQUESTED) {
+                eventType = "STAGE_CHANGES_REQUESTED";
+                severity = "WARNING";
+            }
+
+            event.setEventType(eventType);
+            event.setSource("STAGE_APPROVAL_SERVICE");
+            event.setTitle(String.format("Stage %s: %s by %s", saved.getStage(), saved.getApprovalStatus(), saved.getApproverName()));
+            event.setMessage(String.format("Project #%d stage '%s' recorded sign-off status '%s'. Remarks: %s",
+                    projectId, saved.getStage(), saved.getApprovalStatus(),
+                    saved.getRemarks() != null ? saved.getRemarks() : "None"));
+            event.setSeverity(severity);
+            event.setActionUrl("/dashboard?role=industry&tab=active-projects");
+            event.setReferenceEntityType("PROJECT_STAGE_SIGNOFF");
+            event.setReferenceEntityId(saved.getId());
+            event.setChannels(List.of("IN_APP", "EMAIL"));
+
+            // Broadcast to both Industry & University channels
+            notificationEventPublisher.publishIndustryNotification(event);
+            notificationEventPublisher.publishUniversityNotification(event);
+        } catch (Exception e) {
+            log.warn("Failed to publish signoff notification: {}", e.getMessage());
+        }
+
         // Check if Closed-Loop Dual Signoff is achieved on FINAL_RESOLUTION
         if (request.getStage() == ApprovalStage.FINAL_RESOLUTION && request.getApprovalStatus() == ApprovalStatus.APPROVED) {
             checkAndApplyFinalResolution(projectId);
@@ -164,6 +201,29 @@ public class StageApprovalServiceImpl implements StageApprovalService {
                     issue.setResolvedAt(LocalDateTime.now());
                     grassrootIssueRepository.save(issue);
                     log.info("Issue #{} successfully transitioned to RESOLVED via closed-loop sign-off.", issue.getIssueNumber());
+
+                    // Publish Resolution Event to Citizen
+                    try {
+                        NotificationEvent citizenEvent = new NotificationEvent();
+                        citizenEvent.setEventType("SOLUTION_DEPLOYED_RESOLVED");
+                        citizenEvent.setSource("STAGE_APPROVAL_SERVICE");
+                        if (issue.getSubmitter() != null) {
+                            citizenEvent.setRecipientUserId(issue.getSubmitter().getId());
+                            citizenEvent.setRecipientEmail(issue.getSubmitter().getEmail());
+                            citizenEvent.setRecipientPhone(issue.getContactPhone() != null ? issue.getContactPhone() : issue.getSubmitter().getPhone());
+                        }
+                        citizenEvent.setTitle("Solution Deployed & Grievance Resolved!");
+                        citizenEvent.setMessage(String.format("Your reported issue #%s ('%s') has been successfully resolved and deployed in the field!",
+                                issue.getIssueNumber(), issue.getTitle()));
+                        citizenEvent.setSeverity("SUCCESS");
+                        citizenEvent.setActionUrl("/challenges/" + issue.getId());
+                        citizenEvent.setReferenceEntityType("GRASSROOT_ISSUE");
+                        citizenEvent.setReferenceEntityId(issue.getId());
+                        citizenEvent.setChannels(List.of("IN_APP", "SMS", "EMAIL"));
+                        notificationEventPublisher.publishCitizenNotification(citizenEvent);
+                    } catch (Exception ex) {
+                        log.warn("Failed to publish resolution event to citizen: {}", ex.getMessage());
+                    }
                 }
             });
         }

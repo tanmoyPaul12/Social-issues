@@ -42,10 +42,20 @@ export function useCommunication(userRole: "industry" | "university" = "industry
           userRole,
           activeThread?.title
         );
-        setMessagesMap((prev) => ({
-          ...prev,
-          [threadId]: data,
-        }));
+        setMessagesMap((prev) => {
+          const currentList = prev[threadId] || [];
+          if (
+            currentList.length === data.length &&
+            currentList[currentList.length - 1]?.id === data[data.length - 1]?.id &&
+            currentList[currentList.length - 1]?.message === data[data.length - 1]?.message
+          ) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [threadId]: data,
+          };
+        });
       } catch (err) {
         console.warn("Load messages notice:", err);
       }

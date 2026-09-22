@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 
 public class CommitFundingRequest {
 
+    private Long projectId;
+
     @NotNull(message = "Grant commitment amount is required")
     @DecimalMin(value = "1000.00", message = "Minimum grant commitment is ₹1,000")
     private BigDecimal grantAmount;
@@ -19,6 +21,9 @@ public class CommitFundingRequest {
     private String financialYear = "2026-2027";
 
     public CommitFundingRequest() {}
+
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
 
     public BigDecimal getGrantAmount() { return grantAmount; }
     public void setGrantAmount(BigDecimal grantAmount) { this.grantAmount = grantAmount; }

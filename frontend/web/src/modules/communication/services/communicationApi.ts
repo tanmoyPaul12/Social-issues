@@ -438,7 +438,19 @@ export async function fetchCommunicationThreads(
     }
   });
 
-  return Array.from(mergedMap.values());
+  const list = Array.from(mergedMap.values());
+  const seenIds = new Set<number>();
+  return list.map((thread, idx) => {
+    let uniqueId = thread.id;
+    if (!uniqueId || seenIds.has(uniqueId)) {
+      uniqueId = 1000 + idx;
+    }
+    seenIds.add(uniqueId);
+    return {
+      ...thread,
+      id: uniqueId,
+    };
+  });
 }
 
 /**

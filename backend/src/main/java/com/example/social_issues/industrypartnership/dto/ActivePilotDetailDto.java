@@ -6,6 +6,7 @@ import java.util.List;
 
 public class ActivePilotDetailDto {
 
+    private Long projectId;
     private ActivePilotSummaryDto project;
     private List<MilestoneDto> milestones = new ArrayList<>();
     private List<DisbursementDto> disbursements = new ArrayList<>();
@@ -24,6 +25,12 @@ public class ActivePilotDetailDto {
     private String remainingFormatted;
 
     public ActivePilotDetailDto() {}
+
+    public Long getProjectId() {
+        if (projectId != null) return projectId;
+        return project != null ? project.getId() : null;
+    }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
 
     public ActivePilotSummaryDto getProject() { return project; }
     public void setProject(ActivePilotSummaryDto project) { this.project = project; }

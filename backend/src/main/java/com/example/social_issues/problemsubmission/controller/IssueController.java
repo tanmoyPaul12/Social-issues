@@ -160,7 +160,7 @@ public class IssueController {
     /**
      * Get single issue details by Issue Number (Public)
      */
-    @GetMapping("/number/{issueNumber}")
+    @GetMapping({"/number/{issueNumber}", "/ticket/{issueNumber}"})
     public ResponseEntity<?> getIssueByNumber(@PathVariable("issueNumber") String issueNumber) {
         try {
             IssueResponse response = issueService.getIssueByNumber(issueNumber);

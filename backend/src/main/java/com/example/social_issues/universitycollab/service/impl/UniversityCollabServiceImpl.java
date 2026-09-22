@@ -558,4 +558,112 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
 
         return report;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoutedChallengeDto> getChallengesForUniversity(String assignedTo, String aisheCode) {
+        log.info("Fetching challenges for university assignedTo: {}, aisheCode: {}", assignedTo, aisheCode);
+        if (assignedTo != null && !assignedTo.isBlank()) {
+            Page<GrassrootIssue> pageResult = issueRepository.findWithFilters(
+                    null, null, null, null, null, null, PageRequest.of(0, 100)
+            );
+            String assignedLower = assignedTo.trim().toLowerCase();
+            return pageResult.getContent().stream()
+                    .filter(i -> (i.getAssignedHEI() != null && i.getAssignedHEI().toLowerCase().contains(assignedLower))
+                            || (i.getRecommendedHeisJson() != null && i.getRecommendedHeisJson().toLowerCase().contains(assignedLower)))
+                    .map(issue -> RoutedChallengeDto.fromIssue(issue, "Direct HEI Assignment"))
+                    .collect(Collectors.toList());
+        }
+        return getRoutedChallenges(aisheCode != null ? aisheCode : "U-0205");
+    }
+
+    @Override
+    public UniversityProjectResponse acceptChallenge(Long issueId, CreateUniversityProjectRequest request) {
+        log.info("Accepting challenge for issue ID: {}", issueId);
+        GrassrootIssue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue not found with ID: " + issueId));
+
+        issue.setStatus(IssueStatus.ASSIGNED_HEI);
+        String auditStamp = "[University Accepted]: Accepted by " + (request != null && request.getUniversityName() != null ? request.getUniversityName() : "Partner HEI");
+        if (issue.getReviewNotes() == null || issue.getReviewNotes().isBlank()) {
+            issue.setReviewNotes(auditStamp);
+        } else {
+            issue.setReviewNotes(issue.getReviewNotes() + "\n" + auditStamp);
+        }
+        issueRepository.save(issue);
+
+        if (request == null) {
+            request = new CreateUniversityProjectRequest();
+            request.setIssueId(issue.getId());
+            request.setTicketId(issue.getIssueNumber());
+            request.setTitle(issue.getTitle());
+            request.setAbstractDescription(issue.getDescription());
+            request.setDomain(issue.getSector() != null ? issue.getSector().name() : "Civic Technology");
+            request.setDistrict(issue.getDistrict());
+            request.setAisheCode("U-0205");
+            request.setUniversityName("Birla Institute of Technology (BIT) Mesra");
+        } else {
+            if (request.getIssueId() == null) request.setIssueId(issue.getId());
+            if (request.getTicketId() == null) request.setTicketId(issue.getIssueNumber());
+            if (request.getTitle() == null || request.getTitle().isBlank()) request.setTitle(issue.getTitle());
+            if (request.getAbstractDescription() == null) request.setAbstractDescription(issue.getDescription());
+            if (request.getAisheCode() == null || request.getAisheCode().isBlank()) request.setAisheCode("U-0205");
+        }
+
+        UniversityProjectResponse projectResp = createProject(request);
+
+        if (issue.getSubmitter() != null && issue.getSubmitter().getEmail() != null) {
+            notificationDispatcher.dispatchCitizenVerificationNotice(
+                    projectResp.getId(),
+                    issue.getSubmitter().getEmail(),
+                    issue.getTitle(),
+                    issue.getDistrict()
+            );
+        }
+
+        return projectResp;
+    }
+
+    @Override
+    public void declineChallenge(Long issueId, DeclineChallengeRequest request) {
+        log.info("Declining challenge for issue ID: {}", issueId);
+        GrassrootIssue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue not found with ID: " + issueId));
+
+        issue.setStatus(IssueStatus.TRIAGED);
+        String reason = request != null && request.getReason() != null ? request.getReason() : "Declined by university due to resource / capacity constraints";
+        String auditStamp = "[University Declined]: " + reason;
+        if (issue.getReviewNotes() == null || issue.getReviewNotes().isBlank()) {
+            issue.setReviewNotes(auditStamp);
+        } else {
+            issue.setReviewNotes(issue.getReviewNotes() + "\n" + auditStamp);
+        }
+        issueRepository.save(issue);
+    }
+
+    @Override
+    public UniversityProjectResponse submitProposal(Long projectId, SubmitProposalRequest request) {
+        log.info("Submitting proposal for university project ID: {}", projectId);
+        UniversityProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("University project not found with ID: " + projectId));
+
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+            project.setTitle(request.getTitle().trim());
+        }
+        if (request.getAbstractDescription() != null && !request.getAbstractDescription().isBlank()) {
+            project.setAbstractDescription(request.getAbstractDescription().trim());
+        }
+        if (request.getDomain() != null && !request.getDomain().isBlank()) {
+            project.setDomain(request.getDomain().trim());
+        }
+        if (request.getAllocatedGrant() != null) {
+            project.setAllocatedGrant(request.getAllocatedGrant());
+        }
+        if (request.getMethodology() != null && !request.getMethodology().isBlank()) {
+            project.setCurrentMilestone("Proposal submitted: " + request.getMethodology());
+        }
+
+        UniversityProject saved = projectRepository.save(project);
+        return UniversityProjectResponse.fromEntity(saved);
+    }
 }

@@ -26,7 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
 public class ActivePilotsServiceImpl implements ActivePilotsService {
@@ -301,6 +301,17 @@ public class ActivePilotsServiceImpl implements ActivePilotsService {
             event.setActionUrl("/dashboard?role=industry&tab=active-projects");
             eventPublisher.publishIndustryNotification(event);
 
+            // Notify University Channel
+            NotificationEvent uniEvent = new NotificationEvent();
+            uniEvent.setEventType("MILESTONE_APPROVED");
+            uniEvent.setSource("backend.pilots");
+            uniEvent.setTitle("Milestone Verified by Industry Partner");
+            uniEvent.setMessage(String.format("Milestone %d ('%s') for project '%s' has been approved by the CSR partner.", milestone.getMilestoneNumber(), milestone.getTitle(), pilot.getTitle()));
+            uniEvent.setSeverity("SUCCESS");
+            uniEvent.setActionUrl("/university/projects");
+            uniEvent.setChannels(List.of("IN_APP", "EMAIL"));
+            eventPublisher.publishUniversityNotification(uniEvent);
+
         } else {
             milestone.setStatus(MilestoneStatus.REVISION_REQUESTED);
             milestone.setReviewedAt(LocalDateTime.now());
@@ -323,6 +334,19 @@ public class ActivePilotsServiceImpl implements ActivePilotsService {
             activity.setReferenceEntityType("PILOT");
             activity.setReferenceEntityId(pilot.getId());
             activityLogRepository.save(activity);
+
+            // Notify University Channel of Revision Request
+            NotificationEvent uniEvent = new NotificationEvent();
+            uniEvent.setEventType("MILESTONE_REVISION_REQUESTED");
+            uniEvent.setSource("backend.pilots");
+            uniEvent.setTitle("Milestone Revision Requested");
+            uniEvent.setMessage(String.format("Milestone %d ('%s') for '%s' requires revision: %s",
+                    milestone.getMilestoneNumber(), milestone.getTitle(), pilot.getTitle(),
+                    milestone.getReviewRemarks() != null ? milestone.getReviewRemarks() : "Please check feedback."));
+            uniEvent.setSeverity("WARNING");
+            uniEvent.setActionUrl("/university/projects");
+            uniEvent.setChannels(List.of("IN_APP", "EMAIL"));
+            eventPublisher.publishUniversityNotification(uniEvent);
         }
 
         return MilestoneDto.fromEntity(milestone);

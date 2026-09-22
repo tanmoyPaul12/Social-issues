@@ -40,6 +40,7 @@ export type PilotStatus =
 
 export interface ActivePilotSummary {
   id: number;
+  projectId?: number;
   title: string;
   abstractDescription: string;
   sector: string;
@@ -142,6 +143,7 @@ export interface PilotDocument {
 }
 
 export interface ActivePilotDetail {
+  projectId?: number;
   project: ActivePilotSummary;
   milestones: Milestone[];
   disbursements: DisbursementTranche[];

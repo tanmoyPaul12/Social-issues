@@ -49,6 +49,37 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
             Pageable pageable
     );
 
+    @Query("""
+        SELECT i FROM GrassrootIssue i
+        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status IN (com.example.social_issues.problemsubmission.model.IssueStatus.SUBMITTED, com.example.social_issues.problemsubmission.model.IssueStatus.TRIAGED, com.example.social_issues.problemsubmission.model.IssueStatus.UNDER_REVIEW)) )
+          AND (:sector IS NULL OR i.sector = :sector)
+          AND (:priority IS NULL OR i.priority = :priority)
+          AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))
+        ORDER BY i.createdAt DESC
+    """)
+    Page<GrassrootIssue> findTriageQueue(
+            @Param("status") IssueStatus status,
+            @Param("sector") IssueSector sector,
+            @Param("priority") IssuePriority priority,
+            @Param("district") String district,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT i FROM GrassrootIssue i
+        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status IN (com.example.social_issues.problemsubmission.model.IssueStatus.SUBMITTED, com.example.social_issues.problemsubmission.model.IssueStatus.TRIAGED, com.example.social_issues.problemsubmission.model.IssueStatus.UNDER_REVIEW)) )
+          AND (:sector IS NULL OR i.sector = :sector)
+          AND (:priority IS NULL OR i.priority = :priority)
+          AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))
+        ORDER BY i.createdAt DESC
+    """)
+    List<GrassrootIssue> findTriageQueueList(
+            @Param("status") IssueStatus status,
+            @Param("sector") IssueSector sector,
+            @Param("priority") IssuePriority priority,
+            @Param("district") String district
+    );
+
     long countByStatus(IssueStatus status);
 
     @Query("SELECT i.sector, COUNT(i) FROM GrassrootIssue i GROUP BY i.sector")

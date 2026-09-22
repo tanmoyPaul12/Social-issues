@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class ActivePilotSummaryDto {
 
     private Long id;
+    private Long projectId;
     private String title;
     private String abstractDescription;
     private IssueSector sector;
@@ -51,6 +52,7 @@ public class ActivePilotSummaryDto {
         if (entity == null) return null;
         ActivePilotSummaryDto dto = new ActivePilotSummaryDto();
         dto.setId(entity.getId());
+        dto.setProjectId(entity.getId());
         dto.setTitle(entity.getTitle());
         dto.setAbstractDescription(entity.getAbstractDescription());
         dto.setSector(entity.getSector());
@@ -143,6 +145,9 @@ public class ActivePilotSummaryDto {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getProjectId() { return projectId != null ? projectId : id; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

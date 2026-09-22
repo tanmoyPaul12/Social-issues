@@ -131,9 +131,13 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
   const handleAcceptCsrPitch = (pitchId: string) => {
     const accepted = acceptPitch(pitchId);
     if (accepted) {
+      const numericThreadId = typeof accepted.threadId === "number"
+        ? accepted.threadId
+        : parseInt(String(accepted.threadId).replace(/\D/g, "") || "101", 10);
+
       const createdThread = registerProjectPitchThread({
-        id: accepted.threadId,
-        pilotId: accepted.threadId,
+        id: numericThreadId,
+        pilotId: numericThreadId,
         title: accepted.projectTitle,
         partnerName: accepted.universityName,
         partnerRole: `Lead PI • ${accepted.universityName}`,

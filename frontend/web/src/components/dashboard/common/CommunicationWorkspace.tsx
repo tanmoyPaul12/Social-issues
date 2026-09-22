@@ -33,12 +33,41 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
   const [newChannelTitle, setNewChannelTitle] = useState("");
   const [newChannelPartner, setNewChannelPartner] = useState("");
   const [newChannelSector, setNewChannelSector] = useState("CSR Grant & Innovation");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom whenever messages change
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  const isUserNearBottomRef = useRef(true);
+  const lastThreadIdRef = useRef<number | null>(null);
+
+  const handleChatScroll = () => {
+    if (!chatScrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatScrollContainerRef.current;
+    isUserNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (chatScrollContainerRef.current) {
+      chatScrollContainerRef.current.scrollTo({
+        top: chatScrollContainerRef.current.scrollHeight,
+        behavior,
+      });
+    }
+  };
+
+  // Scroll to bottom when selecting a new thread
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (selectedThreadId !== lastThreadIdRef.current) {
+      lastThreadIdRef.current = selectedThreadId;
+      isUserNearBottomRef.current = true;
+      setTimeout(() => scrollToBottom("auto"), 50);
+    }
+  }, [selectedThreadId]);
+
+  // Scroll to bottom on new messages ONLY if user is already near bottom
+  useEffect(() => {
+    if (isUserNearBottomRef.current) {
+      scrollToBottom("smooth");
+    }
+  }, [messages.length]);
 
   const filteredThreads = threads.filter((t) => {
     const matchSearch =
@@ -57,6 +86,8 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
     sendMessage(inputMessage, attachmentName || undefined);
     setInputMessage("");
     setAttachmentName(null);
+    isUserNearBottomRef.current = true;
+    setTimeout(() => scrollToBottom("smooth"), 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -91,6 +122,8 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
     // Send greeting
     setTimeout(() => {
       sendMessage(`💬 Discussion channel initialized for "${newChannelTitle.trim()}". Real-time collaboration active.`);
+      isUserNearBottomRef.current = true;
+      setTimeout(() => scrollToBottom("smooth"), 100);
     }, 200);
   };
 
@@ -121,9 +154,9 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
         ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto h-[calc(100vh-100px)] min-h-[600px] flex flex-col">
       {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-200 shrink-0">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 tracking-wider uppercase">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -148,11 +181,11 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
       </div>
 
       {/* Main Chat Grid (Sidebar 4 cols + Chat 8 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white min-h-[640px] flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white flex-1 min-h-0">
         {/* Left Sidebar: Threads List (4 cols) */}
-        <div className="lg:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50">
+        <div className="lg:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50 h-full min-h-0">
           {/* Search & Actions */}
-          <div className="p-4 space-y-3 border-b border-slate-200 bg-white">
+          <div className="p-4 space-y-3 border-b border-slate-200 bg-white shrink-0">
             <div className="relative">
               <input
                 type="text"
@@ -233,7 +266,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                 </button>
               </div>
             ) : (
-              filteredThreads.map((thread) => {
+              filteredThreads.map((thread, idx) => {
                 const isSelected = thread.id === selectedThreadId;
                 const partnerLabel =
                   userRole === "university"
@@ -246,7 +279,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
 
                 return (
                   <button
-                    key={thread.id}
+                    key={`thread-${thread.channelKey || 'ch'}-${thread.id}-${idx}`}
                     onClick={() => setSelectedThreadId(thread.id)}
                     className={`w-full text-left p-4 transition-all flex gap-3 relative cursor-pointer ${
                       isSelected
@@ -295,11 +328,11 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
         </div>
 
         {/* Right Area: Active Discussion Stream (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col bg-white">
+        <div className="lg:col-span-8 flex flex-col bg-white h-full min-h-0">
           {activeThread ? (
             <>
               {/* Active Thread Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-4 bg-slate-50/50">
+              <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-4 bg-slate-50/50 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-11 h-11 rounded-xl ${activeThread.avatarBg} text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0`}
@@ -336,13 +369,17 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
               </div>
 
               {/* Messages Scroll Panel */}
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/30" style={{ minHeight: 0 }}>
+              <div
+                ref={chatScrollContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/30 min-h-0"
+              >
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-slate-400 text-xs font-medium py-16">
                     <span>No messages yet — type a message below to start collaborating.</span>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  messages.map((msg, idx) => {
                     const isMe = msg.isCurrentUser;
                     const isProposalCard =
                       msg.message.includes("CSR GRANT PROPOSAL") ||
@@ -352,7 +389,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                     if (isProposalCard) {
                       const isAccepted = msg.message.includes("ACCEPTED");
                       return (
-                        <div key={msg.id} className="flex justify-center my-3">
+                        <div key={`proposal-${msg.id || 'p'}-${idx}-${msg.timestamp}`} className="flex justify-center my-3">
                           <div
                             className={`max-w-xl w-full p-4 rounded-2xl border shadow-sm text-xs space-y-2 ${
                               isAccepted
@@ -381,7 +418,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
 
                     return (
                       <div
-                        key={msg.id}
+                        key={`msg-${msg.id || 'm'}-${idx}-${msg.timestamp}`}
                         className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                       >
                         <div className="flex items-center gap-2 mb-1 px-1">
@@ -426,15 +463,14 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Quick Actions Bar */}
-              <div className="px-4 py-2 bg-slate-50 border-t border-slate-200/70 flex items-center gap-2 overflow-x-auto">
+              <div className="px-4 py-2 bg-slate-50 border-t border-slate-200/70 flex items-center gap-2 overflow-x-auto shrink-0">
                 <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Quick Actions:</span>
                 {quickReplies.map((reply, i) => (
                   <button
-                    key={i}
+                    key={`quick-reply-${i}-${reply}`}
                     type="button"
                     onClick={() => sendMessage(reply)}
                     className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 rounded-full transition-all shrink-0 cursor-pointer shadow-xs"

@@ -8,6 +8,7 @@ import { toast } from "@/components/dashboard/ToastStack";
 import { NodalAiAuditCard } from "@/components/dashboard/NodalAiAuditCard";
 import { WorkspacePlaceholderTab } from "./WorkspacePlaceholderTab";
 import { GovernmentAnalyticsOverview } from "./government/GovernmentAnalyticsOverview";
+import { AiRoutingMasterOversight } from "./government/AiRoutingMasterOversight";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -70,12 +71,13 @@ export function GovernmentDashboardView({
   onNavigateTab,
 }: GovernmentDashboardViewProps) {
   const { user, token } = useAuthStore();
-  const { issues: storeIssues, setIssues: setStoreIssues } = useIssueStore();
+  const { issues: storeIssues, setIssues: setStoreIssues, updateIssue } = useIssueStore();
   const departmentName = user?.orgName || "Department of Higher & Technical Education";
   const serviceCode = user?.orgCode || "e-Pramaan SSO • Level 4 State Clearance";
 
   const [selectedDistrict, setSelectedDistrict] = useState("All 24 Districts");
   const [selectedAuditIssue, setSelectedAuditIssue] = useState<GrassrootIssueRecord | null>(null);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
 
   const [escalations, setEscalations] = useState<EscalationItem[]>([]);
   const [resolvedEscalations, setResolvedEscalations] = useState<string[]>([]);
@@ -85,16 +87,31 @@ export function GovernmentDashboardView({
   }, [token, selectedDistrict]);
 
   const fetchIssues = async () => {
+    setIsLoadingQueue(true);
     try {
-      let url = `${API_BASE_URL}/issues?page=0&size=200`;
+      let districtParam = "";
       if (selectedDistrict !== "All 24 Districts") {
-        url += `&district=${encodeURIComponent(selectedDistrict)}`;
+        districtParam = `&district=${encodeURIComponent(selectedDistrict)}`;
       }
-      const res = await fetch(url, {
+
+      // Step 1: Try fetching real Nodal Triage Queue
+      let url = `${API_BASE_URL}/triage/queue?page=0&size=200${districtParam}`;
+      let res = await fetch(url, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
+
+      // Step 2: Fallback to /issues if not yet authorized as nodal or during transition
+      if (!res.ok) {
+        url = `${API_BASE_URL}/issues?page=0&size=200${districtParam}`;
+        res = await fetch(url, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+      }
+
       if (res.ok) {
         const data = await res.json();
         if (data.content && Array.isArray(data.content) && data.content.length > 0) {
@@ -121,11 +138,13 @@ export function GovernmentDashboardView({
               createdAt: item.createdAt || new Date().toISOString(),
               attachmentCount: item.attachmentCount || 1,
               validationReportJson: item.validationReportJson,
+              isDuplicate: item.isDuplicate || false,
+              duplicateClusterId: item.duplicateClusterId,
+              potentialDuplicatesJson: item.potentialDuplicatesJson,
             };
           });
 
           const combinedMap = new Map<string, GrassrootIssueRecord>();
-          // Also auto-correct any existing store issues if sector was OTHER
           storeIssues.forEach((i) => {
             const sec = inferSector(i.sector || "OTHER", i.title || "", i.description || "");
             const dom = sectorToDomainMap[sec] || i.domain || sec;
@@ -143,6 +162,35 @@ export function GovernmentDashboardView({
       }
     } catch (e) {
       console.warn("Failed to fetch government dashboard issues from backend:", e);
+    } finally {
+      setIsLoadingQueue(false);
+    }
+  };
+
+  const handleQuickValidate = async (issue: GrassrootIssueRecord, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (issue.numericId) {
+        const res = await fetch(`${API_BASE_URL}/triage/${issue.numericId}/validate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ notes: "Quick validated via Government Dashboard" })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to validate grievance");
+        }
+      }
+      updateIssue(issue.id, {
+        status: "TRIAGED",
+        validationStatus: "PASS"
+      });
+      toast.success(`Ticket #${issue.id} verified and marked TRIAGED.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to validate grievance");
     }
   };
 
@@ -157,7 +205,6 @@ export function GovernmentDashboardView({
 
   const criticalCount = filteredIssues.filter((i) => i.priority === "CRITICAL" || i.priority === "HIGH").length;
   const assignedCount = filteredIssues.filter((i) => i.status === "ASSIGNED_HEI" || i.assignedHEI).length;
-
 
   return (
     <div className="p-6 sm:p-8 space-y-6 animate-in fade-in">
@@ -189,13 +236,18 @@ export function GovernmentDashboardView({
         />
       )}
 
+      {/* ── TAB: MASTER AI ROUTING & HEI ALLOCATIONS ── */}
+      {activeTab === "routing" && (
+        <AiRoutingMasterOversight />
+      )}
+
       {/* ── TAB 2: DISTRICT INGESTION & REGISTRY TABLE ── */}
       {activeTab === "districts" && (
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                District-Level Citizen Ingestions & AI Verification Registry
+                District-Level Citizen Ingestions &amp; AI Verification Registry
               </h2>
               <p className="text-xs text-slate-500">Real-time status breakdown across Jharkhand district collectorates</p>
             </div>
@@ -229,10 +281,10 @@ export function GovernmentDashboardView({
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
                     <th className="py-3 px-4">Ticket ID</th>
-                    <th className="py-3 px-4">Title & Description</th>
-                    <th className="py-3 px-4">Sector & District</th>
+                    <th className="py-3 px-4">Title &amp; Description</th>
+                    <th className="py-3 px-4">Sector &amp; District</th>
                     <th className="py-3 px-4">Priority Tier</th>
-                    <th className="py-3 px-4">AI Verification</th>
+                    <th className="py-3 px-4">Status &amp; Verification</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -246,6 +298,11 @@ export function GovernmentDashboardView({
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900">{issue.title}</div>
                         <div className="text-[11px] text-slate-500 truncate max-w-xs">{issue.description}</div>
+                        {issue.assignedHEI && (
+                          <div className="text-[10px] text-indigo-700 font-bold mt-0.5">
+                            HEI: {issue.assignedHEI}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-700">{issue.sector}</div>
@@ -267,19 +324,51 @@ export function GovernmentDashboardView({
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                          <span>AI VERIFIED</span>
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          {issue.isDuplicate ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                              <span>DUPLICATE FLAGGED</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                              <span>AI VERIFIED</span>
+                            </span>
+                          )}
+
+                          <span className={`text-[10px] font-bold px-2 py-0.2 rounded border ${
+                            issue.status === 'ASSIGNED_HEI'
+                              ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                              : issue.status === 'TRIAGED'
+                              ? 'bg-violet-50 text-violet-800 border-violet-200'
+                              : issue.status === 'REJECTED'
+                              ? 'bg-rose-50 text-rose-800 border-rose-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {issue.status || 'SUBMITTED'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedAuditIssue(issue)}
-                          className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Inspect AI Audit →
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {issue.status === 'SUBMITTED' && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleQuickValidate(issue, e)}
+                              className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold text-[11px] transition-colors cursor-pointer"
+                            >
+                              Validate
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAuditIssue(issue)}
+                            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                          >
+                            Inspect AI Audit →
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -362,6 +451,7 @@ export function GovernmentDashboardView({
       {/* Catch-all fallback for unrecognized government tabs */}
       {![
         "overview",
+        "routing",
         "districts",
         "heatmap",
         "escalations",

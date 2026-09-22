@@ -77,10 +77,7 @@ class LocalE5Embedder:
             vec[idx] += sign
 
         norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
-
-        return vec.tolist()
+        return (vec / norm).tolist()
 
 
 # Global singleton instance

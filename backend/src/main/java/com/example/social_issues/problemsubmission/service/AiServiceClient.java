@@ -119,11 +119,15 @@ public class AiServiceClient {
             String endpoint = aiServiceUrl + "/api/v1/route";
 
             Map<String, Object> payload = new HashMap<>();
-            payload.put("challenge_id", issue.getIssueNumber());
+            payload.put("challenge_id", issue.getIssueNumber() != null ? issue.getIssueNumber() : "CH-NEW");
             payload.put("title", issue.getTitle() != null ? issue.getTitle() : "");
             payload.put("description", issue.getDescription() != null ? issue.getDescription() : "");
             payload.put("district", issue.getDistrict() != null ? issue.getDistrict() : "Ranchi");
             payload.put("block", issue.getBlock() != null ? issue.getBlock() : "");
+            payload.put("village_or_ward", issue.getVillageOrWard() != null ? issue.getVillageOrWard() : "");
+            payload.put("latitude", issue.getLatitude() != null ? issue.getLatitude() : 23.3441);
+            payload.put("longitude", issue.getLongitude() != null ? issue.getLongitude() : 85.3096);
+            payload.put("attachments", new ArrayList<>());
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -196,5 +200,44 @@ public class AiServiceClient {
         Map<String, Object> result = new HashMap<>();
         result.put("recommended_heis", matches);
         return result;
+    }
+
+    /**
+     * Checks if a newly submitted issue is a duplicate of existing tickets using vector and spatial similarity.
+     */
+    public Map<String, Object> checkDuplicates(GrassrootIssue issue) {
+        try {
+            String endpoint = aiServiceUrl + "/api/v1/deduplicate";
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("challenge_id", issue.getIssueNumber() != null ? issue.getIssueNumber() : "CH-NEW");
+            payload.put("title", issue.getTitle() != null ? issue.getTitle() : "");
+            payload.put("description", issue.getDescription() != null ? issue.getDescription() : "");
+            payload.put("district", issue.getDistrict() != null ? issue.getDistrict() : "Ranchi");
+            payload.put("block", issue.getBlock() != null ? issue.getBlock() : "");
+            payload.put("village_or_ward", issue.getVillageOrWard() != null ? issue.getVillageOrWard() : "");
+            payload.put("latitude", issue.getLatitude() != null ? issue.getLatitude() : 23.3441);
+            payload.put("longitude", issue.getLongitude() != null ? issue.getLongitude() : 85.3096);
+            payload.put("affected_population", issue.getAffectedPopulation());
+            payload.put("attachments", new ArrayList<>());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> response = responseEntity.getBody();
+            if (response != null) {
+                return response;
+            }
+        } catch (Exception e) {
+            log.warn("AI Deduplication check failed for issue #{}: {}", issue.getIssueNumber(), e.getMessage());
+        }
+        return Map.of("is_duplicate", false, "potential_duplicates", List.of());
     }
 }

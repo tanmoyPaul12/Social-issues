@@ -4,6 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteNavbar } from "@/components/common/SiteNavbar";
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
 
@@ -57,13 +58,13 @@ function PublicLoginForm() {
   };
 
   return (
-    <div className="w-full max-w-[490px] bg-white border border-[#e5e7eb] rounded-2xl p-7 sm:p-10 shadow-xs">
+    <div className="w-full max-w-[490px] bg-white border border-[#e5e7eb] rounded-2xl p-4 sm:p-7 md:p-10 shadow-xs">
       {/* Citizen & Public Portal Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+      <div className="text-center mb-5 sm:mb-6">
+        <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
           Citizen &amp; Public Sign In
         </h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
           Access your submitted community issues, track remediation status &amp; participate in local polls
         </p>
       </div>
@@ -71,16 +72,23 @@ function PublicLoginForm() {
       {/* Error Banner */}
       {error && (
         <div
-          className={`mb-5 p-3.5 rounded-xl border text-xs ${errorCode === "ACCOUNT_NOT_FOUND"
+          className={`mb-5 p-3.5 rounded-xl border text-xs ${
+            errorCode === "ACCOUNT_NOT_FOUND"
               ? "bg-amber-50/90 border-amber-200 text-amber-900"
               : "bg-red-50 border-red-200 text-red-700"
-            }`}
+          }`}
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2">
-              <span className="text-sm shrink-0 mt-0.5">
-                {errorCode === "ACCOUNT_NOT_FOUND" ? "⚠️" : "✕"}
-              </span>
+            <div className="flex items-start gap-2.5">
+              {errorCode === "ACCOUNT_NOT_FOUND" ? (
+                <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
               <div className="space-y-1.5">
                 <p className="font-semibold leading-normal">{error}</p>
                 {errorCode === "ACCOUNT_NOT_FOUND" && (
@@ -96,9 +104,12 @@ function PublicLoginForm() {
             <button
               type="button"
               onClick={clearError}
-              className="text-slate-400 hover:text-slate-700 font-bold ml-1 cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+              aria-label="Dismiss error"
             >
-              ✕
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
@@ -252,10 +263,10 @@ function PublicLoginForm() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
           <Link
             href="/auth/login/industry"
-            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-slate-800 font-semibold flex items-center justify-between transition-all"
+            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-800 font-semibold flex items-center justify-between transition-all"
           >
             <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
               <span>Industry / CSR</span>
@@ -264,10 +275,10 @@ function PublicLoginForm() {
           </Link>
           <Link
             href="/auth/login/university"
-            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-purple-400 hover:bg-purple-50/50 text-slate-800 font-semibold flex items-center justify-between transition-all"
+            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-800 font-semibold flex items-center justify-between transition-all"
           >
             <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
               </svg>
               <span>University</span>
@@ -276,10 +287,10 @@ function PublicLoginForm() {
           </Link>
           <Link
             href="/auth/login/government"
-            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 text-slate-800 font-semibold flex items-center justify-between transition-all"
+            className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-800 font-semibold flex items-center justify-between transition-all"
           >
             <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               <span>Govt Officer</span>
@@ -302,6 +313,8 @@ export default function LoginPage() {
           <PublicLoginForm />
         </Suspense>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
