@@ -65,7 +65,7 @@ spring:
 
         # 2. AI Microservice Routes
         - id: ai-service
-          uri: ${AI_SERVICE_URL:http://localhost:8083}
+          uri: ${AI_SERVICE_URL:http://localhost:8002}
           predicates:
             - Path=/api/ai/**
           filters:

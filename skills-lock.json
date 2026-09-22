@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "archify": {
+      "source": "tt-a1i/archify",
+      "sourceType": "github",
+      "skillPath": "archify/SKILL.md",
+      "computedHash": "0fba8a6990d908b5302c8522c76ff2c91524afd670b6d3c94589087a041091a6"
+    },
     "brandkit": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
@@ -67,6 +73,12 @@
       "skillPath": "skills/brutalist-skill/SKILL.md",
       "computedHash": "8fc355c4aadb7d29c53ca28bc41be3cd6eea765d121e3737c4dc2d0f90a8effa"
     },
+    "langgraph-knowledge-pipeline": {
+      "source": "./local/workspace",
+      "sourceType": "local",
+      "skillPath": "skills/langgraph-knowledge-pipeline/SKILL.md",
+      "computedHash": "local-langgraph-knowledge-skill"
+    },
     "minimalist-ui": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
@@ -84,6 +96,12 @@
       "sourceType": "github",
       "skillPath": "skills/stitch-skill/SKILL.md",
       "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
+    },
+    "university-routing-engine": {
+      "source": "./local/workspace",
+      "sourceType": "local",
+      "skillPath": "skills/university-routing-engine/SKILL.md",
+      "computedHash": "local-univ-routing-skill"
     }
   }
 }
