@@ -931,8 +931,8 @@ export default function LandingPage() {
 
               {/* Subtitle */}
               <p className="text-xs sm:text-base lg:text-[17.5px] text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                Empowering citizens to report local challenges, and connecting them directly with
-                universities, startups, and industries to build funded, real-world solutions
+                Empowering communities to surface critical real-world challenges, and connecting them directly with
+                universities, startups, and industries to build funded, deployable solutions
                 across all 24 districts of Jharkhand.
               </p>
 
@@ -942,7 +942,7 @@ export default function LandingPage() {
                   href="/auth/login"
                   className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#080d1a] hover:bg-slate-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-md hover:shadow-xl transition-all group active:scale-95 cursor-pointer"
                 >
-                  <span>Submit Community Challenge</span>
+                  <span>Submit Real-World Challenge</span>
                   <span className="transition-transform group-hover:translate-x-1 font-bold">→</span>
                 </Link>
               </div>
@@ -1144,10 +1144,10 @@ export default function LandingPage() {
             HOW IT WORKS
           </span>
           <h2 className="text-xl sm:text-3xl font-bold text-slate-900 mt-1.5 sm:mt-2 tracking-tight">
-            How Your Reported Issue Gets Solved
+            How Real-World Challenges Get Solved
           </h2>
           <p className="text-slate-500 text-xs sm:text-sm mt-1.5 sm:mt-2 max-w-xl mx-auto">
-            From community submission to university R&amp;D, prototype testing, and ground deployment.
+            From community submission to university engineering, prototype field-testing, and district-wide deployment.
           </p>
         </div>
 
@@ -1156,8 +1156,8 @@ export default function LandingPage() {
           {[
             {
               step: "01",
-              title: "Report a Local Problem",
-              desc: "Citizens, panchayats, and community members submit issues faced in their villages or towns—such as water scarcity, crop storage, or rural healthcare—using simple text, photos, or voice notes in regional languages.",
+              title: "Submit Critical Challenges",
+              desc: "Citizens, panchayats, and field organizations submit urgent challenges affecting human lives, public health, agriculture, water safety, or industry that need scientific or technological solutions.",
               icon: (
                 <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a4 4 0 00-4 4v6a4 4 0 008 0V5a4 4 0 00-4-4z" />
@@ -1168,18 +1168,8 @@ export default function LandingPage() {
             },
             {
               step: "02",
-              title: "Verified & Published",
-              desc: "The submitted issue is verified, enriched with district geolocation data, and converted into an open, research-grade problem statement published on the Jharkhand Innovation Registry for public visibility.",
-              icon: (
-                <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                </svg>
-              ),
-            },
-            {
-              step: "03",
-              title: "Colleges Adopt R&D Projects",
-              desc: "Professors, engineering departments, and university student teams choose the challenge as an academic capstone, final-year thesis, or applied R&D project aligned with NEP 2020 experiential learning.",
+              title: "Matched to University Labs",
+              desc: "Leading university professors, research departments, and engineering labs at premier institutes (IIT, NIT, BIT, BAU, AIIMS) adopt the challenge for dedicated applied R&D.",
               icon: (
                 <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147L12 6.18l7.74 3.967-7.74 3.968-7.74-3.968z" />
@@ -1189,9 +1179,9 @@ export default function LandingPage() {
               ),
             },
             {
-              step: "04",
-              title: "Build & Test Solutions",
-              desc: "Student innovators, university incubation labs, and startup teams design, build, and test practical physical prototypes, IoT systems, or software models in real-world field conditions.",
+              step: "03",
+              title: "Engineers Design Solutions",
+              desc: "Student innovators, multidisciplinary researchers, and incubation teams design practical hardware, IoT sensors, clean-tech, or software models tailored to the challenge.",
               icon: (
                 <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m-2 6h2m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM10 10h4v4h-4v-4z" />
@@ -1199,9 +1189,19 @@ export default function LandingPage() {
               ),
             },
             {
+              step: "04",
+              title: "Prototypes Field-Tested",
+              desc: "Working physical prototypes and systems are rigorously tested in real-world ground conditions in affected villages and towns to validate safety, durability, and effectiveness.",
+              icon: (
+                <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                </svg>
+              ),
+            },
+            {
               step: "05",
-              title: "Industry Grants & Mentorship",
-              desc: "Leading industrial enterprises, MSMEs, and CSR organizations evaluate working prototypes to provide financial grants, technical mentorship, pilot testbeds, and production funding.",
+              title: "Industry Grants & Scaling",
+              desc: "Leading industrial enterprises (Tata Steel, Coal India, MSMEs) and CSR organizations provide financial grants, technical mentorship, pilot testbeds, and production funding.",
               icon: (
                 <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
@@ -1211,7 +1211,7 @@ export default function LandingPage() {
             {
               step: "06",
               title: "District-Wide Deployment",
-              desc: "The validated, industry-backed solution is manufactured and rolled out across the affected district by local administrations, solving the problem and delivering measurable community impact.",
+              desc: "The validated, industry-backed solution is manufactured and rolled out across the affected district by local administrations, permanently solving the problem and delivering life-saving impact.",
               icon: (
                 <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
@@ -1259,7 +1259,7 @@ export default function LandingPage() {
                 LIVE ECOSYSTEM FEED
               </span>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1.5 sm:mt-2 tracking-tight">
-                Active Community Challenges &amp; Assigned University Labs
+                Active Real-World Challenges &amp; Assigned University Labs
               </h2>
               <p className="text-slate-500 text-xs sm:text-sm mt-1">
                 Real-time problem statements submitted across Jharkhand districts.
@@ -1313,16 +1313,16 @@ export default function LandingPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
-                  <h3 className="text-base font-black text-slate-900">Community Problem Statement Registry</h3>
+                  <h3 className="text-base font-black text-slate-900">Real-World Problem Statement Registry</h3>
                   <p className="text-xs text-slate-500 max-w-lg mx-auto mt-1 mb-5 leading-relaxed">
-                    As verified citizens and local panchayats log community challenges across Jharkhand&apos;s 24 districts, they are processed by the State AI clustering engine and published here with real-time academic lab matches.
+                    As verified citizens and local panchayats submit critical real-world challenges across Jharkhand&apos;s 24 districts, they are connected with university engineering labs and industry partners for research-backed solutions.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
                     <Link
                       href="/auth/login"
                       className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
-                      <span>Submit Community Challenge →</span>
+                      <span>Submit Real-World Challenge →</span>
                     </Link>
                     <Link
                       href="/onboarding/university"

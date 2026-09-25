@@ -1,5 +1,6 @@
 package com.example.social_issues.problemsubmission.service;
 
+import com.example.social_issues.auth.dto.UserSummaryDto;
 import com.example.social_issues.auth.model.EntityType;
 import com.example.social_issues.auth.model.User;
 import com.example.social_issues.auth.repository.UserRepository;
@@ -273,17 +274,29 @@ public class IssueServiceImpl implements IssueService {
     @Override
     @Transactional(readOnly = true)
     public IssueResponse getIssueById(Long issueId) {
+        return getIssueById(issueId, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public IssueResponse getIssueById(Long issueId, UserSummaryDto viewer) {
         GrassrootIssue issue = issueRepository.findByIdWithAttachments(issueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue not found with id: " + issueId));
-        return IssueResponse.fromEntity(issue);
+        return IssueResponse.fromEntity(issue, viewer);
     }
 
     @Override
     @Transactional(readOnly = true)
     public IssueResponse getIssueByNumber(String issueNumber) {
+        return getIssueByNumber(issueNumber, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public IssueResponse getIssueByNumber(String issueNumber, UserSummaryDto viewer) {
         GrassrootIssue issue = issueRepository.findByIssueNumber(issueNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue not found with number: " + issueNumber));
-        return IssueResponse.fromEntity(issue);
+        return IssueResponse.fromEntity(issue, viewer);
     }
 
     @Override
@@ -299,6 +312,24 @@ public class IssueServiceImpl implements IssueService {
             int size,
             String sortBy,
             String sortDir
+    ) {
+        return getIssues(status, sector, priority, district, block, search, page, size, sortBy, sortDir, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public IssuePageResponse getIssues(
+            IssueStatus status,
+            IssueSector sector,
+            IssuePriority priority,
+            String district,
+            String block,
+            String search,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir,
+            UserSummaryDto viewer
     ) {
         Sort sort = "asc".equalsIgnoreCase(sortDir)
                 ? Sort.by(sortBy != null ? sortBy : "createdAt").ascending()
@@ -317,7 +348,7 @@ public class IssueServiceImpl implements IssueService {
         );
 
         List<IssueSummaryResponse> content = issuePage.getContent().stream()
-                .map(IssueSummaryResponse::fromEntity)
+                .map(issue -> IssueSummaryResponse.fromEntity(issue, viewer))
                 .toList();
 
         return new IssuePageResponse(
@@ -336,8 +367,11 @@ public class IssueServiceImpl implements IssueService {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)));
         Page<GrassrootIssue> issuePage = issueRepository.findBySubmitterIdOrderByCreatedAtDesc(submitterId, pageable);
 
+        UserSummaryDto ownerViewer = new UserSummaryDto();
+        ownerViewer.setId(String.valueOf(submitterId));
+
         List<IssueSummaryResponse> content = issuePage.getContent().stream()
-                .map(IssueSummaryResponse::fromEntity)
+                .map(issue -> IssueSummaryResponse.fromEntity(issue, ownerViewer))
                 .toList();
 
         return new IssuePageResponse(

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
-export type DashboardRole = "citizen" | "university" | "industry" | "government" | "admin";
+export type DashboardRole = "citizen" | "university" | "industry" | "government" | "superadmin" | "admin";
 
 interface DashboardNavbarProps {
   activeRole: DashboardRole;
@@ -48,12 +48,20 @@ const ROLES_CONFIG: Record<
     jurisdiction: "Corporate CSR Partner",
   },
   government: {
-    label: "Government",
-    badgeText: "Nodal Oversight",
+    label: "District Nodal Admin",
+    badgeText: "District Nodal Oversight",
     badgeColor: "bg-blue-50 text-blue-800 border-blue-200",
-    defaultName: "Department Nodal Officer",
-    userDesignation: "State Nodal Officer",
-    jurisdiction: "24 Districts Jurisdiction",
+    defaultName: "District Nodal Officer",
+    userDesignation: "District Nodal Officer",
+    jurisdiction: "District Collectorate Jurisdiction",
+  },
+  superadmin: {
+    label: "State Directorate",
+    badgeText: "Statewide SuperAdmin",
+    badgeColor: "bg-indigo-50 text-indigo-900 border-indigo-200",
+    defaultName: "State Nodal Director",
+    userDesignation: "Statewide Innovation Director / Superadmin",
+    jurisdiction: "State Directorate (All 24 Districts)",
   },
   admin: {
     label: "Platform Admin",

@@ -92,7 +92,7 @@ export function ActivePilotsTab({ onNavigateTab }: ActivePilotsTabProps) {
 
                   <h4 className="font-bold text-slate-900 text-sm leading-snug">{p.title}</h4>
                   <div className="text-xs text-slate-600 space-y-1">
-                    <p className="font-medium text-slate-800">🏫 {p.university}</p>
+                    <p className="font-medium text-slate-800">{p.university}</p>
                     <p className="text-[11px] text-slate-500">Lead PI: {p.leadInvestigator}</p>
                   </div>
                 </div>
@@ -104,7 +104,7 @@ export function ActivePilotsTab({ onNavigateTab }: ActivePilotsTabProps) {
                     onClick={() => onNavigateTab && onNavigateTab("communication")}
                     className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer inline-flex items-center gap-1"
                   >
-                    <span>💬 Open Chat</span>
+                    <span>Open Chat</span>
                   </button>
                 </div>
               </div>

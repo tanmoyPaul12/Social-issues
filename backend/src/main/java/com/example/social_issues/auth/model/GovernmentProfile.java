@@ -34,6 +34,12 @@ public class GovernmentProfile {
     @Column(name = "panchayat_code", length = 50)
     private String panchayatCode;
 
+    @Column(name = "is_state_super_admin")
+    private Boolean isStateSuperAdmin = false;
+
+    @Column(name = "jurisdiction_level", length = 50)
+    private String jurisdictionLevel = "DISTRICT";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -70,6 +76,12 @@ public class GovernmentProfile {
 
     public String getPanchayatCode() { return panchayatCode; }
     public void setPanchayatCode(String panchayatCode) { this.panchayatCode = panchayatCode; }
+
+    public Boolean getIsStateSuperAdmin() { return isStateSuperAdmin != null ? isStateSuperAdmin : false; }
+    public void setIsStateSuperAdmin(Boolean isStateSuperAdmin) { this.isStateSuperAdmin = isStateSuperAdmin; }
+
+    public String getJurisdictionLevel() { return jurisdictionLevel != null ? jurisdictionLevel : "DISTRICT"; }
+    public void setJurisdictionLevel(String jurisdictionLevel) { this.jurisdictionLevel = jurisdictionLevel; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

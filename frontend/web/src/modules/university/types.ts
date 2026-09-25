@@ -244,6 +244,13 @@ export interface LiveNotificationEvent {
 // ==========================================
 
 export type DeliverableType =
+  | "HARDWARE_SCHEMATIC"
+  | "SOURCE_CODE_REPO"
+  | "LAB_REPORT"
+  | "FIELD_TEST_DATA"
+  | "VIDEO_DEMO"
+  | "USER_MANUAL"
+  | "MOU_AGREEMENT"
   | "DOCUMENT"
   | "CAD_DESIGN"
   | "SOURCE_CODE"
@@ -251,68 +258,102 @@ export type DeliverableType =
   | "FIELD_TRIAL_REPORT"
   | "PATENT_DRAFT"
   | "USER_FEEDBACK_SIGN_OFF"
-  | "VIDEO_DEMO";
+  | "OTHER";
 
 export type MilestoneStatus =
-  | "NOT_STARTED"
+  | "UPCOMING"
   | "IN_PROGRESS"
   | "SUBMITTED"
+  | "SUBMITTED_FOR_REVIEW"
   | "APPROVED"
-  | "REVISION_REQUESTED";
+  | "REVISION_REQUESTED"
+  | "NOT_STARTED";
 
 export interface DeliverableDto {
   id: number;
-  milestoneId: number;
+  milestoneId?: number;
   title: string;
+  description?: string;
   deliverableType: DeliverableType;
   fileUrl?: string;
+  fileStorageKey?: string;
   fileSizeBytes?: number;
-  notes?: string;
+  externalRepoUrl?: string;
+  submittedByUserId?: number;
+  submittedByName?: string;
   submittedBy?: string;
-  submittedAt: string;
-  isVerified: boolean;
+  submittedAt?: string;
+  isApproved?: boolean;
+  isVerified?: boolean;
+  reviewNotes?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MilestoneDto {
   id: number;
   projectId: number;
-  stageOrder: number;
+  milestoneNumber?: number;
+  stageOrder?: number;
   title: string;
-  description: string;
-  targetTrl: number;
-  status: MilestoneStatus;
+  deliverableSummary?: string;
+  description?: string;
+  targetDate?: string;
   targetDueDate?: string;
   completedDate?: string;
+  status: MilestoneStatus;
+  targetTrl?: number;
+  trancheAmount?: number;
+  completionPercentage?: number;
+  reviewRemarks?: string;
   reviewNotes?: string;
+  reviewedByUserId?: number;
   reviewedBy?: string;
+  reviewedAt?: string;
   deliverables: DeliverableDto[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateMilestoneRequest {
-  stageOrder: number;
+  milestoneNumber?: number;
+  stageOrder?: number;
   title: string;
+  deliverableSummary?: string;
   description?: string;
-  targetTrl?: number;
+  targetDate?: string;
   targetDueDate?: string;
+  targetTrl?: number;
+  trancheAmount?: number;
 }
 
 export interface SubmitDeliverableRequest {
   title: string;
+  description?: string;
   deliverableType: DeliverableType;
-  fileUrl: string;
+  fileUrl?: string;
+  fileStorageKey?: string;
   fileSizeBytes?: number;
-  notes?: string;
+  externalRepoUrl?: string;
+  submittedByName?: string;
   submittedBy?: string;
+  notes?: string;
 }
 
 export interface ReviewMilestoneRequest {
   status: MilestoneStatus;
+  reviewRemarks?: string;
   reviewNotes?: string;
   reviewedBy?: string;
 }
 
 export type TestType =
+  | "LAB_BENCHMARK"
   | "SIMULATION"
+  | "SANDBOX_PILOT"
+  | "DISTRICT_FIELD_TRIAL"
+  | "SAFETY_COMPLIANCE"
   | "BENCH_TEST"
   | "FIELD_TRIAL"
   | "USER_STUDY"
@@ -321,96 +362,146 @@ export type TestType =
 export type TestPassStatus =
   | "PASSED"
   | "FAILED"
-  | "INCONCLUSIVE"
-  | "CONDITIONAL_PASS";
+  | "CONDITIONALLY_PASSED"
+  | "CONDITIONAL_PASS"
+  | "UNDER_EVALUATION"
+  | "INCONCLUSIVE";
 
 export interface TestResultDto {
   id: number;
   projectId: number;
+  testTitle?: string;
+  title?: string;
   testType: TestType;
-  title: string;
   trlLevel: number;
-  status: TestPassStatus;
-  quantitativeMetrics?: string;
-  evidenceDocumentUrl?: string;
+  testLocation?: string;
   testedLocation?: string;
-  testedAt: string;
+  testDate?: string;
+  testedAt?: string;
   testedBy?: string;
+  testedByUserId?: number;
+  parametersJson?: string;
+  quantitativeMetrics?: string;
+  passStatus?: TestPassStatus;
+  status?: TestPassStatus;
+  observations?: string;
+  evidenceAttachmentUrl?: string;
+  evidenceDocumentUrl?: string;
+  evidenceStorageKey?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RecordTestResultRequest {
+  testTitle?: string;
+  title?: string;
   testType: TestType;
-  title: string;
   trlLevel: number;
-  status: TestPassStatus;
-  quantitativeMetrics?: string;
-  evidenceDocumentUrl?: string;
+  testLocation?: string;
   testedLocation?: string;
+  testDate?: string;
+  testedAt?: string;
   testedBy?: string;
+  parametersJson?: string;
+  quantitativeMetrics?: string;
+  passStatus?: TestPassStatus;
+  status?: TestPassStatus;
+  observations?: string;
+  evidenceAttachmentUrl?: string;
+  evidenceDocumentUrl?: string;
 }
 
 export type ApprovalStage =
+  | "PROPOSAL"
+  | "PROTOTYPE"
+  | "FIELD_PILOT"
+  | "DEPLOYMENT_HANDOVER"
+  | "FINAL_RESOLUTION"
   | "LAB_PROTOTYPE_SIGN_OFF"
   | "FIELD_TEST_SIGN_OFF"
-  | "MOU_APPROVAL"
-  | "FINAL_RESOLUTION";
+  | "MOU_APPROVAL";
 
 export type ApproverRole =
+  | "FACULTY_MENTOR"
+  | "HEI_DEAN_SPOC"
+  | "INDUSTRY_CSR_ADMIN"
   | "CITIZEN_REPORTER"
   | "NODAL_GOVT_OFFICER"
-  | "FACULTY_MENTOR"
   | "INDUSTRY_SPONSOR";
 
 export type ApprovalStatus =
-  | "PENDING"
   | "APPROVED"
   | "REJECTED"
-  | "REQUESTED_CHANGES";
+  | "CHANGES_REQUESTED"
+  | "REQUESTED_CHANGES"
+  | "WAIVED_BY_ADMIN"
+  | "PENDING";
 
 export interface ApprovalSignoffDto {
   id: number;
   projectId: number;
   stage: ApprovalStage;
   approverRole: ApproverRole;
-  approverName: string;
+  approverUserId?: number;
+  approverName?: string;
   approverDesignation?: string;
   approverEntity?: string;
-  status: ApprovalStatus;
-  digitalSignatureHash?: string;
-  satisfactionRating?: number;
+  approvalStatus?: ApprovalStatus;
+  status?: ApprovalStatus;
+  remarks?: string;
   feedbackNotes?: string;
-  signedAt: string;
+  digitalSignatureHash?: string;
+  citizenRating?: number;
+  satisfactionRating?: number;
+  closureCertificateStorageKey?: string;
+  closureCertificateUrl?: string;
+  signedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SubmitSignoffRequest {
   stage: ApprovalStage;
   approverRole: ApproverRole;
-  approverName: string;
+  approverName?: string;
   approverDesignation?: string;
   approverEntity?: string;
-  status: ApprovalStatus;
-  satisfactionRating?: number;
+  approvalStatus?: ApprovalStatus;
+  status?: ApprovalStatus;
+  remarks?: string;
   feedbackNotes?: string;
+  citizenRating?: number;
+  satisfactionRating?: number;
+  closureCertificateStorageKey?: string;
+  closureCertificateUrl?: string;
 }
 
 export interface DualClosedLoopStatusDto {
   projectId: number;
   issueId?: number;
-  citizenSigned: boolean;
+  citizenSignedOff?: boolean;
+  citizenSigned?: boolean;
+  citizenRating?: number;
+  citizenRemarks?: string;
   citizenSignedAt?: string;
   citizenSignerName?: string;
-  citizenRating?: number;
-  govtSigned: boolean;
-  govtSignedAt?: string;
+  nodalOfficerSignedOff?: boolean;
+  govtSigned?: boolean;
+  nodalOfficerName?: string;
   govtSignerName?: string;
   govtDesignation?: string;
-  isFullyResolved: boolean;
+  closureCertificateUrl?: string;
   resolutionCertificateId?: string;
+  nodalOfficerSignedAt?: string;
+  govtSignedAt?: string;
+  isFullyClosedAndResolved?: boolean;
+  isFullyResolved?: boolean;
+  isFullyClosed?: boolean;
 }
 
 export type IpType =
-  | "SHARED_PATENT"
   | "OPEN_SOURCE"
+  | "SHARED_PATENT"
   | "COMMERCIAL_LICENSE"
   | "COPYRIGHT_SOFTWARE";
 
@@ -435,14 +526,16 @@ export interface IpRecordDto {
   grantDate?: string;
   patentOffice?: string;
   status: IpStatus;
-  heiOwnershipShare: number;
-  studentInnovatorsShare: number;
-  industryPartnerShare: number;
+  heiOwnershipShare?: number;
+  studentInnovatorsShare?: number;
+  industryPartnerShare?: number;
+  govtOwnershipShare?: number;
   inventorsList?: string;
   commercialPartnerName?: string;
   mouDocumentUrl?: string;
   royaltyTerms?: string;
-  createdAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateIpRecordRequest {
@@ -451,14 +544,29 @@ export interface CreateIpRecordRequest {
   ipType: IpType;
   patentApplicationNumber?: string;
   filingDate?: string;
+  grantDate?: string;
   patentOffice?: string;
   status?: IpStatus;
   heiOwnershipShare?: number;
   studentInnovatorsShare?: number;
   industryPartnerShare?: number;
+  govtOwnershipShare?: number;
   inventorsList?: string;
   commercialPartnerName?: string;
   mouDocumentUrl?: string;
   royaltyTerms?: string;
+}
+
+export interface ProjectLifecycleDossierDto {
+  project: UniversityProject;
+  milestones: MilestoneDto[];
+  testResults: TestResultDto[];
+  highestTrl: number;
+  signoffs: ApprovalSignoffDto[];
+  closedLoopStatus?: DualClosedLoopStatusDto;
+  ipRecords: IpRecordDto[];
+  totalDeliverablesCount: number;
+  approvedDeliverablesCount: number;
+  isNodalSignoffPending: boolean;
 }
 

@@ -12,6 +12,7 @@ public enum Role {
     GOVERNMENT,
     PRI_OFFICIAL,
     NODAL_ADMIN,
+    STATE_SUPERADMIN,
     ADMIN,
     PLATFORM_ADMIN
 }

@@ -33,4 +33,14 @@ public interface IntellectualPropertyRepository extends JpaRepository<Intellectu
     long countByStatus(IpStatus status);
 
     long countByProjectId(Long projectId);
+
+    @Query("""
+        SELECT ip FROM IntellectualPropertyRecord ip
+        WHERE ip.createdAt >= :startDate AND ip.createdAt <= :endDate
+        ORDER BY ip.createdAt DESC
+    """)
+    List<IntellectualPropertyRecord> findByDateRange(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
 }

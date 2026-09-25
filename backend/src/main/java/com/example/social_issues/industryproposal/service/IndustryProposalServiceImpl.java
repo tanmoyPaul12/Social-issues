@@ -559,7 +559,7 @@ public class IndustryProposalServiceImpl implements IndustryProposalService {
     }
 
     private boolean isAdmin(User user) {
-        return user.getRole() == Role.ADMIN || user.getRole() == Role.PLATFORM_ADMIN || user.getRole() == Role.NODAL_ADMIN;
+        return user.getRole() == Role.ADMIN || user.getRole() == Role.PLATFORM_ADMIN || user.getRole() == Role.STATE_SUPERADMIN || user.getRole() == Role.NODAL_ADMIN;
     }
 
     private PublicationResponse mapToPublicationResponse(IssuePublicationRecord p) {
@@ -586,7 +586,10 @@ public class IndustryProposalServiceImpl implements IndustryProposalService {
             resp.setPriority(issue.getPriority() != null ? issue.getPriority().name() : null);
             resp.setAssignedHEI(issue.getAssignedHEI());
 
-            if (issue.getSubmitter() != null) {
+            if (Boolean.TRUE.equals(issue.getIsAnonymous())) {
+                resp.setSubmitterName("Anonymous Citizen");
+                resp.setSubmitterRole(null);
+            } else if (issue.getSubmitter() != null) {
                 resp.setSubmitterName(issue.getSubmitter().getName());
                 resp.setSubmitterRole(issue.getSubmitter().getRole() != null ? issue.getSubmitter().getRole().name() : null);
             }

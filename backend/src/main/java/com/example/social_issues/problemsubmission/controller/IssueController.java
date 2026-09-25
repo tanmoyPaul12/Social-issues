@@ -145,12 +145,16 @@ public class IssueController {
     }
 
     /**
-     * Get single issue details by ID (Public)
+     * Get single issue details by ID (Role-aware privacy masking)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getIssueById(@PathVariable("id") Long id) {
+    public ResponseEntity<?> getIssueById(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id
+    ) {
         try {
-            IssueResponse response = issueService.getIssueById(id);
+            UserSummaryDto viewer = getAuthenticatedUser(authHeader);
+            IssueResponse response = issueService.getIssueById(id, viewer);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -158,12 +162,16 @@ public class IssueController {
     }
 
     /**
-     * Get single issue details by Issue Number (Public)
+     * Get single issue details by Issue Number (Role-aware privacy masking)
      */
     @GetMapping({"/number/{issueNumber}", "/ticket/{issueNumber}"})
-    public ResponseEntity<?> getIssueByNumber(@PathVariable("issueNumber") String issueNumber) {
+    public ResponseEntity<?> getIssueByNumber(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("issueNumber") String issueNumber
+    ) {
         try {
-            IssueResponse response = issueService.getIssueByNumber(issueNumber);
+            UserSummaryDto viewer = getAuthenticatedUser(authHeader);
+            IssueResponse response = issueService.getIssueByNumber(issueNumber, viewer);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -171,10 +179,11 @@ public class IssueController {
     }
 
     /**
-     * Public / Filterable issue registry listing
+     * Public / Filterable issue registry listing (Role-aware privacy masking)
      */
     @GetMapping
     public ResponseEntity<IssuePageResponse> getIssues(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "status", required = false) IssueStatus status,
             @RequestParam(value = "sector", required = false) IssueSector sector,
             @RequestParam(value = "priority", required = false) IssuePriority priority,
@@ -186,8 +195,9 @@ public class IssueController {
             @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
             @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir
     ) {
+        UserSummaryDto viewer = getAuthenticatedUser(authHeader);
         IssuePageResponse response = issueService.getIssues(
-                status, sector, priority, district, block, search, page, size, sortBy, sortDir
+                status, sector, priority, district, block, search, page, size, sortBy, sortDir, viewer
         );
         return ResponseEntity.ok(response);
     }
@@ -274,7 +284,7 @@ public class IssueController {
         }
 
         Role role = user.getRole();
-        boolean isAuthorized = role == Role.GOVERNMENT || role == Role.PRI_OFFICIAL
+        boolean isAuthorized = role == Role.STATE_SUPERADMIN || role == Role.GOVERNMENT || role == Role.PRI_OFFICIAL
                 || role == Role.NODAL_ADMIN || role == Role.ADMIN || role == Role.PLATFORM_ADMIN;
 
         if (!isAuthorized) {

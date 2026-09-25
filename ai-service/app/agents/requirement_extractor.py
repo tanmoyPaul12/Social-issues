@@ -48,23 +48,81 @@ Output ONLY valid JSON matching this schema:
 
 def extract_challenge_requirements(problem_statement: str) -> ExtractedChallengeRequirements:
     """
-    Parses a raw citizen/government problem statement into structured requirements using openai/gpt-oss-120b.
+    Parses a raw citizen/government problem statement into structured requirements using openai/gpt-oss-120b or dynamic NLP analysis.
     """
     user_prompt = f"Analyze the following problem statement and extract structured requirements:\n\n{problem_statement}"
     try:
         raw_dict = query_llm_json(SYSTEM_PROMPT, user_prompt)
         return ExtractedChallengeRequirements(**raw_dict)
     except Exception as e:
-        logger.warning(f"Error in LLM requirement extraction, falling back to heuristic parsing: {e}")
-        # Robust heuristic fallback
+        logger.warning(f"Error in LLM requirement extraction, applying dynamic NLP extraction: {e}")
+        
+        text_lower = (problem_statement or "").lower()
+        words = [w.strip(" ,.-;:!?") for w in text_lower.split() if len(w.strip(" ,.-;:!?")) > 2]
+        
+        # 1. Detect known Jharkhand districts
+        jharkhand_districts = [
+            "ranchi", "dhanbad", "deoghar", "bokaro", "jamshedpur", "east singhbhum", "west singhbhum",
+            "hazaribagh", "dumka", "giridih", "ramgarh", "palamu", "chatra", "godda", "gumla",
+            "khunti", "koderma", "latehar", "lohardaga", "pakur", "sahibganj", "seraikela", "simdega", "jamtara"
+        ]
+        matched_district = "Jharkhand"
+        for dist in jharkhand_districts:
+            if dist in text_lower:
+                matched_district = dist.title()
+                break
+
+        # 2. Dynamic Domain & Discipline Classification
+        if any(w in text_lower for w in ["crop", "farm", "paddy", "soil", "harvest", "drought", "agri", "seed", "fertilizer", "pest", "irrigation"]):
+            domain = "Agriculture & Agro-Tech"
+            disciplines = ["Agronomy", "Soil Science", "Plant Pathology"]
+            capabilities = ["Soil testing", "Agri-biotech diagnostics", "Field trials"]
+        elif any(w in text_lower for w in ["water", "fluorid", "arsenic", "well", "drinking", "drain", "sewage", "contaminat", "hydro", "flood"]):
+            domain = "Water Resources & Hydrogeology"
+            disciplines = ["Environmental Science", "Hydrogeology", "Public Health"]
+            capabilities = ["Water quality spectrophotometry", "Arsenic nanofiltration", "Hydrological modeling"]
+        elif any(w in text_lower for w in ["road", "pothole", "highway", "bridge", "asphalt", "bitumin", "traffic", "pavement", "nh-"]):
+            domain = "Transportation & Pavement Engineering"
+            disciplines = ["Civil Engineering", "Transportation Engineering"]
+            capabilities = ["Marshall stability testing", "Pavement friction profiling", "Aggregate crushing analysis"]
+        elif any(w in text_lower for w in ["health", "hospital", "clinic", "disease", "epidemic", "fever", "diarrhea", "morbidity", "telemedicine"]):
+            domain = "Healthcare & Biomedical Sciences"
+            disciplines = ["Community Medicine", "Public Health", "Microbiology"]
+            capabilities = ["Pathogen culture", "Clinical diagnostic trials", "Epidemiological surveillance"]
+        elif any(w in text_lower for w in ["mine", "mining", "coal", "subsidence", "quarry", "geology", "blasting", "seam"]):
+            domain = "Mining Safety & Applied Geology"
+            disciplines = ["Mining Engineering", "Applied Geology", "Rock Mechanics"]
+            capabilities = ["Subsidence laser mapping", "Mine safety audits", "Slope stability analysis"]
+        elif any(w in text_lower for w in ["solar", "energy", "power", "grid", "electricity", "transformer", "microgrid", "inverter"]):
+            domain = "Clean Energy & Power Systems"
+            disciplines = ["Electrical Engineering", "Renewable Energy"]
+            capabilities = ["Smart grid simulation", "Solar inverter diagnostics", "Power reliability auditing"]
+        elif any(w in text_lower for w in ["slag", "metallurg", "steel", "furnace", "alloy", "iron", "casting"]):
+            domain = "Metallurgy & Materials Science"
+            disciplines = ["Metallurgical and Materials Engineering", "Mechanical Engineering"]
+            capabilities = ["Slag utilization testing", "Material tensile testing", "Foundry prototyping"]
+        elif any(w in text_lower for w in ["waste", "plastic", "garbage", "dump", "recycl", "effluent", "landfill"]):
+            domain = "Waste Management & Circular Economy"
+            disciplines = ["Environmental Engineering", "Chemical Engineering"]
+            capabilities = ["Solid waste characterization", "Effluent digestion", "Circular material conversion"]
+        else:
+            # Check if text is gibberish (high consonant density, no vowels, or very short unknown chars)
+            domain = "Unclassified / Citizen Request"
+            disciplines = []
+            capabilities = []
+
+        # Meaningful search keywords
+        stop_words = {"this", "that", "with", "from", "have", "were", "problem", "issue", "please", "help", "very", "area"}
+        keywords = [w for w in words if w not in stop_words and len(w) > 3][:8]
+
         return ExtractedChallengeRequirements(
-            domain="General Engineering & Science",
+            domain=domain,
             problem_summary=problem_statement[:200],
-            required_disciplines=["Mechanical Engineering", "Civil Engineering"],
-            expertise_keywords=[w.strip().lower() for w in problem_statement.split() if len(w) > 4][:6],
-            required_capabilities=["field research", "prototyping"],
-            prototyping_needed=True,
+            required_disciplines=disciplines,
+            expertise_keywords=keywords,
+            required_capabilities=capabilities,
+            prototyping_needed=bool(disciplines),
             incubation_needed=False,
-            district="Dhanbad",
+            district=matched_district,
             state="Jharkhand"
         )

@@ -1,6 +1,8 @@
 package com.example.social_issues.problemsubmission.dto;
 
+import com.example.social_issues.auth.dto.UserSummaryDto;
 import com.example.social_issues.auth.model.EntityType;
+import com.example.social_issues.auth.model.Role;
 import com.example.social_issues.problemsubmission.model.GrassrootIssue;
 import com.example.social_issues.problemsubmission.model.IssuePriority;
 import com.example.social_issues.problemsubmission.model.IssueSector;
@@ -19,6 +21,7 @@ public class IssueSummaryResponse {
     private IssuePriority priority;
     private EntityType submitterEntityType;
     private String submitterName;
+    private Boolean isAnonymous;
     private String district;
     private String block;
     private Integer affectedPopulation;
@@ -30,6 +33,10 @@ public class IssueSummaryResponse {
     public IssueSummaryResponse() {}
 
     public static IssueSummaryResponse fromEntity(GrassrootIssue issue) {
+        return fromEntity(issue, null);
+    }
+
+    public static IssueSummaryResponse fromEntity(GrassrootIssue issue, UserSummaryDto viewer) {
         if (issue == null) return null;
         IssueSummaryResponse res = new IssueSummaryResponse();
         res.setId(issue.getId());
@@ -47,8 +54,23 @@ public class IssueSummaryResponse {
         res.setStatus(issue.getStatus());
         res.setPriority(issue.getPriority());
         res.setSubmitterEntityType(issue.getSubmitterEntityType());
+        res.setIsAnonymous(issue.getIsAnonymous());
+
+        boolean isGovtAdmin = viewer != null && (
+                viewer.getRole() == Role.STATE_SUPERADMIN ||
+                viewer.getRole() == Role.GOVERNMENT ||
+                viewer.getRole() == Role.NODAL_ADMIN ||
+                viewer.getRole() == Role.ADMIN ||
+                viewer.getRole() == Role.PLATFORM_ADMIN
+        );
+        boolean isOwner = viewer != null && issue.getSubmitter() != null &&
+                viewer.getId() != null &&
+                viewer.getId().equals(String.valueOf(issue.getSubmitter().getId()));
+
+        boolean isAnonymous = Boolean.TRUE.equals(issue.getIsAnonymous());
+
         if (issue.getSubmitter() != null) {
-            if (Boolean.TRUE.equals(issue.getIsAnonymous())) {
+            if (isAnonymous && !isGovtAdmin && !isOwner) {
                 res.setSubmitterName("Anonymous Citizen");
             } else {
                 res.setSubmitterName(issue.getSubmitter().getName());
@@ -97,6 +119,9 @@ public class IssueSummaryResponse {
 
     public String getSubmitterName() { return submitterName; }
     public void setSubmitterName(String submitterName) { this.submitterName = submitterName; }
+
+    public Boolean getIsAnonymous() { return isAnonymous; }
+    public void setIsAnonymous(Boolean anonymous) { isAnonymous = anonymous; }
 
     public String getDistrict() { return district; }
     public void setDistrict(String district) { this.district = district; }

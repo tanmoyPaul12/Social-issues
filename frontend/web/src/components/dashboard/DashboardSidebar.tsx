@@ -60,14 +60,22 @@ const SIDEBAR_CONFIG: Record<DashboardRole, { title: string; items: SidebarItem[
     ],
   },
   government: {
-    title: "Government Oversight",
+    title: "District Nodal Oversight",
     items: [
-      { id: "overview", label: "Overview" },
-      { id: "routing", label: "AI Routing & Allocations", badge: "MASTER" },
-      { id: "districts", label: "District Ingestion" },
-      { id: "heatmap", label: "Domain Heatmap" },
-      { id: "escalations", label: "Escalations & Approvals" },
-      { id: "reports", label: "State Reports" },
+      { id: "overview", label: "District Overview" },
+      { id: "routing", label: "Master AI Routing" },
+      { id: "projects", label: "Project Management" },
+      { id: "reports", label: "District Reports" },
+    ],
+  },
+  superadmin: {
+    title: "State Directorate",
+    items: [
+      { id: "overview", label: "Statewide Cockpit" },
+      { id: "nodal_officers", label: "24 District Nodal Admins", badge: "24" },
+      { id: "routing", label: "Master AI Routing" },
+      { id: "projects", label: "Statewide R&D & Clearances" },
+      { id: "reports", label: "Cabinet & Statutory Reports" },
     ],
   },
   admin: {
@@ -101,9 +109,9 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
   const avatarInitial = displayName.charAt(0).toUpperCase() || "U";
 
   return (
-    <aside className="w-60 sm:w-64 bg-[#f8fafc] border-r border-slate-200 h-full flex-shrink-0 flex flex-col justify-between overflow-y-auto select-none">
+    <aside className="w-60 sm:w-64 bg-[#82acd3] border-r border-[#6e9bc4] h-full flex-shrink-0 flex flex-col justify-between overflow-y-auto select-none transition-colors">
       {/* Sidebar navigation list */}
-      <nav className="divide-y divide-slate-200/80">
+      <nav className="divide-y divide-[#6e9bc4]/60">
         {roleConfig.items.map((item) => {
           const isActive = activeItem === item.id;
           const displayBadge =
@@ -118,21 +126,21 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
               key={item.id}
               type="button"
               onClick={() => onSelectItem(item.id)}
-              className={`w-full text-left px-5 py-3.5 text-xs font-bold transition-colors flex items-center justify-between cursor-pointer ${
+              className={`w-full text-left px-5 py-3.5 text-xs font-bold transition-all flex items-center justify-between gap-2 cursor-pointer ${
                 isActive
-                  ? "bg-slate-200/90 text-slate-950 font-black border-l-4 border-slate-900"
-                  : "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                  ? "bg-[#0b2545] text-white font-black border-l-4 border-white shadow-xs"
+                  : "bg-transparent text-[#0b2545] hover:bg-white/20 hover:text-slate-950"
               }`}
             >
               <span className="truncate">{item.label}</span>
               {displayBadge && (
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  className={`text-[10px] font-black px-2 py-0.5 rounded whitespace-nowrap shrink-0 inline-flex items-center leading-none ${
                     item.id === "notifications" || item.id === "alerts"
-                      ? "bg-rose-500 text-white rounded-full px-2"
+                      ? "bg-rose-500 text-white rounded-full"
                       : isActive
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-200 text-slate-700"
+                      ? "bg-white text-[#0b2545]"
+                      : "bg-[#0b2545]/15 text-[#0b2545]"
                   }`}
                 >
                   {displayBadge}
@@ -144,17 +152,17 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
       </nav>
 
       {/* Bottom Profile & Logout Footer */}
-      <div className="p-3 border-t border-slate-200 bg-white/80 space-y-2 mt-auto">
+      <div className="p-3 border-t border-[#6e9bc4] bg-white/25 backdrop-blur-xs space-y-2 mt-auto">
         {/* User Mini Card */}
-        <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
-          <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-2xs">
+        <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/40 border border-white/50 shadow-2xs">
+          <div className="w-8 h-8 rounded-full bg-[#0b2545] text-white flex items-center justify-center text-xs font-black shrink-0 shadow-2xs">
             {avatarInitial}
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-xs font-bold text-slate-900 truncate">
+            <p className="text-xs font-black text-[#0b2545] truncate">
               {displayName}
             </p>
-            <p className="text-[10px] text-slate-500 font-medium truncate uppercase">
+            <p className="text-[10px] text-[#0b2545]/80 font-bold truncate uppercase tracking-wider">
               {displaySubtitle}
             </p>
           </div>
@@ -164,7 +172,7 @@ export function DashboardSidebar({ activeRole, activeItem, onSelectItem }: Dashb
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 rounded-lg transition-all border border-rose-200 hover:border-rose-600 cursor-pointer shadow-2xs"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-rose-700 bg-white/70 hover:bg-rose-600 hover:text-white rounded-xl transition-all border border-white/60 hover:border-rose-600 cursor-pointer shadow-2xs"
         >
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

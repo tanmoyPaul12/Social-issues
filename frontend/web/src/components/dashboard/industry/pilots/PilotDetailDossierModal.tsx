@@ -1084,7 +1084,7 @@ export function PilotDetailDossierModal({
                         : "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                     }`}
                   >
-                    {closedLoopStatus?.bothPartiesSigned ? "🎉 Fully Resolved & Closed" : "Verification In Progress"}
+                    {closedLoopStatus?.bothPartiesSigned ? "Fully Resolved & Closed" : "Verification In Progress"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
@@ -1481,7 +1481,7 @@ export function PilotDetailDossierModal({
                         <h3 className="text-sm font-bold text-slate-900">{t.testTitle}</h3>
                         {t.testLocation && (
                           <div className="text-[11px] text-slate-500 mt-0.5">
-                            📍 Testbed Location: <strong>{t.testLocation}</strong>
+                            Testbed Location: <strong>{t.testLocation}</strong>
                             {t.testerName && ` • Evaluator: ${t.testerName}`}
                           </div>
                         )}

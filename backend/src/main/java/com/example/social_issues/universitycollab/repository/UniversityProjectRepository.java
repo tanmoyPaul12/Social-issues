@@ -29,4 +29,18 @@ public interface UniversityProjectRepository extends JpaRepository<UniversityPro
 
     @Query("SELECT p FROM UniversityProject p LEFT JOIN FETCH p.teamMembers WHERE p.id = :id")
     Optional<UniversityProject> findByIdWithTeamMembers(@Param("id") Long id);
+
+    @Query("""
+        SELECT p FROM UniversityProject p
+        WHERE p.createdAt >= :startDate AND p.createdAt <= :endDate
+          AND (CAST(:district AS string) IS NULL OR LOWER(p.district) = LOWER(CAST(:district AS string)))
+          AND (CAST(:domain AS string) IS NULL OR LOWER(p.domain) = LOWER(CAST(:domain AS string)))
+        ORDER BY p.createdAt DESC
+    """)
+    List<UniversityProject> findByDateRangeAndFilters(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("district") String district,
+            @Param("domain") String domain
+    );
 }

@@ -10,4 +10,8 @@ import java.util.Optional;
 public interface GovernmentProfileRepository extends JpaRepository<GovernmentProfile, Long> {
     Optional<GovernmentProfile> findByUserId(Long userId);
     Optional<GovernmentProfile> findByServiceCode(String serviceCode);
+    Optional<GovernmentProfile> findByDistrictIgnoreCase(String district);
+    boolean existsByDistrictIgnoreCase(String district);
+    Optional<GovernmentProfile> findByIsStateSuperAdminTrue();
+    boolean existsByIsStateSuperAdminTrue();
 }

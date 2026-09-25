@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
 @import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,800,900&display=swap');
 @import "tailwindcss";
 
@@ -5,6 +6,7 @@
   --background: #fbfcfd;
   --foreground: #090e1a;
   --font-satoshi: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-figtree: 'Figtree', sans-serif;
 }
 
 body {
@@ -13,6 +15,18 @@ body {
   font-family: var(--font-satoshi), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dashboard-only Figtree font styling */
+.dashboard-root,
+.dashboard-root * {
+  font-family: var(--font-figtree) !important;
+  font-optical-sizing: auto;
+}
+
+.font-figtree {
+  font-family: var(--font-figtree);
+  font-optical-sizing: auto;
 }
 
 /* Custom scrollbar */

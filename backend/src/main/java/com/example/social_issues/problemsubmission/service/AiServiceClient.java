@@ -240,4 +240,32 @@ public class AiServiceClient {
         }
         return Map.of("is_duplicate", false, "potential_duplicates", List.of());
     }
+
+    /**
+     * Executes the Master Unified Intelligence & Faculty Matching Pipeline via FastAPI AI microservice.
+     */
+    public Map<String, Object> analyzeUnifiedRouting(Map<String, Object> requestPayload) {
+        try {
+            String endpoint = aiServiceUrl + "/api/v1/unified-routing/analyze";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestPayload, headers);
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> response = responseEntity.getBody();
+            if (response != null) {
+                return response;
+            }
+        } catch (Exception e) {
+            log.error("AI Service unified routing analyze call failed: {}", e.getMessage());
+            throw new RuntimeException("AI Service unified routing call failed: " + e.getMessage(), e);
+        }
+        throw new RuntimeException("Empty response received from AI Service");
+    }
 }

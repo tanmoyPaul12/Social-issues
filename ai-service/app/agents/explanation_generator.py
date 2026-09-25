@@ -146,10 +146,11 @@ Evaluated University Capabilities Data:
                 )
             )
 
+        primary_name = scored_universities[0].university_name if scored_universities else "State Premier Academic Institutions"
         return ExplainableRoutingReport(
             challenge_summary=requirements.problem_summary,
             domain=requirements.domain,
-            executive_summary=f"Based on 6-factor deterministic capability evaluation, {scored_universities[0].university_name} is recommended as the primary university partner for this challenge.",
+            executive_summary=f"Based on 6-factor deterministic capability evaluation, {primary_name} is recommended as the primary university partner for this challenge.",
             recommendations=recs,
             suggested_next_steps=[
                 "Issue official technical collaboration proposal to top-ranked university.",

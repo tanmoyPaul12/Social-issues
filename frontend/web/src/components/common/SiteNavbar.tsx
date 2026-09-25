@@ -80,7 +80,7 @@ export function SiteNavbar() {
     { label: "College & University (HEI) Portal", href: "/onboarding/university", hasArrow: true },
     { label: "Industry & CSR Partnership Gateway", href: "/onboarding/industry", hasArrow: true },
     { label: "Government Nodal Officer Portal", href: "/onboarding/government", hasArrow: true },
-    { label: "Citizen Problem Submission", href: "/auth/login", hasArrow: true },
+    { label: "Citizen & Grassroots Challenge Portal", href: "/auth/login", hasArrow: true },
     { label: "Academic & CSR Consortium", href: "/#institutions-section", hasArrow: false },
   ];
 

@@ -147,7 +147,14 @@ public class IssuePdfGeneratorService {
                 cs.endText();
                 y -= 13;
 
-                if (issue.getSubmitter() != null) {
+                if (Boolean.TRUE.equals(issue.getIsAnonymous())) {
+                    cs.beginText();
+                    cs.setFont(fontRegular, 9);
+                    cs.newLineAtOffset(margin, y);
+                    cs.showText("Submitting Authority: Anonymous Citizen (Identity Protected)");
+                    cs.endText();
+                    y -= 18;
+                } else if (issue.getSubmitter() != null) {
                     cs.beginText();
                     cs.setFont(fontRegular, 9);
                     cs.newLineAtOffset(margin, y);

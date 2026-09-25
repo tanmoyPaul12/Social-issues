@@ -1,5 +1,6 @@
 package com.example.social_issues.problemsubmission.service;
 
+import com.example.social_issues.auth.dto.UserSummaryDto;
 import com.example.social_issues.problemsubmission.dto.*;
 import com.example.social_issues.problemsubmission.model.IssuePriority;
 import com.example.social_issues.problemsubmission.model.IssueSector;
@@ -18,7 +19,11 @@ public interface IssueService {
 
     IssueResponse getIssueById(Long issueId);
 
+    IssueResponse getIssueById(Long issueId, UserSummaryDto viewer);
+
     IssueResponse getIssueByNumber(String issueNumber);
+
+    IssueResponse getIssueByNumber(String issueNumber, UserSummaryDto viewer);
 
     IssuePageResponse getIssues(
             IssueStatus status,
@@ -31,6 +36,20 @@ public interface IssueService {
             int size,
             String sortBy,
             String sortDir
+    );
+
+    IssuePageResponse getIssues(
+            IssueStatus status,
+            IssueSector sector,
+            IssuePriority priority,
+            String district,
+            String block,
+            String search,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir,
+            UserSummaryDto viewer
     );
 
     IssuePageResponse getMyIssues(Long submitterId, int page, int size);

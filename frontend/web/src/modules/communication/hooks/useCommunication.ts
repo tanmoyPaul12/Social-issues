@@ -216,7 +216,7 @@ export function useCommunication(userRole: "industry" | "university" = "industry
           t.id === threadId
             ? {
                 ...t,
-                lastMessage: trimmed || `📎 ${attachmentName || "Document"}`,
+                lastMessage: trimmed || `Attachment: ${attachmentName || "Document"}`,
                 timestamp: "Just now",
               }
             : t

@@ -155,7 +155,7 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
         postThreadMessage(
           token,
           createdThread.id,
-          `🤝 CSR GRANT PROPOSAL ACCEPTED\n\nCorporate Partner (${user?.name || accepted.targetCompany || "Industry CSR Committee"}) has officially accepted the grant pitch for "${accepted.projectTitle}".\n\nActive communication channel is now open for prototype review, technical mentorship, and milestone disbursements.`,
+          `CSR GRANT PROPOSAL ACCEPTED\n\nCorporate Partner (${user?.name || accepted.targetCompany || "Industry CSR Committee"}) has officially accepted the grant pitch for "${accepted.projectTitle}".\n\nActive communication channel is now open for prototype review, technical mentorship, and milestone disbursements.`,
           undefined,
           undefined,
           createdThread.pilotId,
@@ -228,7 +228,7 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
   const dynamicPitchActivities = useMemo(() => {
     return pitches.map((pitch, idx) => ({
       id: 990000 + idx,
-      title: `🏛️ ${pitch.universityName} Pitched CSR Proposal: "${pitch.projectTitle}"`,
+      title: `${pitch.universityName} Pitched CSR Proposal: "${pitch.projectTitle}"`,
       description: `Target Sponsor: ${pitch.targetCompany} • Requisition: ₹${pitch.requestedAmount.toLocaleString()} (${pitch.category}). ${pitch.description}`,
       eventType: "UNIVERSITY_PITCH",
       severity: pitch.status === "PENDING" ? ("ACTION_REQUIRED" as const) : ("SUCCESS" as const),
@@ -378,14 +378,14 @@ export function IndustryNotificationsTab({ onNavigateTab }: IndustryNotification
                       onClick={() => handleRejectCsrPitch(pitch.id)}
                       className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-rose-500/40 text-rose-300 text-xs font-bold transition-colors cursor-pointer"
                     >
-                      ✕ Decline / Reject
+                      Decline / Reject
                     </button>
                     <button
                       type="button"
                       onClick={() => handleAcceptCsrPitch(pitch.id)}
                       className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
                     >
-                      ✓ Accept Pitch &amp; Co-Fund
+                      Accept Pitch &amp; Co-Fund
                     </button>
                   </div>
                 </div>

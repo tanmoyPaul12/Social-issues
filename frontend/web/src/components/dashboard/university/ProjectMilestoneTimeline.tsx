@@ -64,15 +64,22 @@ const TRL_DESCRIPTIONS: Record<number, { title: string; desc: string; phase: str
   9: { title: "Full Operational Deployment", desc: "Sustainably deployed, handed over to community & civic body", phase: "Deployment" },
 };
 
-const DELIVERABLE_TYPE_LABELS: Record<DeliverableType, { label: string; icon: string }> = {
-  DOCUMENT: { label: "Technical Specification", icon: "📄" },
-  CAD_DESIGN: { label: "CAD / Schematic Blueprint", icon: "📐" },
-  SOURCE_CODE: { label: "Firmware / Source Code", icon: "💻" },
-  TEST_BENCH_DATA: { label: "Lab Test Bench Data", icon: "📊" },
-  FIELD_TRIAL_REPORT: { label: "Field Pilot Report", icon: "📋" },
-  PATENT_DRAFT: { label: "IP / Patent Draft", icon: "⚖️" },
-  USER_FEEDBACK_SIGN_OFF: { label: "Citizen Sign-off Sheet", icon: "✍️" },
-  VIDEO_DEMO: { label: "Field Video Demonstration", icon: "🎥" },
+const DELIVERABLE_TYPE_LABELS: Record<DeliverableType, { label: string }> = {
+  DOCUMENT: { label: "Technical Specification" },
+  CAD_DESIGN: { label: "CAD / Schematic Blueprint" },
+  SOURCE_CODE: { label: "Firmware / Source Code" },
+  TEST_BENCH_DATA: { label: "Lab Test Bench Data" },
+  FIELD_TRIAL_REPORT: { label: "Field Pilot Report" },
+  PATENT_DRAFT: { label: "IP / Patent Draft" },
+  USER_FEEDBACK_SIGN_OFF: { label: "Citizen Sign-off Sheet" },
+  VIDEO_DEMO: { label: "Field Video Demonstration" },
+  HARDWARE_SCHEMATIC: { label: "Hardware Schematic" },
+  SOURCE_CODE_REPO: { label: "Source Code Repository" },
+  LAB_REPORT: { label: "Lab Benchmark Report" },
+  FIELD_TEST_DATA: { label: "Field Test Telemetry" },
+  USER_MANUAL: { label: "User & Operations Manual" },
+  MOU_AGREEMENT: { label: "MoU & Handover Agreement" },
+  OTHER: { label: "Other Technical Artifact" },
 };
 
 export function ProjectMilestoneTimeline({
@@ -862,9 +869,7 @@ export function ProjectMilestoneTimeline({
                             >
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm">
-                                    {DELIVERABLE_TYPE_LABELS[del.deliverableType]?.icon || "📄"}
-                                  </span>
+                                  <FileText className="w-4 h-4 text-slate-500" />
                                   <span className="font-bold text-slate-800">{del.title}</span>
                                 </div>
                                 <div className="text-[11px] text-slate-500">
@@ -1201,7 +1206,7 @@ export function ProjectMilestoneTimeline({
                 >
                   {Object.entries(DELIVERABLE_TYPE_LABELS).map(([key, val]) => (
                     <option key={key} value={key}>
-                      {val.icon} {val.label}
+                      {val.label}
                     </option>
                   ))}
                 </select>

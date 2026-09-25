@@ -128,7 +128,7 @@ public class UniversityCollabController {
      */
     @GetMapping("/projects")
     public ResponseEntity<List<UniversityProjectResponse>> getUniversityProjects(
-            @RequestParam(name = "aisheCode", required = false, defaultValue = "U-0205") String aisheCode) {
+            @RequestParam(name = "aisheCode", required = false) String aisheCode) {
         return ResponseEntity.ok(collabService.getUniversityProjects(aisheCode));
     }
 
