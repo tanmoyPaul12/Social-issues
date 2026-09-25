@@ -125,6 +125,7 @@ interface CitizenSubmission {
   attachmentCount?: number;
   primaryThumbnailUrl?: string;
   validationStatus?: string;
+  isAnonymous?: boolean;
 }
 
 interface CommunityChallenge {
@@ -279,7 +280,8 @@ export function CitizenDashboardView({
             attachments: item.attachments || [],
             attachmentCount: (item.attachments && item.attachments.length) || item.attachmentCount || 0,
             primaryThumbnailUrl: item.primaryThumbnailUrl || (item.attachments && item.attachments[0]?.fileUrl),
-            validationStatus: item.validationStatus || "PASS"
+            validationStatus: item.validationStatus || "PASS",
+            isAnonymous: Boolean(item.isAnonymous)
           }));
           setSubmissions(mapped);
         }
@@ -309,7 +311,8 @@ export function CitizenDashboardView({
             latitude: fullData.latitude,
             longitude: fullData.longitude,
             attachments: fullData.attachments || [],
-            priority: fullData.priority || prev.priority
+            priority: fullData.priority || prev.priority,
+            isAnonymous: fullData.isAnonymous ?? prev.isAnonymous
           } : null);
         }
       } catch (e) {
@@ -647,10 +650,10 @@ export function CitizenDashboardView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Citizen Problem Command Center
+            Citizen &amp; Community Challenge Center
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Welcome, <strong>{citizenName}</strong>. Report local civic, agricultural, water, and environmental problems with interactive Google Maps pinning and photo/video evidence for AI triage to Jharkhand university R&amp;D labs.
+            Welcome, <strong>{citizenName}</strong>. Submit real-world challenges in health, agriculture, water resources, clean energy, or industry with interactive Google Maps pinning and evidence for university R&amp;D labs.
           </p>
         </div>
 
@@ -662,7 +665,7 @@ export function CitizenDashboardView({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
           </svg>
-          <span>Report New Challenge</span>
+          <span>Submit Real-World Challenge</span>
         </button>
       </div>
 
@@ -706,16 +709,16 @@ export function CitizenDashboardView({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-sm font-bold text-slate-900">No Grassroots Challenges Reported Yet</h3>
+              <h3 className="text-sm font-bold text-slate-900">No Challenges Submitted Yet</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-                Have a civic, agricultural, water, or public service problem in your panchayat? Click below to report a challenge directly with Google Maps coordinates and photos/videos to state university R&amp;D labs.
+                Have a critical real-world problem in health, water safety, agriculture, energy, or industry? Submit a challenge with location pinning and evidence to connect with university research teams.
               </p>
               <button
                 type="button"
                 onClick={() => setIsReportModalOpen(true)}
                 className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
               >
-                + Report New Challenge
+                + Submit Real-World Challenge
               </button>
             </div>
           ) : (
@@ -737,7 +740,14 @@ export function CitizenDashboardView({
                     <tr key={String(sub.id)} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-blue-700">{sub.id}</td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{sub.title}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-slate-900">{sub.title}</div>
+                          {sub.isAnonymous && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                              Anonymous
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] text-slate-500 truncate max-w-xs">{sub.description}</div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -976,9 +986,9 @@ export function CitizenDashboardView({
               </svg>
             </button>
 
-            <h3 className="text-lg font-black text-slate-900">Report Grassroots Challenge</h3>
+            <h3 className="text-lg font-black text-slate-900">Submit Real-World Challenge</h3>
             <p className="text-slate-500 mt-1 mb-5 text-xs">
-              Submit a civic, agricultural, water, or health problem. Pin the problem site on the interactive Google Map and attach photo/video evidence for AI triage to Jharkhand university capstone teams.
+              Submit an urgent challenge affecting health, water safety, agriculture, energy, or industry. Your submission is matched directly with university research labs and industry partners to engineer practical, funded solutions.
             </p>
 
             <form onSubmit={handleCreateChallenge} className="space-y-5 font-medium">

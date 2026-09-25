@@ -1,6 +1,8 @@
 package com.example.social_issues.problemsubmission.dto;
 
+import com.example.social_issues.auth.dto.UserSummaryDto;
 import com.example.social_issues.auth.model.EntityType;
+import com.example.social_issues.auth.model.Role;
 import com.example.social_issues.problemsubmission.model.GrassrootIssue;
 import com.example.social_issues.problemsubmission.model.IssuePriority;
 import com.example.social_issues.problemsubmission.model.IssueSector;
@@ -39,6 +41,9 @@ public class IssueResponse {
     private String validationReportJson;
     private String assignedHEI;
     private String recommendedHeisJson;
+    private Long projectId;
+    private String projectCode;
+    private String projectStage;
     private Boolean isDuplicate;
     private String duplicateClusterId;
     private String potentialDuplicatesJson;
@@ -50,20 +55,53 @@ public class IssueResponse {
     public IssueResponse() {}
 
     public static IssueResponse fromEntity(GrassrootIssue issue) {
+        return fromEntity(issue, null);
+    }
+
+    public static IssueResponse fromEntity(GrassrootIssue issue, UserSummaryDto viewer) {
         if (issue == null) return null;
         IssueResponse res = new IssueResponse();
         res.setId(issue.getId());
         res.setIssueNumber(issue.getIssueNumber());
+
+        boolean isGovtAdmin = viewer != null && (
+                viewer.getRole() == Role.STATE_SUPERADMIN ||
+                viewer.getRole() == Role.GOVERNMENT ||
+                viewer.getRole() == Role.NODAL_ADMIN ||
+                viewer.getRole() == Role.ADMIN ||
+                viewer.getRole() == Role.PLATFORM_ADMIN
+        );
+        boolean isOwner = viewer != null && issue.getSubmitter() != null &&
+                viewer.getId() != null &&
+                viewer.getId().equals(String.valueOf(issue.getSubmitter().getId()));
+
+        boolean isAnonymous = Boolean.TRUE.equals(issue.getIsAnonymous());
+
         if (issue.getSubmitter() != null) {
-            res.setSubmitterId(issue.getSubmitter().getId());
-            if (Boolean.TRUE.equals(issue.getIsAnonymous())) {
+            if (isAnonymous && !isGovtAdmin && !isOwner) {
+                // Completely mask identifying information for non-govt viewers and non-owners
+                res.setSubmitterId(null);
                 res.setSubmitterName("Anonymous Citizen");
                 res.setSubmitterPhone(null);
+                res.setContactName(null);
+                res.setContactPhone(null);
             } else {
+                res.setSubmitterId(issue.getSubmitter().getId());
                 res.setSubmitterName(issue.getSubmitter().getName());
                 res.setSubmitterPhone(issue.getSubmitter().getPhone());
+                res.setContactName(issue.getContactName());
+                res.setContactPhone(issue.getContactPhone());
+            }
+        } else {
+            if (isAnonymous && !isGovtAdmin) {
+                res.setContactName(null);
+                res.setContactPhone(null);
+            } else {
+                res.setContactName(issue.getContactName());
+                res.setContactPhone(issue.getContactPhone());
             }
         }
+
         res.setSubmitterEntityType(issue.getSubmitterEntityType());
         res.setTitle(issue.getTitle());
         res.setDescription(issue.getDescription());
@@ -78,8 +116,6 @@ public class IssueResponse {
         res.setAddressDescription(issue.getAddressDescription());
         res.setAffectedPopulation(issue.getAffectedPopulation());
         res.setEstimatedImpactScore(issue.getEstimatedImpactScore());
-        res.setContactName(issue.getContactName());
-        res.setContactPhone(issue.getContactPhone());
         res.setIsAnonymous(issue.getIsAnonymous());
         res.setReviewNotes(issue.getReviewNotes());
         res.setValidationStatus(issue.getValidationStatus());
@@ -183,6 +219,15 @@ public class IssueResponse {
 
     public String getRecommendedHeisJson() { return recommendedHeisJson; }
     public void setRecommendedHeisJson(String recommendedHeisJson) { this.recommendedHeisJson = recommendedHeisJson; }
+
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
+
+    public String getProjectCode() { return projectCode; }
+    public void setProjectCode(String projectCode) { this.projectCode = projectCode; }
+
+    public String getProjectStage() { return projectStage; }
+    public void setProjectStage(String projectStage) { this.projectStage = projectStage; }
 
     public Boolean getIsDuplicate() { return isDuplicate; }
     public void setIsDuplicate(Boolean isDuplicate) { this.isDuplicate = isDuplicate; }

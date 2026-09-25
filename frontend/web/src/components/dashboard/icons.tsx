@@ -136,6 +136,30 @@ export function ChevronRight({ className = "w-4 h-4", ...props }: IconProps) {
   );
 }
 
+export function ChevronLeft({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+    </svg>
+  );
+}
+
+export function ChevronsLeft({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+    </svg>
+  );
+}
+
+export function ChevronsRight({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+    </svg>
+  );
+}
+
 export function BookOpen({ className = "w-4 h-4", ...props }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
@@ -244,6 +268,14 @@ export function Loader2({ className = "w-4 h-4", ...props }: IconProps) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v4m0 12v4m-7.071-3.071l2.828-2.828m8.486-8.486l2.828-2.828M2 12h4m12 0h4m-3.071 7.071l-2.828-2.828m-8.486-8.486L3.929 4.929" />
+    </svg>
+  );
+}
+
+export function X({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
 }

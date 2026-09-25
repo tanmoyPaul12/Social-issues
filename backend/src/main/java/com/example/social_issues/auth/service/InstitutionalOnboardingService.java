@@ -12,8 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class InstitutionalOnboardingService {
@@ -84,11 +83,14 @@ public class InstitutionalOnboardingService {
             Optional<User> existingEmail = userRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
             Optional<User> existingPhone = userRepository.findFirstByPhoneOrderByIdDesc(phone);
 
-            if (existingPhone.isPresent() && (existingEmail.isEmpty() || !existingPhone.get().getId().equals(existingEmail.get().getId()))) {
-                return AuthResponse.error("The mobile number (" + phone + ") is already registered with another account. Please use your direct mobile number or sign in.");
+            User user;
+            if (existingEmail.isPresent()) {
+                user = existingEmail.get();
+            } else if (existingPhone.isPresent()) {
+                user = existingPhone.get();
+            } else {
+                user = new User();
             }
-
-            User user = existingEmail.orElseGet(() -> existingPhone.orElseGet(User::new));
 
             user.setName(name);
             user.setPhone(phone);
@@ -190,11 +192,14 @@ public class InstitutionalOnboardingService {
             Optional<User> existingEmail = userRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
             Optional<User> existingPhone = userRepository.findFirstByPhoneOrderByIdDesc(phone);
 
-            if (existingPhone.isPresent() && (existingEmail.isEmpty() || !existingPhone.get().getId().equals(existingEmail.get().getId()))) {
-                return AuthResponse.error("The mobile number (" + phone + ") is already registered with another account. Please use your direct mobile number or sign in.");
+            User user;
+            if (existingEmail.isPresent()) {
+                user = existingEmail.get();
+            } else if (existingPhone.isPresent()) {
+                user = existingPhone.get();
+            } else {
+                user = new User();
             }
-
-            User user = existingEmail.orElseGet(() -> existingPhone.orElseGet(User::new));
 
             user.setName(name);
             user.setPhone(phone);
@@ -253,6 +258,93 @@ public class InstitutionalOnboardingService {
         }
     }
 
+    public static final List<String> JHARKHAND_OFFICIAL_DISTRICTS = List.of(
+            "Ranchi", "Dhanbad", "East Singhbhum (Jamshedpur)", "West Singhbhum (Chaibasa)", "Bokaro", "Hazaribagh",
+            "Deoghar", "Dumka", "Giridih", "Ramgarh", "Palamu", "Chatra", "Garhwa", "Godda", "Gumla",
+            "Jamtara", "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Sahibganj", "Saraikela Kharsawan", "Simdega"
+    );
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getGovernmentDistrictsStatus() {
+        List<GovernmentProfile> profiles = governmentProfileRepository.findAll();
+        Map<String, GovernmentProfile> profileByDistrict = new HashMap<>();
+        GovernmentProfile stateSuperAdminProfile = null;
+
+        for (GovernmentProfile gp : profiles) {
+            if (Boolean.TRUE.equals(gp.getIsStateSuperAdmin()) || "statewide".equalsIgnoreCase(gp.getDistrict())) {
+                stateSuperAdminProfile = gp;
+            }
+            if (gp.getDistrict() != null && !gp.getDistrict().isBlank()) {
+                profileByDistrict.put(gp.getDistrict().trim().toLowerCase(), gp);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        // 1. First entry: Statewide Directorate Superadmin Seat (Singleton)
+        Map<String, Object> stateMap = new LinkedHashMap<>();
+        stateMap.put("district", "Statewide (All 24 Districts)");
+        stateMap.put("isStateSuperAdmin", true);
+        if (stateSuperAdminProfile != null) {
+            stateMap.put("isAssigned", true);
+            String officerName = stateSuperAdminProfile.getNodalOfficerName();
+            if ((officerName == null || officerName.isBlank()) && stateSuperAdminProfile.getUser() != null) {
+                officerName = stateSuperAdminProfile.getUser().getName();
+            }
+            stateMap.put("nodalOfficerName", officerName != null ? officerName : "State Nodal Director");
+            stateMap.put("serviceCode", stateSuperAdminProfile.getServiceCode());
+            stateMap.put("designation", stateSuperAdminProfile.getDesignation() != null ? stateSuperAdminProfile.getDesignation() : "State Nodal Director / Superadmin");
+        } else {
+            stateMap.put("isAssigned", false);
+            stateMap.put("nodalOfficerName", null);
+            stateMap.put("serviceCode", null);
+            stateMap.put("designation", "State Nodal Director / Superadmin (Vacant)");
+        }
+        result.add(stateMap);
+
+        // 2. The 24 District Nodal Officer Seats
+        for (String district : JHARKHAND_OFFICIAL_DISTRICTS) {
+            String distKey = district.trim().toLowerCase();
+            String simpleKey = district.contains("(") ? district.substring(0, district.indexOf("(")).trim().toLowerCase() : distKey;
+
+            GovernmentProfile matched = profileByDistrict.get(distKey);
+            if (matched == null) {
+                matched = profileByDistrict.get(simpleKey);
+            }
+            if (matched == null) {
+                for (Map.Entry<String, GovernmentProfile> entry : profileByDistrict.entrySet()) {
+                    if (entry.getValue() != null && !Boolean.TRUE.equals(entry.getValue().getIsStateSuperAdmin())) {
+                        if (distKey.contains(entry.getKey()) || entry.getKey().contains(distKey) || simpleKey.contains(entry.getKey()) || entry.getKey().contains(simpleKey)) {
+                            matched = entry.getValue();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            Map<String, Object> distMap = new LinkedHashMap<>();
+            distMap.put("district", district);
+            distMap.put("isStateSuperAdmin", false);
+            if (matched != null && !Boolean.TRUE.equals(matched.getIsStateSuperAdmin())) {
+                distMap.put("isAssigned", true);
+                String officerName = matched.getNodalOfficerName();
+                if ((officerName == null || officerName.isBlank()) && matched.getUser() != null) {
+                    officerName = matched.getUser().getName();
+                }
+                distMap.put("nodalOfficerName", officerName != null ? officerName : "Active Officer");
+                distMap.put("serviceCode", matched.getServiceCode());
+                distMap.put("designation", matched.getDesignation());
+            } else {
+                distMap.put("isAssigned", false);
+                distMap.put("nodalOfficerName", null);
+                distMap.put("serviceCode", null);
+                distMap.put("designation", null);
+            }
+            result.add(distMap);
+        }
+        return result;
+    }
+
     @Transactional
     public AuthResponse onboardGovernment(InstitutionalOnboardingRequest req) {
         try {
@@ -260,10 +352,10 @@ public class InstitutionalOnboardingService {
                 return AuthResponse.error("Provisioning request cannot be empty.");
             }
 
-            String dept = req.getGovtDepartment() != null ? req.getGovtDepartment().trim() : "";
-            if (dept.isBlank()) {
-                return AuthResponse.error("Government Department is required.");
-            }
+            String district = req.getDistrict() != null ? req.getDistrict().trim() : "";
+            boolean isSuperAdmin = Boolean.TRUE.equals(req.getIsStateSuperAdmin()) 
+                    || "Statewide (All 24 Districts)".equalsIgnoreCase(district) 
+                    || "Statewide".equalsIgnoreCase(district);
 
             String name = req.getName() != null ? req.getName().trim() : "";
             if (name.isBlank()) {
@@ -272,7 +364,7 @@ public class InstitutionalOnboardingService {
 
             String email = req.getEmail() != null ? req.getEmail().trim().toLowerCase() : "";
             if (email.isBlank() || !email.contains("@")) {
-                return AuthResponse.error("Official official email is required.");
+                return AuthResponse.error("Official email is required.");
             }
 
             String phone = req.getPhone() != null ? req.getPhone().trim() : "";
@@ -285,24 +377,61 @@ public class InstitutionalOnboardingService {
                 return AuthResponse.error("Password must be at least 6 characters long.");
             }
 
+            Role targetRole = isSuperAdmin ? Role.STATE_SUPERADMIN : Role.GOVERNMENT;
+
+            if (isSuperAdmin) {
+                // Check if a State Superadmin is already registered under a different email
+                Optional<GovernmentProfile> existingSuper = governmentProfileRepository.findByIsStateSuperAdminTrue();
+                if (existingSuper.isPresent()) {
+                    GovernmentProfile sp = existingSuper.get();
+                    boolean isSameAccount = sp.getUser() != null && email.equalsIgnoreCase(sp.getUser().getEmail());
+                    if (!isSameAccount) {
+                        String officer = sp.getNodalOfficerName() != null ? sp.getNodalOfficerName() : "Active Director";
+                        return AuthResponse.error("A State Directorate Superadmin (" + officer + ") is already registered for Jharkhand. Only 1 statewide superadmin seat is permitted.");
+                    }
+                }
+            } else {
+                if (district.isBlank()) {
+                    return AuthResponse.error("Please select a specific district jurisdiction. Each district must have one designated Nodal Officer.");
+                }
+
+                // Check if a Nodal Officer is already registered for this district
+                List<GovernmentProfile> existingDistProfiles = governmentProfileRepository.findAll();
+                String checkDist = district.toLowerCase();
+                String checkSimple = district.contains("(") ? district.substring(0, district.indexOf("(")).trim().toLowerCase() : checkDist;
+
+                for (GovernmentProfile gp : existingDistProfiles) {
+                    if (gp.getDistrict() != null && !Boolean.TRUE.equals(gp.getIsStateSuperAdmin())) {
+                        String existingD = gp.getDistrict().trim().toLowerCase();
+                        String existingSimple = existingD.contains("(") ? existingD.substring(0, existingD.indexOf("(")).trim().toLowerCase() : existingD;
+                        if (existingD.equals(checkDist) || existingSimple.equals(checkSimple) || existingD.contains(checkSimple) || checkDist.contains(existingSimple)) {
+                            return AuthResponse.error("A designated Nodal Officer (" + (gp.getNodalOfficerName() != null ? gp.getNodalOfficerName() : "Active Officer") + ") is already registered for " + district + " District. Each district can only have one assigned Nodal Officer.");
+                        }
+                    }
+                }
+            }
+
             // 1. Create or update User in users table
             Optional<User> existingEmail = userRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
             Optional<User> existingPhone = userRepository.findFirstByPhoneOrderByIdDesc(phone);
 
-            if (existingPhone.isPresent() && (existingEmail.isEmpty() || !existingPhone.get().getId().equals(existingEmail.get().getId()))) {
-                return AuthResponse.error("The mobile number (" + phone + ") is already registered with another account. Please use your direct mobile number or sign in.");
+            User user;
+            if (existingEmail.isPresent()) {
+                user = existingEmail.get();
+            } else if (existingPhone.isPresent()) {
+                user = existingPhone.get();
+            } else {
+                user = new User();
             }
-
-            User user = existingEmail.orElseGet(() -> existingPhone.orElseGet(User::new));
 
             user.setName(name);
             user.setPhone(phone);
             user.setEmail(email);
-            user.setRole(Role.GOVERNMENT);
+            user.setRole(targetRole);
             user.setVerificationStatus(VerificationStatus.APPROVED);
             user.setVerified(true);
             if (user.getReferenceId() == null) {
-                user.setReferenceId("GOV-JH-2026-" + (100 + random.nextInt(900)));
+                user.setReferenceId(isSuperAdmin ? "GOV-JH-STATE-" + (100 + random.nextInt(900)) : "GOV-JH-2026-" + (100 + random.nextInt(900)));
             }
             user.setPasswordHash(passwordEncoder.encode(rawPassword));
 
@@ -314,25 +443,50 @@ public class InstitutionalOnboardingService {
                 profile = new GovernmentProfile();
                 profile.setUser(user);
             }
-            profile.setDeptName(dept);
-            profile.setServiceCode(req.getServiceCode() != null ? req.getServiceCode().trim() : "JH-IAS-" + (1000 + random.nextInt(9000)));
-            profile.setNodalOfficerName(name);
-            profile.setDesignation(req.getDesignation() != null && !req.getDesignation().isBlank() ? req.getDesignation() : "Nodal Officer");
-            profile.setDistrict(req.getDistrict() != null && !req.getDistrict().isBlank() ? req.getDistrict() : "Ranchi");
-            profile.setPanchayatCode(req.getPanchayatCode());
+
+            if (isSuperAdmin) {
+                String dept = req.getGovtDepartment() != null && !req.getGovtDepartment().isBlank()
+                        ? req.getGovtDepartment().trim()
+                        : "State Directorate of Higher & Technical Education";
+                profile.setDeptName(dept);
+                profile.setServiceCode(req.getServiceCode() != null && !req.getServiceCode().isBlank() ? req.getServiceCode().trim() : "JH-SEC-DIR-" + (1000 + random.nextInt(9000)));
+                profile.setNodalOfficerName(name);
+                profile.setDesignation(req.getDesignation() != null && !req.getDesignation().isBlank() ? req.getDesignation() : "State Nodal Director / Superadmin");
+                profile.setDistrict("Statewide");
+                profile.setIsStateSuperAdmin(true);
+                profile.setJurisdictionLevel("STATEWIDE");
+                profile.setPanchayatCode(req.getPanchayatCode());
+            } else {
+                String dept = req.getGovtDepartment() != null && !req.getGovtDepartment().isBlank() 
+                        ? req.getGovtDepartment().trim() 
+                        : "District Administration (" + district + ")";
+                profile.setDeptName(dept);
+                profile.setServiceCode(req.getServiceCode() != null && !req.getServiceCode().isBlank() ? req.getServiceCode().trim() : "JH-IAS-" + (1000 + random.nextInt(9000)));
+                profile.setNodalOfficerName(name);
+                profile.setDesignation(req.getDesignation() != null && !req.getDesignation().isBlank() ? req.getDesignation() : "District Nodal Officer");
+                profile.setDistrict(district);
+                profile.setIsStateSuperAdmin(false);
+                profile.setJurisdictionLevel("DISTRICT");
+                profile.setPanchayatCode(req.getPanchayatCode());
+            }
 
             governmentProfileRepository.save(profile);
             user.setGovernmentProfile(profile);
 
-            String accessToken = jwtService.generateAccessToken(user, Role.GOVERNMENT);
-            String refreshToken = jwtService.generateRefreshToken(user, Role.GOVERNMENT, false);
-            UserSummaryDto userDto = UserSummaryDto.fromEntity(user, Role.GOVERNMENT);
+            String accessToken = jwtService.generateAccessToken(user, targetRole);
+            String refreshToken = jwtService.generateRefreshToken(user, targetRole, false);
+            UserSummaryDto userDto = UserSummaryDto.fromEntity(user, targetRole);
 
             redisSessionService.saveSession(accessToken, userDto, Duration.ofMinutes(15));
-            redisSessionService.saveRefreshToken(refreshToken, user.getId(), Role.GOVERNMENT.name(), Duration.ofDays(7));
+            redisSessionService.saveRefreshToken(refreshToken, user.getId(), targetRole.name(), Duration.ofDays(7));
 
-            log.info("Government officer provisioned into government_profiles: [{}] ({})", profile.getDeptName(), user.getReferenceId());
-            return AuthResponse.success("Government officer provisioned successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
+            if (isSuperAdmin) {
+                log.info("State Directorate Superadmin provisioned successfully ({})", user.getReferenceId());
+                return AuthResponse.success("State Directorate Superadmin provisioned successfully.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
+            } else {
+                log.info("Government Nodal Officer provisioned for district [{}] ({})", district, user.getReferenceId());
+                return AuthResponse.success("Government Nodal Officer provisioned successfully for " + district + " District.", accessToken, refreshToken, jwtService.getAccessExpirationSeconds(), userDto);
+            }
         } catch (Exception e) {
             log.error("Error provisioning government officer: {}", e.getMessage(), e);
             return AuthResponse.error("Government provisioning failed: " + (e.getMessage() != null ? e.getMessage() : "Unexpected error."));

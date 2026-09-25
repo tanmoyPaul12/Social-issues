@@ -11,7 +11,7 @@ const INITIAL_NOTIFICATIONS: LiveNotificationEvent[] = [
   {
     eventId: "init_1",
     eventType: "AI_CHALLENGE_ROUTED",
-    title: "🤖 AI Challenge Routing Match",
+    title: "AI Challenge Routing Match",
     message: "AI Matchmaker matched challenge #JH-2026-BOK-009 'Fluoride In Drinking Water' with BIT Mesra (96% Confidence Score).",
     severity: "INFO",
     actionUrl: "#routed",
@@ -20,7 +20,7 @@ const INITIAL_NOTIFICATIONS: LiveNotificationEvent[] = [
   {
     eventId: "init_2",
     eventType: "CSR_OFFER_RECEIVED",
-    title: "💼 Tata Steel CSR Foundation Offer",
+    title: "Tata Steel CSR Foundation Offer",
     message: "Tata Steel CSR pledged ₹5,00,000 co-funding & 1 Senior Metallurgical Mentor for Groundwater Filtration project.",
     severity: "SUCCESS",
     actionUrl: "#projects",
@@ -29,8 +29,8 @@ const INITIAL_NOTIFICATIONS: LiveNotificationEvent[] = [
   {
     eventId: "init_3",
     eventType: "CITIZEN_VERIFIED",
-    title: "✅ Citizen Verification Completed",
-    message: "Ward 4 Resident Ramesh Mahato verified deployment for Solar Water Pump and rated it 5.0 ⭐.",
+    title: "Citizen Verification Completed",
+    message: "Ward 4 Resident Ramesh Mahato verified deployment for Solar Water Pump and rated it 5.0.",
     severity: "SUCCESS",
     actionUrl: "#projects",
     timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),

@@ -121,7 +121,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
 
     // Send greeting
     setTimeout(() => {
-      sendMessage(`💬 Discussion channel initialized for "${newChannelTitle.trim()}". Real-time collaboration active.`);
+      sendMessage(`Discussion channel initialized for "${newChannelTitle.trim()}". Real-time collaboration active.`);
       isUserNearBottomRef.current = true;
       setTimeout(() => scrollToBottom("smooth"), 100);
     }, 200);
@@ -399,7 +399,6 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                           >
                             <div className="flex items-center justify-between border-b border-white/10 pb-2">
                               <span className="font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-                                <span>{isAccepted ? "🤝" : "📋"}</span>
                                 <span>{isAccepted ? "CSR Grant Proposal Accepted" : "CSR Grant Proposal Pitch"}</span>
                               </span>
                               <span className="text-[10px] text-indigo-200">{msg.timestamp}</span>
@@ -454,8 +453,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                                 isMe ? "bg-indigo-700 text-white" : "bg-slate-100 text-slate-800"
                               }`}
                             >
-                              <span>📎</span>
-                              <span className="truncate">{msg.attachmentName}</span>
+                              <span className="truncate">Attachment: {msg.attachmentName}</span>
                             </div>
                           )}
                         </div>
@@ -485,8 +483,7 @@ export function CommunicationWorkspace({ userRole = "industry" }: CommunicationW
                 {attachmentName && (
                   <div className="mb-2 p-2 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span>📎</span>
-                      <span>{attachmentName}</span>
+                      <span>Attachment: {attachmentName}</span>
                     </div>
                     <button
                       type="button"

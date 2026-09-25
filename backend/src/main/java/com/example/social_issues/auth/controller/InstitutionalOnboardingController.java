@@ -43,4 +43,9 @@ public class InstitutionalOnboardingController {
         }
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/government/districts-status")
+    public ResponseEntity<?> getGovernmentDistrictsStatus() {
+        return ResponseEntity.ok(onboardingService.getGovernmentDistrictsStatus());
+    }
 }

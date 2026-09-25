@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -264,6 +265,12 @@ public class UniversityCollabServiceImpl implements UniversityCollabService {
     @Transactional(readOnly = true)
     public List<UniversityProjectResponse> getUniversityProjects(String aisheCode) {
         log.info("Fetching active projects for university AISHE: {}", aisheCode);
+        if (aisheCode == null || aisheCode.isBlank() || aisheCode.equalsIgnoreCase("ALL")) {
+            return projectRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .stream()
+                    .map(UniversityProjectResponse::fromEntity)
+                    .collect(Collectors.toList());
+        }
         return projectRepository.findByAisheCodeOrderByCreatedAtDesc(aisheCode)
                 .stream()
                 .map(UniversityProjectResponse::fromEntity)

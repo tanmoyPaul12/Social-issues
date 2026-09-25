@@ -1,94 +1,177 @@
-"use client";
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { useIssueStore, GrassrootIssueRecord } from "@/lib/store/useIssueStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { NodalAiAuditCard } from "@/components/dashboard/NodalAiAuditCard";
+import { ProblemAiVerificationDrawer } from "./ProblemAiVerificationDrawer";
+import { GovernmentPagination } from "./GovernmentPagination";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 
-export const JHARKHAND_OFFICIAL_HEIS = [
-  {
-    hei_id: "BIT_MESRA",
-    name: "Birla Institute of Technology (BIT) Mesra, Ranchi",
-    domains: ["Water Management & Hydrology", "Rural Infrastructure & Transport", "Energy & Electricity", "Agriculture & Agro-Tech"],
-    district: "Ranchi",
-    aishe: "U-0205"
-  },
-  {
-    hei_id: "IIT_ISM_DHANBAD",
-    name: "IIT (ISM) Dhanbad",
-    domains: ["Environment & Climate Resilience", "Energy & Electricity", "Water Management & Hydrology"],
-    district: "Dhanbad",
-    aishe: "U-0206"
-  },
-  {
-    hei_id: "BAU_RANCHI",
-    name: "Birsa Agricultural University (BAU), Kanke",
-    domains: ["Agriculture & Agro-Tech", "Livelihood & Rural Employment", "Water Management & Hydrology"],
-    district: "Ranchi",
-    aishe: "U-0208"
-  },
-  {
-    hei_id: "RANCHI_UNIV",
-    name: "Ranchi University",
-    domains: ["Education & Skilling", "Healthcare & Public Health", "Governance & Public Service Delivery"],
-    district: "Ranchi",
-    aishe: "U-0209"
-  },
-  {
-    hei_id: "NIT_JAMSHEDPUR",
-    name: "National Institute of Technology (NIT) Jamshedpur",
-    domains: ["Rural Infrastructure & Transport", "Sanitation & Waste Management", "Energy & Electricity"],
-    district: "East Singhbhum",
-    aishe: "U-0207"
-  }
-];
-
-// Helper to compute best AI matched HEI based on domain and district
-export function calculateAiHeiRecommendation(issue: GrassrootIssueRecord) {
-  const domainText = (issue.domain || issue.sector || "").toLowerCase();
-  const districtText = (issue.district || "").toLowerCase();
-
-  let bestMatch = JHARKHAND_OFFICIAL_HEIS[0];
-  let highestScore = 0.5;
-
-  for (const hei of JHARKHAND_OFFICIAL_HEIS) {
-    let score = 0.5;
-    const hasDomain = hei.domains.some((d) => domainText.includes(d.split(" ")[0].toLowerCase()));
-    if (hasDomain) score += 0.35;
-    if (districtText.includes(hei.district.toLowerCase())) score += 0.15;
-
-    if (score > highestScore) {
-      highestScore = score;
-      bestMatch = hei;
-    }
-  }
-
-  const matchPercent = Math.min(99, Math.round(highestScore * 100));
-  return {
-    hei: bestMatch,
-    matchScore: matchPercent,
-    rationale: `AI matched ${bestMatch.name} based on domain '${issue.domain || issue.sector}' and regional capabilities in ${bestMatch.district}.`
-  };
+interface RegisteredUniversity {
+  id: string;
+  code: string;
+  name: string;
+  district: string;
+  state?: string;
 }
 
-export function AiRoutingMasterOversight() {
+// Helper to extract real AI matched HEI from saved database record (validationReportJson or recommendedHeisJson)
+export function extractAiRecommendation(issue: GrassrootIssueRecord): {
+  hasAiRecommendation: boolean;
+  heiName?: string;
+  matchScore?: number;
+  domain?: string;
+} {
+  // 1. Check recommendedHeisJson
+  if (issue.recommendedHeisJson) {
+    try {
+      const rec = typeof issue.recommendedHeisJson === "string"
+        ? JSON.parse(issue.recommendedHeisJson)
+        : issue.recommendedHeisJson;
+      if (Array.isArray(rec) && rec.length > 0) {
+        const top = rec[0];
+        const rawScore = top.match_score || top.total_score || top.score || 0.85;
+        const scorePct = rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
+        return {
+          hasAiRecommendation: true,
+          heiName: top.university_name || top.name || top.hei_name || top.assigned_hei,
+          matchScore: scorePct,
+          domain: top.domain
+        };
+      }
+    } catch {}
+  }
+
+  // 2. Check validationReportJson
+  if (issue.validationReportJson) {
+    try {
+      const rep = typeof issue.validationReportJson === "string"
+        ? JSON.parse(issue.validationReportJson)
+        : issue.validationReportJson;
+      if (rep?.scored_universities && Array.isArray(rep.scored_universities) && rep.scored_universities.length > 0) {
+        const top = rep.scored_universities[0];
+        const rawScore = top.total_score || top.match_score || 0.85;
+        const scorePct = rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
+        return {
+          hasAiRecommendation: true,
+          heiName: top.university_name,
+          matchScore: scorePct,
+          domain: rep.validation?.domain || rep.requirements?.domain
+        };
+      }
+    } catch {}
+  }
+
+  return { hasAiRecommendation: false };
+}
+
+interface AiRoutingMasterOversightProps {
+  userDistrict?: string;
+}
+
+export function AiRoutingMasterOversight({ userDistrict }: AiRoutingMasterOversightProps = {}) {
   const { user, token } = useAuthStore();
-  const { issues, approveIssueAllocation, reassignIssueHEI, revokeIssueAllocation } = useIssueStore();
+  const {
+    issues,
+    isLoading,
+    totalElements,
+    totalPages,
+    currentPage,
+    pageSize,
+    fetchPaginatedIssues,
+    approveIssueAllocation,
+    reassignIssueHEI,
+    revokeIssueAllocation
+  } = useIssueStore();
+
+  const rawDistrict = userDistrict || user?.district?.trim() || "";
+  const isDistrictScoped = Boolean(
+    rawDistrict &&
+    rawDistrict.toLowerCase() !== "statewide" &&
+    rawDistrict.toLowerCase() !== "all" &&
+    rawDistrict.toLowerCase() !== "all 24 districts" &&
+    rawDistrict.toLowerCase() !== "jharkhand"
+  );
+
+  // Dynamic registered universities from database
+  const [registeredUniversities, setRegisteredUniversities] = useState<RegisteredUniversity[]>([]);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState("All 24 Districts");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING_APPROVAL" | "ALLOCATED" | "REVOKED">("ALL");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(
+    isDistrictScoped ? rawDistrict : "All 24 Districts"
+  );
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING_APPROVAL" | "ALLOCATED" | "REVOKED">("PENDING_APPROVAL");
   const [sectorFilter, setSectorFilter] = useState("ALL");
+
+  // Local Pagination State
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  useEffect(() => {
+    if (isDistrictScoped) {
+      setSelectedDistrict(rawDistrict);
+    }
+  }, [isDistrictScoped, rawDistrict]);
+
+  // Fetch registered universities from database API
+  useEffect(() => {
+    async function loadUniversities() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/triage/universities`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setRegisteredUniversities(data);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch registered universities from database:", e);
+      }
+    }
+    loadUniversities();
+  }, [token]);
+
+  // Server-driven paginated fetch
+  const loadData = useCallback(() => {
+    const activeDistrict = isDistrictScoped ? rawDistrict : (selectedDistrict === "All 24 Districts" ? undefined : selectedDistrict);
+    const backendStatus =
+      statusFilter === "ALLOCATED"
+        ? "ASSIGNED_HEI"
+        : statusFilter === "PENDING_APPROVAL"
+        ? "SUBMITTED"
+        : undefined;
+
+    fetchPaginatedIssues({
+      district: activeDistrict,
+      status: backendStatus,
+      sector: sectorFilter !== "ALL" ? sectorFilter : undefined,
+      search: searchQuery.trim() || undefined,
+      page,
+      size: rowsPerPage,
+      token: token || undefined
+    });
+  }, [fetchPaginatedIssues, isDistrictScoped, rawDistrict, selectedDistrict, statusFilter, sectorFilter, searchQuery, page, rowsPerPage, token]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Modals state
   const [selectedIssueForReroute, setSelectedIssueForReroute] = useState<GrassrootIssueRecord | null>(null);
-  const [targetHeiName, setTargetHeiName] = useState(JHARKHAND_OFFICIAL_HEIS[0].name);
+  const [targetHeiName, setTargetHeiName] = useState("");
   const [rerouteJustification, setRerouteJustification] = useState("");
   const [isRerouting, setIsRerouting] = useState(false);
+
+  // Set default target HEI when universities load or modal opens
+  useEffect(() => {
+    if (registeredUniversities.length > 0 && !targetHeiName) {
+      setTargetHeiName(registeredUniversities[0].name);
+    }
+  }, [registeredUniversities, targetHeiName]);
 
   const [selectedIssueForRevoke, setSelectedIssueForRevoke] = useState<GrassrootIssueRecord | null>(null);
   const [revocationReason, setRevocationReason] = useState("Administrative reallocation by State Nodal Department");
@@ -96,6 +179,7 @@ export function AiRoutingMasterOversight() {
   const [isRevoking, setIsRevoking] = useState(false);
 
   const [selectedAuditIssue, setSelectedAuditIssue] = useState<GrassrootIssueRecord | null>(null);
+  const [selectedVerificationIssue, setSelectedVerificationIssue] = useState<GrassrootIssueRecord | null>(null);
 
   // Filter issues
   const filteredIssues = issues.filter((issue) => {
@@ -139,14 +223,19 @@ export function AiRoutingMasterOversight() {
   });
 
   // KPI Calculations
-  const totalIngested = issues.length;
+  const totalIngested = totalElements || issues.length;
   const activeAllocated = issues.filter((i) => i.status === "ASSIGNED_HEI" && i.assignedHEI).length;
   const pendingApprovals = issues.filter((i) => i.status !== "ASSIGNED_HEI" && (!i.validationReportJson || !i.validationReportJson.includes("revocationHistory"))).length;
   const revokedCount = issues.filter((i) => i.validationReportJson && i.validationReportJson.includes("revocationHistory")).length;
 
   // Handler: Verify & Approve AI Recommendation
   const handleApproveAiRecommendation = async (issue: GrassrootIssueRecord) => {
-    const recommendation = calculateAiHeiRecommendation(issue);
+    const aiRec = extractAiRecommendation(issue);
+    const targetHei = aiRec.hasAiRecommendation && aiRec.heiName 
+      ? aiRec.heiName 
+      : (registeredUniversities[0]?.name || "University");
+    const scorePct = aiRec.matchScore || 85;
+
     try {
       if (issue.numericId) {
         const res = await fetch(`${API_BASE_URL}/triage/${issue.numericId}/assign`, {
@@ -156,8 +245,8 @@ export function AiRoutingMasterOversight() {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
           body: JSON.stringify({
-            heiName: recommendation.hei.name,
-            notes: `Verified & Approved by State Nodal Officer. AI Match Score: ${recommendation.matchScore}%`
+            heiName: targetHei,
+            notes: `Verified & Approved by State Nodal Officer. AI Match Score: ${scorePct}%`
           })
         });
         if (!res.ok) {
@@ -166,8 +255,9 @@ export function AiRoutingMasterOversight() {
         }
       }
 
-      approveIssueAllocation(issue.id, recommendation.hei.name, `AI Recommendation Approved (${recommendation.matchScore}% Confidence)`);
-      toast.success(`Ticket #${issue.id} verified and officially allocated to ${recommendation.hei.name}!`);
+      approveIssueAllocation(issue.id, targetHei, `AI Recommendation Approved (${scorePct}% Confidence)`);
+      toast.success(`Ticket #${issue.id} verified and officially allocated to ${targetHei}!`);
+      loadData();
     } catch (err: any) {
       toast.error(err.message || "Failed to approve allocation");
     }
@@ -200,6 +290,7 @@ export function AiRoutingMasterOversight() {
       toast.success(`Ticket #${selectedIssueForReroute.id} re-routed and allocated to ${targetHeiName}.`);
       setSelectedIssueForReroute(null);
       setRerouteJustification("");
+      loadData();
     } catch (err: any) {
       toast.error(err.message || "Failed to re-route challenge");
     } finally {
@@ -237,6 +328,7 @@ export function AiRoutingMasterOversight() {
       toast.warning(`Allocation revoked for Ticket #${selectedIssueForRevoke.id}. Problem returned to state pool.`);
       setSelectedIssueForRevoke(null);
       setCustomRevokeNote("");
+      loadData();
     } catch (err: any) {
       toast.error(err.message || "Failed to revoke allocation");
     } finally {
@@ -245,87 +337,125 @@ export function AiRoutingMasterOversight() {
   };
 
   return (
-    <div className="space-y-6 pt-1 text-slate-800">
+    <div className="space-y-6 pt-1 text-[#4a4a4a]">
       {/* Top Banner & Description */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#d9d9d9] rounded-xl p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">
-              Government Master AI Routing &amp; HEI Allocation Control
+            <h2 className="text-base font-bold text-[#1a0e3d] tracking-tight">
+              {isDistrictScoped ? `${rawDistrict} District AI Routing & HEI Allocation Control` : "Government Master AI Routing & HEI Allocation Control"}
             </h2>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300">
-              STATE NODAL CLEARANCE
-            </span>
+            {isDistrictScoped ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-[#F2fcef] text-[#002110] border border-[#a3e635]">
+                {rawDistrict} JURISDICTION (LOCKED)
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-[#e6fffb] text-[#002329] border border-[#99f6e4]">
+                STATE NODAL CLEARANCE
+              </span>
+            )}
           </div>
-          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-            Full administrative authority over automated AI problem routing. Audit algorithmic match confidence, approve university allocations, override target institutions, or revoke challenges back to the statewide pool.
+          <p className="text-xs text-[#4a4a4a] mt-1 max-w-3xl leading-relaxed">
+            {isDistrictScoped
+              ? `Authorized jurisdiction for ${rawDistrict} District Collectorate. Audit algorithmic match confidence for local grievances, verify and approve HEI capstone allocations, and reassign target institutions.`
+              : "Full administrative authority over automated AI problem routing. Audit algorithmic match confidence, approve university allocations, override target institutions, or revoke challenges back to the statewide pool."}
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI MATCHER LIVE
-          </span>
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#F2efff] border border-[#d9d9d9] text-xs font-bold text-[#1a0e3d] cursor-pointer transition-colors"
+            title="Refresh issues"
+          >
+            <svg className={`w-3.5 h-3.5 text-[#1a0e3d] ${isLoading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{isLoading ? "Refreshing..." : "Refresh"}</span>
+          </button>
+          
         </div>
       </div>
 
-      {/* KPI Cards (Single Neutral Aesthetic) */}
+      {/* KPI Cards (Brand Palette: Primary Violet, Green Success, Orange Warning, Red Danger) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Ingested</span>
-          <div className="text-2xl font-black text-slate-900 font-mono mt-1">{totalIngested}</div>
-          <span className="text-[10px] text-slate-400 font-medium">All 24 Districts</span>
+        <div className="bg-white border border-[#d9d9d9] rounded-xl p-4 shadow-xs">
+          <span className="text-[11px] font-bold text-[#4a4a4a] uppercase tracking-wider block">Total Ingested</span>
+          <div className="text-2xl font-black text-[#1a0e3d] font-mono mt-1">{totalIngested}</div>
+          <span className="text-[10px] text-slate-500 font-medium">{isDistrictScoped ? `${rawDistrict} Collectorate` : "All 24 Districts"}</span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Active Allocations</span>
-          <div className="text-2xl font-black text-slate-900 font-mono mt-1">{activeAllocated}</div>
-          <span className="text-[10px] text-slate-400 font-medium">HEI Capstones Assigned</span>
+        <div className="bg-white border border-[#d9d9d9] rounded-xl p-4 shadow-xs">
+          <span className="text-[11px] font-bold text-[#4a4a4a] uppercase tracking-wider block">Active Allocations</span>
+          <div className="text-2xl font-black text-[#002110] font-mono mt-1">{activeAllocated}</div>
+          <span className="text-[10px] text-[#059669] font-medium font-mono">HEI Capstones Assigned</span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Pending Verification</span>
-          <div className="text-2xl font-black text-slate-900 font-mono mt-1">{pendingApprovals}</div>
-          <span className="text-[10px] text-slate-400 font-medium">Awaiting Nodal Sign-off</span>
+        <div className="bg-white border border-[#d9d9d9] rounded-xl p-4 shadow-xs">
+          <span className="text-[11px] font-bold text-[#4a4a4a] uppercase tracking-wider block">Pending Verification</span>
+          <div className="text-2xl font-black text-[#612500] font-mono mt-1">{pendingApprovals}</div>
+          <span className="text-[10px] text-[#d97706] font-medium font-mono">Awaiting Nodal Sign-off</span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Revoked from HEIs</span>
-          <div className="text-2xl font-black text-slate-900 font-mono mt-1">{revokedCount}</div>
-          <span className="text-[10px] text-slate-400 font-medium">Returned to State Pool</span>
+        <div className="bg-white border border-[#d9d9d9] rounded-xl p-4 shadow-xs">
+          <span className="text-[11px] font-bold text-[#4a4a4a] uppercase tracking-wider block">Revoked from HEIs</span>
+          <div className="text-2xl font-black text-[#3a0907] font-mono mt-1">{revokedCount}</div>
+          <span className="text-[10px] text-[#dc2626] font-medium font-mono">Returned to State Pool</span>
         </div>
       </div>
 
       {/* Filter & Search Controls */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+      <div className="bg-white border border-[#d9d9d9] rounded-xl p-4 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="flex-1 w-full">
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search by Ticket ID, challenge title, keyword, or allocated college..."
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 font-medium"
+              className="w-full px-3.5 py-2 bg-[#F2efff]/30 border border-[#d9d9d9] rounded-lg text-xs text-[#1a0e3d] outline-none focus:bg-white focus:ring-1 focus:ring-[#1a0e3d] font-medium"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <select
               value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setPage(0);
+              }}
+              disabled={isDistrictScoped}
+              className={`px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-xs font-bold text-[#1a0e3d] outline-none focus:ring-1 focus:ring-[#1a0e3d] ${isDistrictScoped ? "bg-[#f5f5f5] opacity-80 cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <option>All 24 Districts</option>
-              {["Ranchi", "Dhanbad", "Dumka", "East Singhbhum", "West Singhbhum", "Bokaro", "Hazaribagh", "Deoghar", "Giridih", "Ramgarh", "Latehar", "Sahibganj"].map((d) => (
-                <option key={d}>{d}</option>
-              ))}
+              {isDistrictScoped ? (
+                <option value={rawDistrict}>{rawDistrict} (Locked)</option>
+              ) : (
+                <>
+                  <option value="All 24 Districts">All 24 Districts</option>
+                  {[
+                    "Ranchi", "Dhanbad", "Dumka", "East Singhbhum", "West Singhbhum",
+                    "Bokaro", "Hazaribagh", "Deoghar", "Giridih", "Ramgarh",
+                    "Palamu", "Latehar", "Sahibganj", "Khunti", "Gumla",
+                    "Simdega", "Garhwa", "Godda", "Chatra", "Koderma",
+                    "Jamtara", "Pakur", "Lohardaga", "Saraikela Kharsawan"
+                  ].map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </>
+              )}
             </select>
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              onChange={(e) => {
+                setStatusFilter(e.target.value as any);
+                setPage(0);
+              }}
+              className="px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-xs font-bold text-[#1a0e3d] outline-none cursor-pointer focus:ring-1 focus:ring-[#1a0e3d]"
             >
               <option value="ALL">All Allocation States</option>
               <option value="PENDING_APPROVAL">Pending Nodal Approval</option>
@@ -335,8 +465,11 @@ export function AiRoutingMasterOversight() {
 
             <select
               value={sectorFilter}
-              onChange={(e) => setSectorFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              onChange={(e) => {
+                setSectorFilter(e.target.value);
+                setPage(0);
+              }}
+              className="px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-xs font-bold text-[#1a0e3d] outline-none cursor-pointer focus:ring-1 focus:ring-[#1a0e3d]"
             >
               <option value="ALL">All Domains</option>
               <option value="WATER">Water Resources</option>
@@ -350,17 +483,17 @@ export function AiRoutingMasterOversight() {
         </div>
       </div>
 
-      {/* Master Allocation Table (Single-Line Compact, No Linebreaks, Sleek Single-Neutral, No Horizontal Scroll) */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-        {filteredIssues.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-xs space-y-2">
-            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+      {/* Master Allocation Table */}
+      <div className="bg-white border border-[#d9d9d9] rounded-xl shadow-xs overflow-hidden">
+        {issues.length === 0 ? (
+          <div className="p-12 text-center text-[#4a4a4a] text-xs space-y-2">
+            <div className="w-10 h-10 rounded-full bg-[#F2efff] text-[#1a0e3d] flex items-center justify-center mx-auto">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <div className="font-bold text-slate-700">No Challenges Matching Current Filter</div>
-            <p className="max-w-md mx-auto text-slate-400">
+            <div className="font-bold text-[#1a0e3d]">No Challenges Matching Current Filter</div>
+            <p className="max-w-md mx-auto text-[#4a4a4a]">
               Adjust your search keywords, district filter, or allocation status to view challenges.
             </p>
           </div>
@@ -368,40 +501,38 @@ export function AiRoutingMasterOversight() {
           <div className="w-full">
             <table className="w-full table-fixed text-left text-xs">
               <thead>
-                <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
+                <tr className="bg-[#F2efff] border-b border-[#d9d9d9] text-[#1a0e3d] font-bold uppercase text-[10px]">
                   <th className="py-3 px-3.5 w-[125px]">Ticket ID</th>
                   <th className="py-3 px-3">Problem &amp; Domain</th>
                   <th className="py-3 px-3 w-[105px]">District</th>
                   <th className="py-3 px-3 w-[180px]">AI Match &amp; HEI</th>
                   <th className="py-3 px-3 w-[150px]">Allocation Status</th>
-                  <th className="py-3 px-3.5 w-[230px] text-right">Master Actions</th>
+                  <th className="py-3 px-3.5 w-[140px] text-right">Verification</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredIssues.map((issue, idx) => {
-                  const recommendation = calculateAiHeiRecommendation(issue);
+              <tbody className="divide-y divide-[#d9d9d9]/60 font-medium">
+                {issues.map((issue, idx) => {
+                  const aiRec = extractAiRecommendation(issue);
                   const isAssigned = Boolean(issue.assignedHEI && issue.assignedHEI !== "Pending Assignment" && issue.status === "ASSIGNED_HEI");
                   const hasRevocationHistory = issue.validationReportJson && issue.validationReportJson.includes("revocationHistory");
-                  const shortAssigned = issue.assignedHEI ? issue.assignedHEI.split(",")[0].replace("Birla Institute of Technology", "BIT").replace("Birsa Agricultural University", "BAU").replace("National Institute of Technology", "NIT") : "";
-                  const shortAi = recommendation.hei.name.split(",")[0].replace("Birla Institute of Technology", "BIT").replace("Birsa Agricultural University", "BAU").replace("National Institute of Technology", "NIT");
 
                   return (
-                    <tr key={`${issue.id}-${idx}`} className="hover:bg-slate-50/90 transition-colors">
+                    <tr key={`${issue.id}-${idx}`} className="hover:bg-[#F2efff]/20 transition-colors">
                       {/* Ticket ID */}
-                      <td className="py-3 px-3.5 font-mono font-bold text-slate-900 truncate">
+                      <td className="py-3 px-3.5 font-mono font-bold text-[#1a0e3d] truncate">
                         {issue.id}
                       </td>
 
                       {/* Problem Statement */}
                       <td className="py-3 px-3 truncate">
-                        <span className="font-bold text-slate-900 mr-1.5">{issue.title}</span>
-                        <span className="text-[11px] text-slate-500 font-normal">
+                        <span className="font-bold text-[#1a0e3d] mr-1.5">{issue.title}</span>
+                        <span className="text-[11px] text-[#32174a] font-normal">
                           ({issue.domain || issue.sector || "Civic Tech"})
                         </span>
                       </td>
 
                       {/* District */}
-                      <td className="py-3 px-3 text-slate-700 font-mono text-[11px] truncate">
+                      <td className="py-3 px-3 text-[#4a4a4a] font-mono text-[11px] truncate">
                         {issue.district}
                       </td>
 
@@ -409,16 +540,22 @@ export function AiRoutingMasterOversight() {
                       <td className="py-3 px-3 truncate">
                         {isAssigned ? (
                           <div className="flex items-center gap-1 truncate" title={`Active: ${issue.assignedHEI}`}>
-                            <span className="font-bold text-slate-900 truncate">{shortAssigned}</span>
-                            <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                            <span className="font-bold text-[#1a0e3d] truncate">{issue.assignedHEI}</span>
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#F2fcef] text-[#002110] border border-[#a3e635] shrink-0">
                               ACTIVE
                             </span>
                           </div>
+                        ) : aiRec.hasAiRecommendation ? (
+                          <div className="flex items-center gap-1.5 truncate" title={`AI Suggestion: ${aiRec.heiName}`}>
+                            <span className="font-bold text-[#1a0e3d] truncate">{aiRec.heiName}</span>
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#F2efff] text-[#1a0e3d] border border-[#dcd3ff] shrink-0">
+                              {aiRec.matchScore}%
+                            </span>
+                          </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 truncate" title={`AI Suggestion: ${recommendation.hei.name}`}>
-                            <span className="font-bold text-slate-800 truncate">{shortAi}</span>
-                            <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
-                              {recommendation.matchScore}%
+                          <div className="flex items-center gap-1.5 truncate text-[#4a4a4a]">
+                            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                              Pending AI Analysis
                             </span>
                           </div>
                         )}
@@ -427,76 +564,34 @@ export function AiRoutingMasterOversight() {
                       {/* Status */}
                       <td className="py-3 px-3">
                         {isAssigned ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 truncate">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#F2fcef] text-[#002110] border border-[#a3e635] truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#059669] shrink-0" />
                             <span className="truncate">ALLOCATED</span>
                           </span>
                         ) : hasRevocationHistory ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 truncate">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFF8f8] text-[#3a0907] border border-[#fecaca] truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#dc2626] shrink-0" />
                             <span className="truncate">REVOKED</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 truncate">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFF7e6] text-[#612500] border border-[#fed7aa] truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#d97706] animate-pulse shrink-0" />
                             <span className="truncate">PENDING</span>
                           </span>
                         )}
                       </td>
 
-                      {/* Master Action Controls */}
+                      {/* Single Action: Check / Verify Button (Primary Violet #1a0e3d) */}
                       <td className="py-3 px-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Option 1: One-click Approve AI Match */}
-                          {!isAssigned && (
-                            <button
-                              type="button"
-                              onClick={() => handleApproveAiRecommendation(issue)}
-                              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-2xs shrink-0"
-                              title={`Approve AI match and allocate to ${recommendation.hei.name}`}
-                            >
-                              Approve
-                            </button>
-                          )}
-
-                          {/* Option 2: Re-route / Override College */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedIssueForReroute(issue);
-                              setTargetHeiName(issue.assignedHEI || recommendation.hei.name);
-                              setRerouteJustification("");
-                            }}
-                            className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
-                          >
-                            {isAssigned ? "Re-route" : "Route"}
-                          </button>
-
-                          {/* Option 3: Revoke Allocation (Master Power) */}
-                          {isAssigned && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedIssueForRevoke(issue);
-                                setRevocationReason("Administrative reallocation by State Nodal Department");
-                                setCustomRevokeNote("");
-                              }}
-                              className="px-2 py-1 rounded bg-slate-100 hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-slate-300 hover:border-rose-300 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
-                            >
-                              Revoke
-                            </button>
-                          )}
-
-                          {/* Inspect Multi-Modal AI Dossier */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedAuditIssue(issue)}
-                            className="px-1.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-medium text-[11px] transition-colors cursor-pointer shrink-0"
-                            title="Inspect AI Multi-Modal consensus and evidence"
-                          >
-                            AI →
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVerificationIssue(issue)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a0e3d] hover:bg-[#2e1764] text-white font-bold text-[11px] shadow-xs hover:shadow transition-all cursor-pointer group shrink-0"
+                          title="Open full AI verification dossier and faculty matching"
+                        >
+                          
+                          <span>Check & Verify</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -507,54 +602,97 @@ export function AiRoutingMasterOversight() {
         )}
       </div>
 
+      {/* Pagination Bar */}
+      <GovernmentPagination
+        currentPage={page}
+        totalPages={totalPages}
+        pageSize={rowsPerPage}
+        totalElements={totalElements}
+        onPageChange={(newPage) => setPage(newPage)}
+        onPageSizeChange={(newSize) => {
+          setRowsPerPage(newSize);
+          setPage(0);
+        }}
+        isLoading={isLoading}
+      />
+
       {/* ── MODAL 1: RE-ROUTE / OVERRIDE UNIVERSITY ALLOCATION ── */}
       {selectedIssueForReroute && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-xl bg-white border border-slate-300 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="w-full max-w-xl bg-white border border-[#d9d9d9] rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#d9d9d9] pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Master Allocation Override</span>
-                <h3 className="text-base font-bold text-slate-900">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#32174a]">Master Allocation Override</span>
+                <h3 className="text-base font-bold text-[#1a0e3d]">
                   Re-route Challenge #{selectedIssueForReroute.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedIssueForReroute(null)}
-                className="w-7 h-7 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold flex items-center justify-center cursor-pointer"
+                className="w-7 h-7 rounded-lg bg-white hover:bg-[#F2efff] text-[#4a4a4a] hover:text-[#1a0e3d] border border-[#d9d9d9] font-bold flex items-center justify-center cursor-pointer transition-colors"
               >
-                ✕
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-                <div className="font-bold text-slate-900">{selectedIssueForReroute.title}</div>
-                <div className="text-slate-500 truncate">{selectedIssueForReroute.description}</div>
-                <div className="text-[11px] text-slate-400 font-mono mt-1">
+              <div className="p-3 bg-[#F2efff]/50 border border-[#dcd3ff] rounded-lg space-y-1">
+                <div className="font-bold text-[#1a0e3d]">{selectedIssueForReroute.title}</div>
+                <div className="text-[#4a4a4a] truncate">{selectedIssueForReroute.description}</div>
+                <div className="text-[11px] text-[#4a4a4a] font-mono mt-1">
                   District: {selectedIssueForReroute.district} • Domain: {selectedIssueForReroute.domain || selectedIssueForReroute.sector}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">
+                <label className="font-bold text-[#1a0e3d] uppercase text-[10px] tracking-wider block">
                   Select Target Higher Education Institution (Jharkhand HEI)
                 </label>
                 <select
                   value={targetHeiName}
                   onChange={(e) => setTargetHeiName(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer"
+                  className="w-full p-2.5 bg-white border border-[#d9d9d9] rounded-lg text-xs font-bold text-[#1a0e3d] outline-none focus:ring-1 focus:ring-[#1a0e3d] cursor-pointer"
                 >
-                  {JHARKHAND_OFFICIAL_HEIS.map((hei) => (
-                    <option key={hei.hei_id} value={hei.name}>
-                      {hei.name} (AISHE {hei.aishe}) — {hei.district}
-                    </option>
-                  ))}
+                  {registeredUniversities.length === 0 ? (
+                    <option value="">Loading registered universities...</option>
+                  ) : isDistrictScoped ? (
+                    <>
+                      {registeredUniversities.filter((u) => u.district?.toLowerCase() === rawDistrict.toLowerCase()).length > 0 && (
+                        <optgroup label={`Local ${rawDistrict} District Institutions (High Proximity)`}>
+                          {registeredUniversities
+                            .filter((u) => u.district?.toLowerCase() === rawDistrict.toLowerCase())
+                            .map((uni) => (
+                              <option key={uni.id || uni.code} value={uni.name}>
+                                {uni.name} ({uni.district || rawDistrict}) — Local District
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="Other Jharkhand State Institutions">
+                        {registeredUniversities
+                          .filter((u) => u.district?.toLowerCase() !== rawDistrict.toLowerCase())
+                          .map((uni) => (
+                            <option key={uni.id || uni.code} value={uni.name}>
+                              {uni.name} ({uni.district || "Jharkhand"})
+                            </option>
+                          ))}
+                      </optgroup>
+                    </>
+                  ) : (
+                    registeredUniversities.map((uni) => (
+                      <option key={uni.id || uni.code} value={uni.name}>
+                        {uni.name} ({uni.district || "Jharkhand"})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">
+                <label className="font-bold text-[#1a0e3d] uppercase text-[10px] tracking-wider block">
                   Nodal Officer Justification / Administrative Note
                 </label>
                 <textarea
@@ -562,16 +700,16 @@ export function AiRoutingMasterOversight() {
                   onChange={(e) => setRerouteJustification(e.target.value)}
                   placeholder="State the statutory reason or departmental priority for this institutional routing..."
                   rows={3}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full p-2.5 bg-white border border-[#d9d9d9] rounded-lg text-xs text-[#1a0e3d] outline-none focus:ring-1 focus:ring-[#1a0e3d]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#d9d9d9]">
               <button
                 type="button"
                 onClick={() => setSelectedIssueForReroute(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-[#4a4a4a] hover:bg-[#F2efff] rounded-lg cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -579,7 +717,7 @@ export function AiRoutingMasterOversight() {
                 type="button"
                 disabled={isRerouting}
                 onClick={handleConfirmReroute}
-                className="px-5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                className="px-5 py-2 text-xs font-bold bg-[#1a0e3d] hover:bg-[#2e1764] text-white rounded-lg transition-colors cursor-pointer shadow-xs disabled:opacity-50"
               >
                 {isRerouting ? "Dispatching..." : "Confirm & Dispatch Allocation"}
               </button>
@@ -591,43 +729,45 @@ export function AiRoutingMasterOversight() {
       {/* ── MODAL 2: MASTER REVOCATION CONFIRMATION ── */}
       {selectedIssueForRevoke && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-lg bg-white border border-slate-300 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="w-full max-w-lg bg-white border border-[#d9d9d9] rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#d9d9d9] pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Master Administrative Revocation</span>
-                <h3 className="text-base font-bold text-slate-900">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#3a0907]">Master Administrative Revocation</span>
+                <h3 className="text-base font-bold text-[#1a0e3d]">
                   Revoke Allocation for #{selectedIssueForRevoke.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedIssueForRevoke(null)}
-                className="w-7 h-7 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold flex items-center justify-center cursor-pointer"
+                className="w-7 h-7 rounded-lg bg-white hover:bg-[#F2efff] text-[#4a4a4a] hover:text-[#1a0e3d] border border-[#d9d9d9] font-bold flex items-center justify-center cursor-pointer transition-colors"
               >
-                ✕
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-                <div className="font-bold text-slate-900">{selectedIssueForRevoke.title}</div>
-                <div className="text-slate-600">
+              <div className="p-3 bg-[#F2efff]/50 border border-[#dcd3ff] rounded-lg space-y-1">
+                <div className="font-bold text-[#1a0e3d]">{selectedIssueForRevoke.title}</div>
+                <div className="text-[#4a4a4a]">
                   Currently Assigned To: <strong>{selectedIssueForRevoke.assignedHEI}</strong>
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] leading-relaxed">
+              <div className="p-3 bg-[#FFF7e6] border border-[#fed7aa] rounded-lg text-[#612500] text-[11px] leading-relaxed">
                 <strong>Administrative Notice:</strong> Revoking this challenge will immediately withdraw it from the university&apos;s active research roster and return it to the Statewide Open Pool for reassignment.
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">
+                <label className="font-bold text-[#1a0e3d] uppercase text-[10px] tracking-wider block">
                   Select Statutory Revocation Reason
                 </label>
                 <select
                   value={revocationReason}
                   onChange={(e) => setRevocationReason(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer"
+                  className="w-full p-2.5 bg-white border border-[#d9d9d9] rounded-lg text-xs font-bold text-[#1a0e3d] outline-none focus:ring-1 focus:ring-[#1a0e3d] cursor-pointer"
                 >
                   <option value="Administrative reallocation by State Nodal Department">Administrative reallocation by State Nodal Department</option>
                   <option value="Institutional capacity/timeline milestone non-compliance">Institutional capacity/timeline milestone non-compliance</option>
@@ -638,7 +778,7 @@ export function AiRoutingMasterOversight() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">
+                <label className="font-bold text-[#1a0e3d] uppercase text-[10px] tracking-wider block">
                   Additional Revocation Audit Notes (Optional)
                 </label>
                 <textarea
@@ -646,16 +786,16 @@ export function AiRoutingMasterOversight() {
                   onChange={(e) => setCustomRevokeNote(e.target.value)}
                   placeholder="Enter specific audit remarks to record in the permanent ledger..."
                   rows={2}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full p-2.5 bg-white border border-[#d9d9d9] rounded-lg text-xs text-[#1a0e3d] outline-none focus:ring-1 focus:ring-[#1a0e3d]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#d9d9d9]">
               <button
                 type="button"
                 onClick={() => setSelectedIssueForRevoke(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-[#4a4a4a] hover:bg-[#F2efff] rounded-lg cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -663,7 +803,7 @@ export function AiRoutingMasterOversight() {
                 type="button"
                 disabled={isRevoking}
                 onClick={handleConfirmRevoke}
-                className="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                className="px-5 py-2 text-xs font-bold bg-[#dc2626] hover:bg-[#b91c1c] text-white rounded-lg transition-colors cursor-pointer shadow-xs disabled:opacity-50"
               >
                 {isRevoking ? "Revoking..." : "Confirm & Revoke Allocation"}
               </button>
@@ -685,6 +825,15 @@ export function AiRoutingMasterOversight() {
             />
           </div>
         </div>
+      )}
+
+      {/* ── DEDICATED RIGHT-SIDE AI VERIFICATION & FACULTY DOSSIER DRAWER ── */}
+      {selectedVerificationIssue && (
+        <ProblemAiVerificationDrawer
+          issue={selectedVerificationIssue}
+          onClose={() => setSelectedVerificationIssue(null)}
+          onSuccess={loadData}
+        />
       )}
     </div>
   );

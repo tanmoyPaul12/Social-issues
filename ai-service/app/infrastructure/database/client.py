@@ -23,10 +23,10 @@ db_pool = None
 def get_db_url() -> str:
     db_url = os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
     if not db_url:
-        user = os.getenv("POSTGRES_USER", "postgres.wrpknffixyckcugslhly")
-        password = os.getenv("POSTGRES_PASSWORD", "Bappa@123")
-        host = os.getenv("POSTGRES_HOST", "aws-0-ap-south-1.pooler.supabase.com")
-        port = os.getenv("POSTGRES_PORT", "6543")
+        user = os.getenv("POSTGRES_USER", "postgres.twdhxcuxxznfqvqhtdmk")
+        password = os.getenv("POSTGRES_PASSWORD", "39i9?+fED6gwv!F")
+        host = os.getenv("POSTGRES_HOST", "db.twdhxcuxxznfqvqhtdmk.supabase.co")
+        port = os.getenv("POSTGRES_PORT", "5432")
         dbname = os.getenv("POSTGRES_DB", "postgres")
         db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
     return db_url

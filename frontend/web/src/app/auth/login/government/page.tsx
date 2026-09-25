@@ -270,12 +270,18 @@ export default function GovernmentLoginPage() {
           </div>
 
           {/* Switch Portal Link */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex items-center justify-between text-xs text-slate-500 font-medium">
             <Link
               href="/auth/login"
-              className="text-xs text-slate-500 hover:text-slate-800 font-medium transition-colors"
+              className="hover:text-slate-800 transition-colors"
             >
-              ← Back to Citizen &amp; Public Sign In
+              ← Citizen Sign In
+            </Link>
+            <Link
+              href="/auth/login/superadmin"
+              className="text-indigo-700 hover:text-indigo-900 font-bold transition-colors"
+            >
+              State SuperAdmin Sign In ★
             </Link>
           </div>
         </div>

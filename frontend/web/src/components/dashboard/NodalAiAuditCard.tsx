@@ -68,11 +68,41 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
     : (user?.orgName || "Birla Institute of Technology, Mesra");
 
   const [selectedHei, setSelectedHei] = useState<string>(defaultHei);
+  const [registeredUniversities, setRegisteredUniversities] = useState<Array<{ id: string; code: string; name: string; district: string }>>([]);
+
+  // Load registered universities dynamically from database
+  React.useEffect(() => {
+    async function loadUniversities() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/triage/universities`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setRegisteredUniversities(data);
+            if (!issue?.assignedHEI || issue.assignedHEI === "Pending Assignment") {
+              setSelectedHei(user?.orgName || data[0].name);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch registered universities in audit card:", e);
+      }
+    }
+    loadUniversities();
+  }, [token, issue?.assignedHEI, user?.orgName]);
+
+  // Anonymous & Privacy Status
+  const isAnonymous = Boolean(issue?.isAnonymous);
+  const userRoleStr = String(user?.role || '').toUpperCase();
+  const isGovtAdmin = userRoleStr === 'GOVERNMENT' || userRoleStr === 'ADMIN' || userRoleStr === 'PLATFORM_ADMIN';
+  const shouldMaskCitizen = isAnonymous && !isGovtAdmin;
 
   // Citizen Contact Details
-  const citizenEmail = issue?.citizenEmail || "citizen.anonymous@jharkhand.gov.in";
-  const citizenName = issue?.citizenName || "Registered Citizen Submitter";
-  const citizenPhone = issue?.citizenPhone || "Not Provided";
+  const citizenEmail = shouldMaskCitizen ? "Protected (Anonymous)" : (issue?.citizenEmail || "citizen.anonymous@jharkhand.gov.in");
+  const citizenName = shouldMaskCitizen ? "Anonymous Citizen" : (issue?.citizenName || "Registered Citizen Submitter");
+  const citizenPhone = shouldMaskCitizen ? "Protected" : (issue?.citizenPhone || "Not Provided");
   const createdAt = issue?.createdAt ? new Date(issue.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently Submitted';
 
   // Attachments
@@ -226,24 +256,24 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl rounded-2xl border border-slate-300 bg-white text-slate-900 shadow-2xl overflow-hidden font-sans">
+    <div className="w-full max-w-5xl rounded-2xl border border-[#d9d9d9] bg-white text-[#4a4a4a] shadow-2xl overflow-hidden font-sans">
       
       {/* High-Contrast Minimal Header */}
-      <div className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between border-b border-[#d9d9d9] bg-[#F2efff] px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a0e3d] text-white font-bold text-sm">
             N
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#32174a]">
                 State Nodal Oversight &amp; Inspection
               </span>
-              <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-300">
+              <span className="rounded bg-[#F2efff] px-2 py-0.5 text-[10px] font-bold text-[#1a0e3d] border border-[#dcd3ff]">
                 Ticket #{issueId}
               </span>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-[#1a0e3d]">
               {title}
             </h2>
           </div>
@@ -253,10 +283,10 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
           <span
             className={`rounded px-3 py-1 text-xs font-bold border ${
               priorityLevel === 'CRITICAL'
-                ? 'bg-red-50 text-red-700 border-red-300'
+                ? 'bg-[#FFF8f8] text-[#3a0907] border-[#fecaca]'
                 : priorityLevel === 'HIGH'
-                ? 'bg-amber-50 text-amber-800 border-amber-300'
-                : 'bg-blue-50 text-blue-800 border-blue-300'
+                ? 'bg-[#FFF7e6] text-[#612500] border-[#fed7aa]'
+                : 'bg-[#F2efff] text-[#1a0e3d] border-[#dcd3ff]'
             }`}
           >
             {priorityLevel} PRIORITY ({priorityScore}/100)
@@ -266,26 +296,30 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition-colors cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#4a4a4a] hover:text-[#1a0e3d] border border-[#d9d9d9] font-bold hover:bg-[#F2efff] transition-colors cursor-pointer"
             >
-              ✕
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           )}
         </div>
-      </div>      {/* Main Structural Tabs Bar */}
-      <div className="flex border-b border-slate-200 bg-slate-100 px-6">
+      </div>
+
+      {/* Main Structural Tabs Bar */}
+      <div className="flex border-b border-[#d9d9d9] bg-[#F2efff]/30 px-6">
         <button
           type="button"
           onClick={() => setMainTab('citizen')}
           className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition-colors cursor-pointer ${
             mainTab === 'citizen'
-              ? 'border-slate-900 bg-white text-slate-900 shadow-2xs'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-[#1a0e3d] bg-white text-[#1a0e3d] shadow-2xs'
+              : 'border-transparent text-[#4a4a4a] hover:text-[#1a0e3d]'
           }`}
         >
           <span>1. Citizen Grievance &amp; Documents</span>
           {issue?.isDuplicate && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-800">
+            <span className="rounded-full bg-[#FFF5ea] px-2 py-0.5 text-[9px] font-bold text-[#803800] border border-[#fed7aa] whitespace-nowrap shrink-0 inline-flex items-center leading-none">
               Duplicate Alert
             </span>
           )}
@@ -296,12 +330,12 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
           onClick={() => setMainTab('ai')}
           className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition-colors cursor-pointer ${
             mainTab === 'ai'
-              ? 'border-slate-900 bg-white text-slate-900 shadow-2xs'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-[#1a0e3d] bg-white text-[#1a0e3d] shadow-2xs'
+              : 'border-transparent text-[#4a4a4a] hover:text-[#1a0e3d]'
           }`}
         >
           <span>2. Field Inspection &amp; Ground Verification</span>
-          <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-800">
+          <span className="rounded-full bg-[#F2fcef] px-2 py-0.5 text-[9px] font-bold text-[#002110] border border-[#a3e635] whitespace-nowrap shrink-0 inline-flex items-center leading-none">
             Verified
           </span>
         </button>
@@ -311,8 +345,8 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
           onClick={() => setMainTab('action')}
           className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition-colors cursor-pointer ${
             mainTab === 'action'
-              ? 'border-slate-900 bg-white text-slate-900 shadow-2xs'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-[#1a0e3d] bg-white text-[#1a0e3d] shadow-2xs'
+              : 'border-transparent text-[#4a4a4a] hover:text-[#1a0e3d]'
           }`}
         >
           <span>3. Officer Review &amp; University Allocation</span>
@@ -346,9 +380,20 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
             
             {/* Citizen Submitter Info Box */}
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                Citizen Submitter Profile &amp; Location Data
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Citizen Submitter Profile &amp; Location Data
+                </h3>
+                {isAnonymous && (
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    isGovtAdmin 
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300' 
+                      : 'bg-slate-200 text-slate-700 border border-slate-300'
+                  }`}>
+                    {isGovtAdmin ? 'Anonymous to Public (Govt Admin View)' : 'Identity Masked (Anonymous Submission)'}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                 <div>
                   <span className="text-slate-500 block text-[11px]">Submitter Name</span>
@@ -550,8 +595,11 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   </h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg">
-                    ✓ Verified on Ground
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg inline-flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Verified on Ground</span>
                   </span>
                 </div>
               </div>
@@ -638,15 +686,15 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                     onChange={(e) => setSelectedHei(e.target.value)}
                     className="w-full p-2 bg-slate-50 border border-slate-300 rounded text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {user?.orgName && (
-                      <option value={user.orgName}>{user.orgName} (Newly Registered University)</option>
+                    {registeredUniversities.length === 0 ? (
+                      <option value="">Loading registered universities...</option>
+                    ) : (
+                      registeredUniversities.map((uni) => (
+                        <option key={uni.id || uni.code} value={uni.name}>
+                          {uni.name} ({uni.district || "Jharkhand"})
+                        </option>
+                      ))
                     )}
-                    <option value="Birla Institute of Technology, Mesra">Birla Institute of Technology, Mesra (BIT Mesra - AISHE U-0205)</option>
-                    <option value="IIT (ISM) Dhanbad">IIT (ISM) Dhanbad (AISHE U-0206)</option>
-                    <option value="NIT Jamshedpur">NIT Jamshedpur (AISHE U-0207)</option>
-                    <option value="Birsa Agricultural University, Kanke">Birsa Agricultural University, Kanke (BAU - AISHE U-0208)</option>
-                    <option value="Ranchi University">Ranchi University (AISHE U-0209)</option>
-                    <option value="Vinoba Bhave University, Hazaribagh">Vinoba Bhave University, Hazaribagh (VBU - AISHE U-0210)</option>
                   </select>
                   <p className="text-xs text-slate-600">Select target University R&D center to receive this civic problem statement.</p>
                 </div>
@@ -680,7 +728,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                 )}
               </div>
 
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-[#4a4a4a]">
                 Execute an official administrative action to route, validate, or reject this citizen grievance:
               </p>
 
@@ -689,10 +737,10 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleAssign}
-                  className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
+                  className={`py-3 px-4 rounded-xl font-bold text-xs transition-colors cursor-pointer border shadow-xs ${
                     decisionState === 'ASSIGNED'
-                      ? 'bg-emerald-700 text-white border-emerald-800 shadow-md'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-700'
+                      ? 'bg-[#002110] text-white border-[#059669]'
+                      : 'bg-[#1a0e3d] text-white hover:bg-[#2e1764] border-[#1a0e3d]'
                   } disabled:opacity-50`}
                 >
                   Approve &amp; Route to HEI
@@ -702,10 +750,10 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleValidate}
-                  className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
+                  className={`py-3 px-4 rounded-xl font-bold text-xs transition-colors cursor-pointer border shadow-xs ${
                     decisionState === 'VALIDATED'
-                      ? 'bg-blue-800 text-white border-blue-900 shadow-md'
-                      : 'bg-blue-700 text-white hover:bg-blue-800 border-blue-800'
+                      ? 'bg-[#002110] text-white border-[#059669]'
+                      : 'bg-[#F2efff] text-[#1a0e3d] hover:bg-[#e4ddff] border-[#dcd3ff]'
                   } disabled:opacity-50`}
                 >
                   Validate &amp; Confirm
@@ -715,10 +763,10 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleReject}
-                  className={`py-3 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
+                  className={`py-3 px-4 rounded-xl font-bold text-xs transition-colors cursor-pointer border shadow-xs ${
                     decisionState === 'REJECTED'
-                      ? 'bg-red-800 text-white border-red-900 shadow-md'
-                      : 'bg-red-700 text-white hover:bg-red-800 border-red-800'
+                      ? 'bg-[#3a0907] text-white border-[#dc2626]'
+                      : 'bg-[#FFF8f8] text-[#3a0907] hover:bg-[#fee2e2] border-[#fecaca]'
                   } disabled:opacity-50`}
                 >
                   Reject Grievance
@@ -731,23 +779,26 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={handleRevoke}
-                    className={`w-full py-2.5 px-4 rounded font-bold text-xs transition-colors cursor-pointer border ${
+                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs transition-colors cursor-pointer border ${
                       decisionState === 'REVOKED'
-                        ? 'bg-rose-800 text-white border-rose-900'
-                        : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border-rose-300'
+                        ? 'bg-[#3a0907] text-white border-[#dc2626]'
+                        : 'bg-[#FFF8f8] text-[#3a0907] hover:bg-[#fee2e2] border-[#fecaca]'
                     } disabled:opacity-50 flex items-center justify-center gap-2`}
                   >
-                    <span>⚠️ Revoke University Allocation (Return to Statewide Pool)</span>
+                    <svg className="w-4 h-4 text-[#dc2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Revoke University Allocation (Return to Statewide Pool)</span>
                   </button>
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <div className="flex gap-2 pt-2 border-t border-[#d9d9d9]">
                 <button
                   type="button"
                   disabled={isProcessing}
                   onClick={handleClarification}
-                  className="py-2 px-3 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                  className="py-2 px-3 text-xs font-semibold text-[#4a4a4a] hover:text-[#1a0e3d] hover:bg-[#F2efff] rounded-lg transition-colors cursor-pointer"
                 >
                   Request Citizen Clarification
                 </button>
@@ -755,7 +806,7 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleEscalate}
-                  className="py-2 px-3 text-xs font-semibold text-red-700 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                  className="py-2 px-3 text-xs font-semibold text-[#3a0907] hover:text-[#3a0907] hover:bg-[#FFF8f8] rounded-lg transition-colors cursor-pointer"
                 >
                   Escalate to Cabinet
                 </button>
@@ -768,11 +819,11 @@ export const NodalAiAuditCard: React.FC<NodalAiAuditCardProps> = ({
       </div>
       
       {/* High Contrast Minimal Footer */}
-      <div className="flex flex-wrap items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3 text-xs text-slate-600">
+      <div className="flex flex-wrap items-center justify-between border-t border-[#d9d9d9] bg-[#F2efff] px-6 py-3 text-xs text-[#4a4a4a]">
         <div>
-          Citizen Email: <strong className="text-slate-900 font-mono">{citizenEmail}</strong>
+          Citizen Email: <strong className="text-[#1a0e3d] font-mono">{citizenEmail}</strong>
         </div>
-        <div className="font-mono text-[11px] text-slate-500">
+        <div className="font-mono text-[11px] text-[#4a4a4a]">
           State Administrative Inspection Terminal
         </div>
       </div>

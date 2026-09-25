@@ -36,6 +36,7 @@ public class InstitutionalOnboardingRequest {
     private String govtDepartment;
     private String serviceCode;
     private String panchayatCode;
+    private Boolean isStateSuperAdmin;
 
     public InstitutionalOnboardingRequest() {
     }
@@ -246,5 +247,13 @@ public class InstitutionalOnboardingRequest {
 
     public void setPanchayatCode(String panchayatCode) {
         this.panchayatCode = panchayatCode;
+    }
+
+    public Boolean getIsStateSuperAdmin() {
+        return isStateSuperAdmin != null ? isStateSuperAdmin : false;
+    }
+
+    public void setIsStateSuperAdmin(Boolean isStateSuperAdmin) {
+        this.isStateSuperAdmin = isStateSuperAdmin;
     }
 }

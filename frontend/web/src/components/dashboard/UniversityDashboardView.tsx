@@ -758,7 +758,7 @@ export function UniversityDashboardView({
         await postThreadMessage(
           token,
           createdThread.id,
-          `🚀 PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${challenge.ticketId}\nLead Faculty: ${defaultFacultyName}\nAcademic Track: Capstone R&D (4 NEP Credits)\n\nDiscussion channel initialized for project milestones and deliverables.`,
+          `PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${challenge.ticketId}\nLead Faculty: ${defaultFacultyName}\nAcademic Track: Capstone R&D (4 NEP Credits)\n\nDiscussion channel initialized for project milestones and deliverables.`,
           undefined,
           undefined,
           createdThread.pilotId,
@@ -851,7 +851,7 @@ export function UniversityDashboardView({
         await postThreadMessage(
           token,
           createdThread.id,
-          `🚀 PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${selectedChallengeForAccept.ticketId}\nLead Faculty: ${acceptFaculty || defaultFaculty}\nLead Student: ${acceptStudentLead.trim() || "Student Project Team"}\n\nDiscussion channel initialized for project milestones and deliverables.`,
+          `PROJECT ACTIVATED: ${projTitle}\n\nTicket ID: ${selectedChallengeForAccept.ticketId}\nLead Faculty: ${acceptFaculty || defaultFaculty}\nLead Student: ${acceptStudentLead.trim() || "Student Project Team"}\n\nDiscussion channel initialized for project milestones and deliverables.`,
           undefined,
           undefined,
           createdThread.pilotId,

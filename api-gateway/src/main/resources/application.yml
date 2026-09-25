@@ -47,7 +47,7 @@ spring:
       routes:
         # 1. Notification Microservice Routes (SSE Streaming & History)
         - id: notification-service-direct
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8082}
+          uri: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8082}
           predicates:
             - Path=/notifications/**
           filters:
@@ -55,7 +55,7 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
 
         - id: notification-service-prefixed
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8082}
+          uri: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8082}
           predicates:
             - Path=/api/notifications/**
           filters:
@@ -65,7 +65,7 @@ spring:
 
         # 2. AI Microservice Routes
         - id: ai-service
-          uri: ${AI_SERVICE_URL:http://localhost:8002}
+          uri: ${AI_SERVICE_URL:http://127.0.0.1:8000}
           predicates:
             - Path=/api/ai/**
           filters:
@@ -75,7 +75,7 @@ spring:
 
         # 3. Core Backend Service Routes (Auth, Issues, Onboarding, Industry, Projects, etc.)
         - id: core-backend-service
-          uri: ${BACKEND_SERVICE_URL:http://localhost:8081}
+          uri: ${BACKEND_SERVICE_URL:http://127.0.0.1:8081}
           predicates:
             - Path=/api/**
           filters:

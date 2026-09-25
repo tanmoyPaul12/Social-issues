@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useMentorship } from "@/modules/industry/hooks/useMentorship";
 import { MentorshipEngagement, LogSessionPayload } from "@/modules/industry/services/mentorshipApi";
 import { toast } from "@/components/dashboard/ToastStack";
+import { Users } from "@/components/dashboard/icons";
 
 interface MentorshipEngagementsSectionProps {
   onNavigateSubTab?: (subTab: string) => void;
@@ -99,8 +100,8 @@ export function MentorshipEngagementsSection({ onNavigateSubTab }: MentorshipEng
         </div>
       ) : engagements.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-xl mx-auto font-bold">
-            🎓
+          <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+            <Users className="w-6 h-6" />
           </div>
           <h4 className="font-bold text-slate-900 text-sm">No Active Mentorship Nominations</h4>
           <p className="text-xs text-slate-500 max-w-md mx-auto">

@@ -31,6 +31,8 @@ public class UserSummaryDto {
     private String csrNumber;
     private String referenceId;
     private VerificationStatus verificationStatus;
+    private Boolean isStateSuperAdmin;
+    private String jurisdictionLevel;
 
     public UserSummaryDto() {
     }
@@ -70,13 +72,15 @@ public class UserSummaryDto {
             dto.setDesignation(ip.getDesignation());
             dto.setDistrict(ip.getDistrict());
             dto.setNodalPerson(ip.getSpocName());
-        } else if (effectiveRole == Role.GOVERNMENT && user.getGovernmentProfile() != null) {
+        } else if ((effectiveRole == Role.GOVERNMENT || effectiveRole == Role.STATE_SUPERADMIN || effectiveRole == Role.NODAL_ADMIN) && user.getGovernmentProfile() != null) {
             GovernmentProfile gp = user.getGovernmentProfile();
             dto.setEntityType(EntityType.ORGANIZATION);
             dto.setOrgName(gp.getDeptName());
             dto.setOrgCode(gp.getServiceCode());
             dto.setDesignation(gp.getDesignation());
-            dto.setDistrict(gp.getDistrict());
+            dto.setIsStateSuperAdmin(gp.getIsStateSuperAdmin());
+            dto.setJurisdictionLevel(gp.getJurisdictionLevel());
+            dto.setDistrict(Boolean.TRUE.equals(gp.getIsStateSuperAdmin()) ? "Statewide" : gp.getDistrict());
             dto.setNodalPerson(gp.getNodalOfficerName());
         } else if (user.getCitizenProfile() != null) {
             CitizenProfile cp = user.getCitizenProfile();
@@ -108,6 +112,16 @@ public class UserSummaryDto {
             dto.setDesignation(ip.getDesignation());
             dto.setDistrict(ip.getDistrict());
             dto.setNodalPerson(ip.getSpocName());
+        } else if (user.getGovernmentProfile() != null) {
+            GovernmentProfile gp = user.getGovernmentProfile();
+            dto.setEntityType(EntityType.ORGANIZATION);
+            dto.setOrgName(gp.getDeptName());
+            dto.setOrgCode(gp.getServiceCode());
+            dto.setDesignation(gp.getDesignation());
+            dto.setIsStateSuperAdmin(gp.getIsStateSuperAdmin());
+            dto.setJurisdictionLevel(gp.getJurisdictionLevel());
+            dto.setDistrict(Boolean.TRUE.equals(gp.getIsStateSuperAdmin()) ? "Statewide" : gp.getDistrict());
+            dto.setNodalPerson(gp.getNodalOfficerName());
         }
 
         return dto;
@@ -307,5 +321,21 @@ public class UserSummaryDto {
 
     public void setVerificationStatus(VerificationStatus verificationStatus) {
         this.verificationStatus = verificationStatus;
+    }
+
+    public Boolean getIsStateSuperAdmin() {
+        return isStateSuperAdmin != null ? isStateSuperAdmin : false;
+    }
+
+    public void setIsStateSuperAdmin(Boolean isStateSuperAdmin) {
+        this.isStateSuperAdmin = isStateSuperAdmin;
+    }
+
+    public String getJurisdictionLevel() {
+        return jurisdictionLevel != null ? jurisdictionLevel : "DISTRICT";
+    }
+
+    public void setJurisdictionLevel(String jurisdictionLevel) {
+        this.jurisdictionLevel = jurisdictionLevel;
     }
 }

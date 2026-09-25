@@ -1,0 +1,25 @@
+Brand Colors
+
+Primary (Violet): Used for core brand identity, headers, primary interaction actions, and focus states. (Codes: #F2efff to #1a0e3d)
+
+Secondary (Amber): Used for warm accents, high-contrast call-outs, highlight elements, and complex data visualizations. (Codes: #FFF5ea to #110700)
+
+Tertiary (Soft Purple): Used as a supporting brand accent for decorative flourishes and complex charts. (Codes: #F6effb to #32174a)
+
+Semantic Colors
+
+Green (Success): Represents positive outcomes, status indicators, completion tags, and validation checkmarks. (Codes: #F2fcef to #002110)
+
+Red (Error & Danger): Signifies critical system failures, input errors, warning dialogues, and destructive action buttons. (Codes: #FFF8f8 to #3a0907)
+
+Orange (Warning): Used for caution, pending status, non-critical alerts, and attention flags. (Codes: #FFF7e6 to #612500)
+
+Cyan (Information): For informational notices, help tips, and standard info call-outs. (Codes: #e6fffb to #002329)
+
+Blue (Accent): Applied to system actions, text links, and secondary buttons. (Codes: #F5faff to #001944)
+
+Neutral Colors
+
+Planes & Edges: These provide the backbone for surfaces, text, background planes, divides, and shadows. (Codes: #FFFFFF to #000000)
+
+Detailed usage rules are also specified for achieving correct accessibility, such as using Neutral-700 (#4a4a4a) for standard text and Neutral-300 (#d9d9d9) for dividing borders.

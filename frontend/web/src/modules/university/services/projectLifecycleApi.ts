@@ -11,6 +11,8 @@ import {
   RecordTestResultRequest,
   SubmitSignoffRequest,
   CreateIpRecordRequest,
+  ProjectLifecycleDossierDto,
+  UniversityProject,
 } from "../types";
 
 const API_BASE_URL =
@@ -165,17 +167,107 @@ export const projectLifecycleApi = {
     return res.json();
   },
 
-  async createIpRecord(
-    projectId: number,
-    data: CreateIpRecordRequest,
+  // --- Government Nodal & Statewide Oversight ---
+  async getProjectsOversight(
+    filters?: {
+      district?: string;
+      domain?: string;
+      stage?: string;
+      aisheCode?: string;
+      search?: string;
+      page?: number;
+      size?: number;
+    },
     token?: string | null
-  ): Promise<IpRecordDto> {
-    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/ip-records`, {
+  ): Promise<{ content: UniversityProject[]; totalElements: number; totalPages: number; page: number; size: number }> {
+    const params = new URLSearchParams();
+    if (filters?.district && filters.district !== "All 24 Districts" && filters.district !== "ALL") {
+      params.append("district", filters.district);
+    }
+    if (filters?.domain && filters.domain !== "ALL") {
+      params.append("domain", filters.domain);
+    }
+    if (filters?.stage && filters.stage !== "ALL") {
+      params.append("stage", filters.stage);
+    }
+    if (filters?.aisheCode && filters.aisheCode !== "ALL") {
+      params.append("aisheCode", filters.aisheCode);
+    }
+    if (filters?.search && filters.search.trim().length > 0) {
+      params.append("search", filters.search.trim());
+    }
+    if (typeof filters?.page === "number") {
+      params.append("page", String(filters.page));
+    }
+    if (typeof filters?.size === "number") {
+      params.append("size", String(filters.size));
+    }
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`${API_BASE_URL}/projects${qs}`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Failed to fetch projects oversight list");
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return {
+        content: data,
+        totalElements: data.length,
+        totalPages: 1,
+        page: 0,
+        size: data.length
+      };
+    }
+    return {
+      content: data.content || [],
+      totalElements: typeof data.totalElements === "number" ? data.totalElements : (data.content?.length || 0),
+      totalPages: typeof data.totalPages === "number" ? data.totalPages : 1,
+      page: typeof data.number === "number" ? data.number : (filters?.page || 0),
+      size: typeof data.size === "number" ? data.size : (filters?.size || 10)
+    };
+  },
+
+  async getProjectDossier(projectId: number, token?: string | null): Promise<ProjectLifecycleDossierDto> {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/dossier`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Failed to fetch 360-degree project dossier");
+    return res.json();
+  },
+
+  async recordNodalSignoff(
+    projectId: number,
+    data: SubmitSignoffRequest,
+    token?: string | null
+  ): Promise<ApprovalSignoffDto> {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/nodal-signoff`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to register IP record");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || "Failed to record Nodal sign-off");
+    }
+    return res.json();
+  },
+
+  async reviewDeliverable(
+    projectId: number,
+    deliverableId: number,
+    isApproved: boolean,
+    reviewNotes?: string,
+    token?: string | null
+  ): Promise<DeliverableDto> {
+    const params = new URLSearchParams({ isApproved: String(isApproved) });
+    if (reviewNotes) params.append("reviewNotes", reviewNotes);
+
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/deliverables/${deliverableId}/review?${params.toString()}`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Failed to review deliverable");
     return res.json();
   },
 };
+

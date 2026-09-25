@@ -23,6 +23,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final CitizenProfileRepository citizenProfileRepository;
+    private final GovernmentProfileRepository governmentProfileRepository;
     private final OtpSessionRepository otpSessionRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final JwtService jwtService;
@@ -31,11 +32,13 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthServiceImpl(UserRepository userRepository,
                            CitizenProfileRepository citizenProfileRepository,
+                           GovernmentProfileRepository governmentProfileRepository,
                            OtpSessionRepository otpSessionRepository,
                            JwtService jwtService,
                            RedisSessionService redisSessionService) {
         this.userRepository = userRepository;
         this.citizenProfileRepository = citizenProfileRepository;
+        this.governmentProfileRepository = governmentProfileRepository;
         this.otpSessionRepository = otpSessionRepository;
         this.jwtService = jwtService;
         this.redisSessionService = redisSessionService;
@@ -181,10 +184,14 @@ public class AuthServiceImpl implements AuthService {
                     if (targetRole == Role.INDUSTRY && authenticatedUser.getIndustryProfile() == null && authenticatedUser.getRole() != Role.INDUSTRY) {
                         return AuthResponse.error("No registered Corporate CSR / Enterprise profile found for this account. Please complete industry onboarding.", "PROFILE_NOT_FOUND");
                     }
-                    if (targetRole == Role.GOVERNMENT && authenticatedUser.getGovernmentProfile() == null && authenticatedUser.getRole() != Role.GOVERNMENT) {
+                    if ((targetRole == Role.GOVERNMENT || targetRole == Role.STATE_SUPERADMIN) && authenticatedUser.getGovernmentProfile() == null && authenticatedUser.getRole() != Role.GOVERNMENT && authenticatedUser.getRole() != Role.STATE_SUPERADMIN) {
                         return AuthResponse.error("No registered Government Department profile found for this account.", "PROFILE_NOT_FOUND");
                     }
-                    activeRole = targetRole;
+                    if (targetRole == Role.GOVERNMENT && authenticatedUser.getRole() == Role.STATE_SUPERADMIN) {
+                        activeRole = Role.STATE_SUPERADMIN;
+                    } else {
+                        activeRole = targetRole;
+                    }
                 } catch (IllegalArgumentException e) {
                     log.warn("Unknown portal role requested: {}", request.getPortalRole());
                 }

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { OnboardingFormWrapper } from "@/components/onboarding/OnboardingFormWrapper";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { toast } from "@/components/dashboard/ToastStack";
 import { GuestOnlyGuard } from "@/components/auth/GuestOnlyGuard";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 
 const JHARKHAND_DISTRICTS = [
   "Ranchi", "Dhanbad", "East Singhbhum (Jamshedpur)", "Bokaro", "Hazaribagh",
@@ -15,18 +17,13 @@ const JHARKHAND_DISTRICTS = [
   "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Sahibganj", "Simdega"
 ];
 
-const GOVT_DEPARTMENTS = [
-  "Department of Higher & Technical Education",
-  "Department of Agriculture & Animal Husbandry",
-  "Health, Medical Education & Family Welfare",
-  "Department of Drinking Water & Sanitation",
-  "Department of Forest, Environment & Climate Change",
-  "Department of Energy & JREDA",
-  "Department of Urban Development & Housing",
-  "Women, Child Development & Social Security",
-  "Personnel, Administrative Reforms & Rajbhasha",
-  "Rural Development & Panchayati Raj",
-];
+interface DistrictStatus {
+  district: string;
+  isAssigned: boolean;
+  nodalOfficerName: string | null;
+  serviceCode: string | null;
+  designation: string | null;
+}
 
 export default function GovernmentOnboardingPage() {
   const router = useRouter();
@@ -37,11 +34,14 @@ export default function GovernmentOnboardingPage() {
   const [refId, setRefId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Step 1: Department & Administrative Identity
-  const [govtDepartment, setGovtDepartment] = useState(GOVT_DEPARTMENTS[0]);
-  const [govtDistrict, setGovtDistrict] = useState("Statewide (All 24 Districts)");
+  // Districts status from backend API
+  const [districtStatuses, setDistrictStatuses] = useState<DistrictStatus[]>([]);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(true);
+
+  // Step 1: District Jurisdiction & Administrative Identity
+  const [govtDistrict, setGovtDistrict] = useState("");
   const [serviceCode, setServiceCode] = useState("");
-  const [govtDesignation, setGovtDesignation] = useState("");
+  const [govtDesignation, setGovtDesignation] = useState("District Nodal Officer");
 
   // Step 2: Nodal Officer Credentials & Security
   const [nodalName, setNodalName] = useState("");
@@ -58,23 +58,78 @@ export default function GovernmentOnboardingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const steps = [
-    "Department & Identity",
+    "District & Identity",
     "Nodal Credentials",
     "Scope & Authorization",
   ];
+
+  // Fetch registered/available districts from backend API
+  useEffect(() => {
+    async function loadDistrictsStatus() {
+      setIsLoadingDistricts(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/onboarding/government/districts-status`, {
+          cache: "no-store"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setDistrictStatuses(data);
+            // Select first available district by default if not set
+            const firstAvailable = data.find((d: DistrictStatus) => !d.isAssigned);
+            if (firstAvailable) {
+              setGovtDistrict((prev) => prev || firstAvailable.district);
+            }
+          }
+        } else {
+          // Fallback to local district list
+          setDistrictStatuses(
+            JHARKHAND_DISTRICTS.map((d) => ({
+              district: d,
+              isAssigned: false,
+              nodalOfficerName: null,
+              serviceCode: null,
+              designation: null,
+            }))
+          );
+        }
+      } catch (e) {
+        console.warn("Could not load districts status from backend:", e);
+        setDistrictStatuses(
+          JHARKHAND_DISTRICTS.map((d) => ({
+            district: d,
+            isAssigned: false,
+            nodalOfficerName: null,
+            serviceCode: null,
+            designation: null,
+          }))
+        );
+      } finally {
+        setIsLoadingDistricts(false);
+      }
+    }
+    loadDistrictsStatus();
+  }, []);
 
   const validateStep = (stepIndex: number): boolean => {
     const errs: Record<string, string> = {};
 
     if (stepIndex === 0) {
-      if (!govtDepartment.trim()) {
-        errs.govtDepartment = "Please select your department.";
+      if (!govtDistrict.trim()) {
+        errs.govtDistrict = "Please select your assigned district jurisdiction.";
+      } else {
+        const chosen = districtStatuses.find(
+          (d) => d.district.toLowerCase() === govtDistrict.toLowerCase()
+        );
+        if (chosen?.isAssigned) {
+          errs.govtDistrict = `A Nodal Officer (${chosen.nodalOfficerName || "Active Officer"}) is already registered for ${govtDistrict} District. Please select an available district.`;
+        }
       }
       if (!serviceCode.trim()) {
         errs.serviceCode = "Official Service ID / Employee Code is required.";
       }
       if (!govtDesignation.trim()) {
-        errs.govtDesignation = "Official designation is required (e.g. BDO / Nodal Officer).";
+        errs.govtDesignation = "Official designation is required (e.g. District Nodal Officer / BDO).";
       }
     } else if (stepIndex === 1) {
       if (!nodalName.trim()) {
@@ -112,14 +167,18 @@ export default function GovernmentOnboardingPage() {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
+      const isStatewide = govtDistrict.toLowerCase().includes("statewide");
       const res = await onboardGovernment({
         name: nodalName.trim(),
         email: govtEmail.trim().toLowerCase(),
         phone: govtPhone.replace(/\D/g, ""),
         password: password.trim(),
-        district: govtDistrict,
+        district: isStatewide ? "Statewide" : govtDistrict,
+        isStateSuperAdmin: isStatewide,
         designation: govtDesignation.trim(),
-        govtDepartment: govtDepartment.trim(),
+        govtDepartment: isStatewide
+          ? "State Directorate of Higher & Technical Education"
+          : `District Administration (${govtDistrict})`,
         serviceCode: serviceCode.trim().toUpperCase(),
         panchayatCode: panchayatCode.trim() || undefined,
       });
@@ -128,10 +187,14 @@ export default function GovernmentOnboardingPage() {
         const generated =
           (res as any).referenceId ||
           (res as any).user?.referenceId ||
-          `GOV-JH-2026-${Math.floor(100 + Math.random() * 900)}`;
+          (isStatewide ? `GOV-JH-STATE-${Math.floor(100 + Math.random() * 900)}` : `GOV-JH-2026-${Math.floor(100 + Math.random() * 900)}`);
         setRefId(generated);
         setIsComplete(true);
-        toast.success("Government Nodal Officer provisioned successfully!");
+        toast.success(
+          isStatewide
+            ? "State Directorate Superadmin provisioned successfully!"
+            : `Government Nodal Officer provisioned successfully for ${govtDistrict} District!`
+        );
       } else {
         const err = (res as any).message || "Provisioning failed. Please review your details.";
         setErrorMessage(err);
@@ -149,11 +212,14 @@ export default function GovernmentOnboardingPage() {
     }
   };
 
+  // Count available districts
+  const availableCount = districtStatuses.filter((d) => !d.isAssigned).length;
+
   return (
     <GuestOnlyGuard>
       <OnboardingFormWrapper
-        roleTitle="Government &amp; Nodal Officer Registration"
-        roleTagline="Access administrative triage consoles, review AI classifications, and route validated challenges"
+        roleTitle="District Nodal Officer Registration"
+        roleTagline="1 Nodal Officer per District • Statewide Challenge Triage & Academic Routing"
         steps={steps}
         currentStepIndex={currentStep}
         onPrevStep={handlePrev}
@@ -161,8 +227,7 @@ export default function GovernmentOnboardingPage() {
         isComplete={isComplete}
         referenceId={refId}
         completedSummary={[
-          { label: "Department", value: govtDepartment || "-" },
-          { label: "Jurisdiction", value: govtDistrict || "-" },
+          { label: "Assigned District", value: `${govtDistrict} District` || "-" },
           { label: "Officer Name", value: nodalName || "-" },
           { label: "Designation", value: govtDesignation || "-" },
           { label: "Service ID", value: serviceCode.toUpperCase() || "-" },
@@ -176,51 +241,72 @@ export default function GovernmentOnboardingPage() {
           </div>
         )}
 
-        {/* Step 0: Department & Identity */}
+        {/* Step 0: District Jurisdiction & Identity */}
         {currentStep === 0 && (
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Government Department / Ministry
-              </label>
-              <select
-                value={govtDepartment}
-                onChange={(e) => {
-                  setGovtDepartment(e.target.value);
-                  if (errors.govtDepartment) setErrors((prev) => ({ ...prev, govtDepartment: "" }));
-                }}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
-              >
-                {GOVT_DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
+            {/* Informational District Governance Callout */}
+            <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-950 leading-relaxed flex items-start gap-2.5">
+              <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="space-y-0.5">
+                <span className="font-bold block">1 Nodal Officer Per District Governance Model</span>
+                <span className="text-slate-600 block text-[11px]">
+                  Each of Jharkhand&apos;s 24 districts is governed by exactly one designated Nodal Officer responsible for grassroots grievance verification and academic routing.
+                </span>
+                <span className="inline-block font-mono text-[10px] font-bold text-blue-700 mt-1">
+                  {availableCount} of 24 Districts Currently Open
+                </span>
+              </div>
             </div>
 
+            {/* Assigned District Jurisdiction Selector */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Assigned District Jurisdiction
+                Select Your Assigned District Jurisdiction <span className="text-red-500">*</span>
               </label>
               <select
                 value={govtDistrict}
-                onChange={(e) => setGovtDistrict(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setGovtDistrict(val);
+                  if (val.toLowerCase().includes("statewide")) {
+                    setGovtDesignation("State Nodal Director / Superadmin");
+                  } else if (govtDesignation === "State Nodal Director / Superadmin" || !govtDesignation) {
+                    setGovtDesignation("District Nodal Officer");
+                  }
+                  if (errors.govtDistrict) setErrors((prev) => ({ ...prev, govtDistrict: "" }));
+                }}
+                disabled={isLoadingDistricts}
+                className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all font-medium"
               >
-                <option value="Statewide (All 24 Districts)">Statewide (All 24 Districts)</option>
-                {JHARKHAND_DISTRICTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d} District
-                  </option>
-                ))}
+                <option value="">-- Choose Your Jurisdiction --</option>
+                {districtStatuses.map((d) => {
+                  const isState = d.district.toLowerCase().includes("statewide");
+                  return (
+                    <option
+                      key={d.district}
+                      value={d.district}
+                      disabled={d.isAssigned}
+                      className={d.isAssigned ? "text-slate-400 bg-slate-100 font-normal" : isState ? "text-indigo-900 font-black bg-indigo-50/50" : "text-slate-900 font-bold"}
+                    >
+                      {isState ? `[State Directorate] ${d.district} (State Superadmin)` : `${d.district} District`} {d.isAssigned ? `— [Claimed by ${d.nodalOfficerName || "Active Officer"}]` : "— Available"}
+                    </option>
+                  );
+                })}
               </select>
+              {errors.govtDistrict && (
+                <p className="text-[11px] text-red-600 font-medium">{errors.govtDistrict}</p>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                  Officer Service ID / Code
+            {/* Service ID and Designation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide h-8 flex items-end">
+                  <span>Officer Service ID / Code <span className="text-red-500">*</span></span>
                 </label>
                 <input
                   type="text"
@@ -230,26 +316,26 @@ export default function GovernmentOnboardingPage() {
                     setServiceCode(e.target.value);
                     if (errors.serviceCode) setErrors((prev) => ({ ...prev, serviceCode: "" }));
                   }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all uppercase font-mono"
+                  className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all uppercase font-mono"
                 />
                 {errors.serviceCode && (
                   <p className="text-[11px] text-red-600 font-medium">{errors.serviceCode}</p>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                  Designation
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide h-8 flex items-end">
+                  <span>Official Designation <span className="text-red-500">*</span></span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. BDO / Nodal Officer"
+                  placeholder="e.g. District Nodal Officer / BDO"
                   value={govtDesignation}
                   onChange={(e) => {
                     setGovtDesignation(e.target.value);
                     if (errors.govtDesignation) setErrors((prev) => ({ ...prev, govtDesignation: "" }));
                   }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                  className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
                 />
                 {errors.govtDesignation && (
                   <p className="text-[11px] text-red-600 font-medium">{errors.govtDesignation}</p>
@@ -274,7 +360,7 @@ export default function GovernmentOnboardingPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Nodal Officer Full Name
+                Nodal Officer Full Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -293,7 +379,7 @@ export default function GovernmentOnboardingPage() {
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Official Email (@jharkhand.gov.in / @nic.in)
+                Official Email (@jharkhand.gov.in / @nic.in) <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -312,7 +398,7 @@ export default function GovernmentOnboardingPage() {
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Official Mobile Number
+                Official Mobile Number <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
                 <span className="px-3.5 py-3 rounded-xl bg-slate-100 border border-slate-300 text-sm font-semibold text-slate-600 flex items-center">
@@ -339,7 +425,7 @@ export default function GovernmentOnboardingPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                  Create Password
+                  Create Password <span className="text-red-500">*</span>
                 </label>
                 <button
                   type="button"
@@ -381,11 +467,11 @@ export default function GovernmentOnboardingPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Block / Ward Code (Optional)
+                Block / Sub-Division Code (Optional)
               </label>
               <input
                 type="text"
-                placeholder="e.g. WARD-04 / BLOCK-01"
+                placeholder="e.g. BLOCK-01 / SUBDIV-HQ"
                 value={panchayatCode}
                 onChange={(e) => setPanchayatCode(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all uppercase font-mono"
@@ -393,8 +479,9 @@ export default function GovernmentOnboardingPage() {
             </div>
 
             <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 space-y-1">
-              <span className="font-bold text-slate-800 block">Scope Summary:</span>
-              <p>Jurisdiction: <strong>{govtDistrict}</strong> • Department: <strong>{govtDepartment}</strong></p>
+              <span className="font-bold text-slate-800 block">District Jurisdiction Summary:</span>
+              <p>Designated District: <strong className="text-slate-900">{govtDistrict} District</strong></p>
+              <p>Officer: <strong className="text-slate-900">{nodalName}</strong> ({govtDesignation})</p>
             </div>
 
             <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
@@ -411,7 +498,7 @@ export default function GovernmentOnboardingPage() {
                   className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-xs text-slate-700 leading-normal">
-                  I declare that I am an authorized government official/nodal lead in the State of Jharkhand.
+                  I declare that I am the authorized district government official / designated nodal lead for <strong>{govtDistrict || "the selected district"}</strong> in the State of Jharkhand.
                 </span>
               </label>
               {errors.authorizedDeclaration && (
@@ -431,10 +518,10 @@ export default function GovernmentOnboardingPage() {
                 {isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Provisioning Officer Account...</span>
+                    <span>Provisioning District Nodal Officer...</span>
                   </>
                 ) : (
-                  <span>Complete Government Registration →</span>
+                  <span>Complete Nodal Registration →</span>
                 )}
               </button>
             </div>
@@ -444,3 +531,4 @@ export default function GovernmentOnboardingPage() {
     </GuestOnlyGuard>
   );
 }
+

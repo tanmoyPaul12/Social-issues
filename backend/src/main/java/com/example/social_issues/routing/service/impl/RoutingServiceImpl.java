@@ -13,10 +13,14 @@ import com.example.social_issues.problemsubmission.model.IssuePriority;
 import com.example.social_issues.problemsubmission.model.IssueSector;
 import com.example.social_issues.problemsubmission.model.IssueStatus;
 import com.example.social_issues.problemsubmission.repository.GrassrootIssueRepository;
+import com.example.social_issues.projectlifecycle.service.ProjectMilestoneService;
 import com.example.social_issues.routing.dto.TriageAssignRequest;
 import com.example.social_issues.routing.dto.TriageRejectRequest;
 import com.example.social_issues.routing.dto.TriageValidateRequest;
 import com.example.social_issues.routing.service.RoutingService;
+import com.example.social_issues.universitycollab.model.UniversityProject;
+import com.example.social_issues.universitycollab.model.UniversityProjectStage;
+import com.example.social_issues.universitycollab.repository.UniversityProjectRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -25,10 +29,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -40,15 +46,21 @@ public class RoutingServiceImpl implements RoutingService {
     private final GrassrootIssueRepository issueRepository;
     private final UserRepository userRepository;
     private final NotificationEventPublisher notificationPublisher;
+    private final UniversityProjectRepository universityProjectRepository;
+    private final ProjectMilestoneService milestoneService;
 
     public RoutingServiceImpl(
             GrassrootIssueRepository issueRepository,
             UserRepository userRepository,
-            NotificationEventPublisher notificationPublisher
+            NotificationEventPublisher notificationPublisher,
+            UniversityProjectRepository universityProjectRepository,
+            ProjectMilestoneService milestoneService
     ) {
         this.issueRepository = issueRepository;
         this.userRepository = userRepository;
         this.notificationPublisher = notificationPublisher;
+        this.universityProjectRepository = universityProjectRepository;
+        this.milestoneService = milestoneService;
     }
 
     @Override
@@ -114,13 +126,14 @@ public class RoutingServiceImpl implements RoutingService {
 
         String heiName = request.getHeiName().trim();
         issue.setStatus(IssueStatus.ASSIGNED_HEI);
+        issue.setValidationStatus("PASS");
         issue.setAssignedHEI(heiName);
 
         String note = request.getNotes() != null && !request.getNotes().isBlank()
                 ? request.getNotes().trim()
                 : "Dispatched to university R&D innovation center for challenge solving.";
 
-        String auditStamp = String.format("[%s] Assigned to HEI '%s' by %s: %s",
+        String auditStamp = String.format("[%s] Verified & Allocated to HEI '%s' by %s: %s",
                 LocalDateTime.now().format(TIME_FORMATTER), heiName, reviewerName, note);
 
         if (issue.getReviewNotes() == null || issue.getReviewNotes().isBlank()) {
@@ -132,6 +145,50 @@ public class RoutingServiceImpl implements RoutingService {
         GrassrootIssue saved = issueRepository.save(issue);
         log.info("Issue #{} assigned to HEI '{}' by reviewer {} (ID: {})", saved.getIssueNumber(), heiName, reviewerName, reviewerId);
 
+        // ── AUTO-PROVISION / UPDATE UNIVERSITY PROJECT IN DATABASE ──
+        String aisheCode = resolveAisheCode(heiName, request.getAisheCode());
+        UniversityProject project = universityProjectRepository.findByIssueId(saved.getId()).orElse(null);
+        boolean isNew = false;
+        if (project == null) {
+            project = new UniversityProject();
+            String safeAishe = aisheCode.replaceAll("[^a-zA-Z0-9]", "");
+            String uniqueSuffix = UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+            project.setProjectCode("PROJ-" + safeAishe + "-" + uniqueSuffix);
+            project.setIssue(saved);
+            project.setTicketId(saved.getIssueNumber());
+            project.setCreatedAt(LocalDateTime.now());
+            isNew = true;
+        }
+
+        project.setAisheCode(aisheCode);
+        project.setUniversityName(heiName);
+        project.setTitle(saved.getTitle());
+        project.setAbstractDescription(saved.getDescription());
+        project.setDomain(saved.getSector() != null ? saved.getSector().name() : "Engineering & Social Innovation");
+        project.setDistrict(saved.getDistrict() != null ? saved.getDistrict() : "Jharkhand");
+        project.setStage(UniversityProjectStage.TEAM_FORMATION);
+        project.setProgressPercentage(15);
+        if (request.getAllocatedGrant() != null) {
+            project.setAllocatedGrant(request.getAllocatedGrant());
+        } else if (project.getAllocatedGrant() == null) {
+            project.setAllocatedGrant(BigDecimal.valueOf(200000));
+        }
+        project.setCsrPartner(project.getCsrPartner() != null ? project.getCsrPartner() : "State Innovation Fund");
+        project.setCurrentMilestone("Project verified and allocated by State Nodal Department. Capstone faculty mentor & student team assembly in progress.");
+        project.setCitizenVerificationStatus("AWAITING_DEPLOYMENT");
+        project.setUpdatedAt(LocalDateTime.now());
+
+        UniversityProject savedProject = universityProjectRepository.save(project);
+        if (isNew) {
+            try {
+                milestoneService.setupDefaultMilestones(savedProject.getId());
+            } catch (Exception e) {
+                log.warn("Notice setting default milestones for project #{}: {}", savedProject.getId(), e.getMessage());
+            }
+        }
+        log.info("Auto-provisioned UniversityProject #{} (Code: {}) for verified Issue #{}",
+                savedProject.getId(), savedProject.getProjectCode(), saved.getIssueNumber());
+
         // Notify submitter of HEI assignment
         if (saved.getSubmitter() != null) {
             NotificationEvent event = new NotificationEvent();
@@ -142,7 +199,7 @@ public class RoutingServiceImpl implements RoutingService {
             event.setRecipientEmail(saved.getSubmitter().getEmail());
             event.setRecipientPhone(saved.getSubmitter().getPhone());
             event.setTitle("Grievance Assigned to " + heiName);
-            event.setMessage("Your grievance #" + saved.getIssueNumber() + " has been assigned to " + heiName + " for research, pilot development, and implementation.");
+            event.setMessage("Your grievance #" + saved.getIssueNumber() + " has been verified and allocated to " + heiName + " for research, pilot development, and implementation.");
             event.setSeverity("INFO");
             event.setActionUrl("/citizen/dashboard");
             event.setReferenceEntityType("ISSUE");
@@ -156,7 +213,7 @@ public class RoutingServiceImpl implements RoutingService {
         uniEvent.setEventType("ISSUE_ROUTED_TO_HEI");
         uniEvent.setSource("NODAL_TRIAGE");
         uniEvent.setTitle("New Challenge Assigned: #" + saved.getIssueNumber());
-        uniEvent.setMessage("Problem statement #" + saved.getIssueNumber() + " (" + saved.getSector() + ") has been routed to " + heiName + " for proposal submission.");
+        uniEvent.setMessage("Problem statement #" + saved.getIssueNumber() + " (" + saved.getSector() + ") has been verified by Government and allocated to " + heiName + " as Project " + savedProject.getProjectCode() + ".");
         uniEvent.setSeverity("ACTION_REQUIRED");
         uniEvent.setActionUrl("/university/challenges");
         uniEvent.setReferenceEntityType("ISSUE");
@@ -175,7 +232,11 @@ public class RoutingServiceImpl implements RoutingService {
         generalEvent.setReferenceEntityId(saved.getId());
         notificationPublisher.publishGeneralNotification(generalEvent);
 
-        return IssueResponse.fromEntity(saved);
+        IssueResponse res = IssueResponse.fromEntity(saved);
+        res.setProjectId(savedProject.getId());
+        res.setProjectCode(savedProject.getProjectCode());
+        res.setProjectStage(savedProject.getStage().name());
+        return res;
     }
 
     @Override
@@ -255,6 +316,16 @@ public class RoutingServiceImpl implements RoutingService {
         GrassrootIssue saved = issueRepository.save(issue);
         log.info("Issue #{} allocation revoked from '{}' by reviewer {} (ID: {}): {}", saved.getIssueNumber(), previousHEI, reviewerName, reviewerId, reason);
 
+        // Delete unfulfilled project record if present so it does not clutter active project oversight
+        universityProjectRepository.findByIssueId(saved.getId()).ifPresent(p -> {
+            try {
+                universityProjectRepository.delete(p);
+                log.info("Removed UniversityProject #{} for revoked Issue #{}", p.getId(), saved.getIssueNumber());
+            } catch (Exception e) {
+                log.warn("Could not delete UniversityProject on revocation: {}", e.getMessage());
+            }
+        });
+
         // Notify submitter of revocation & return to pool
         if (saved.getSubmitter() != null) {
             NotificationEvent event = new NotificationEvent();
@@ -288,6 +359,27 @@ public class RoutingServiceImpl implements RoutingService {
         notificationPublisher.publishUniversityNotification(uniEvent);
 
         return IssueResponse.fromEntity(saved);
+    }
+
+    private String resolveAisheCode(String heiName, String requestedAishe) {
+        if (requestedAishe != null && !requestedAishe.isBlank()) {
+            return requestedAishe.trim();
+        }
+        if (heiName == null || heiName.isBlank()) {
+            return "U-0205";
+        }
+        String lower = heiName.toLowerCase();
+        if (lower.contains("bit") || lower.contains("mesra")) return "U-0205";
+        if (lower.contains("iit") || lower.contains("ism") || lower.contains("dhanbad")) return "U-0207";
+        if (lower.contains("nit") || lower.contains("jamshedpur")) return "U-0206";
+        if (lower.contains("ranchi university")) return "U-0208";
+        if (lower.contains("kolhan")) return "U-0209";
+        if (lower.contains("aiims") || lower.contains("deoghar")) return "U-0210";
+        if (lower.contains("vinoba bhave") || lower.contains("vbu")) return "U-0211";
+        if (lower.contains("sido kanhu") || lower.contains("skmu")) return "U-0212";
+        if (lower.contains("iim") || lower.contains("ranchi")) return "U-0213";
+        if (lower.contains("iiit")) return "U-0214";
+        return "U-" + Math.abs(heiName.hashCode() % 9000 + 1000);
     }
 
     @Override

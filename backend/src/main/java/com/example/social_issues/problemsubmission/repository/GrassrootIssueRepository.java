@@ -93,4 +93,18 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
 
     @Query("SELECT FUNCTION('TO_CHAR', i.createdAt, 'YYYY-MM'), COUNT(i) FROM GrassrootIssue i GROUP BY FUNCTION('TO_CHAR', i.createdAt, 'YYYY-MM') ORDER BY 1")
     List<Object[]> countGroupByMonth();
+
+    @Query("""
+        SELECT i FROM GrassrootIssue i
+        WHERE i.createdAt >= :startDate AND i.createdAt <= :endDate
+          AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))
+          AND (:sector IS NULL OR i.sector = :sector)
+        ORDER BY i.createdAt DESC
+    """)
+    List<GrassrootIssue> findByDateRangeAndFilters(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("district") String district,
+            @Param("sector") IssueSector sector
+    );
 }

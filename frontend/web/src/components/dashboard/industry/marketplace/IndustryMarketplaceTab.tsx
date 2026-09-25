@@ -108,7 +108,7 @@ export function IndustryMarketplaceTab({ onNavigateTab }: IndustryMarketplaceTab
         postThreadMessage(
           token,
           createdThread.id,
-          `💰 CSR GRANT COMMITTED: ${selectedProject.title}\n\nGrant Sponsor: ${user?.name || "Corporate CSR Sponsor"}\nTotal Grant Committed: ₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}\nSchedule VII Head: ${payload.csrScheduleViiHead || "Schedule VII Provision"}\n\nProject channel initialized for prototyping milestones, telemetry reports, and tranche disbursements.`,
+          `CSR GRANT COMMITTED: ${selectedProject.title}\n\nGrant Sponsor: ${user?.name || "Corporate CSR Sponsor"}\nTotal Grant Committed: ₹${(payload.grantAmount || 500000).toLocaleString("en-IN")}\nSchedule VII Head: ${payload.csrScheduleViiHead || "Schedule VII Provision"}\n\nProject channel initialized for prototyping milestones, telemetry reports, and tranche disbursements.`,
           undefined,
           undefined,
           createdThread.pilotId,
