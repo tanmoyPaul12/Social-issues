@@ -47,7 +47,7 @@ export class EmailWorker {
           const rendered = EventTemplateEngine.render(payload);
           const emailSubject = rendered.emailSubject || `[Jharkhand Innovation] ${payload.title}`;
           const emailHtml = rendered.emailHtml || `<p>${payload.message}</p>`;
-          const fromAddress = process.env.EMAIL_FROM || '"Jharkhand Innovation Portal" <noreply@jhinov.gov.in>';
+          const fromAddress = process.env.EMAIL_FROM || (smtpUser ? `"Jharkhand Innovation Portal" <${smtpUser}>` : '"Jharkhand Innovation Portal" <noreply@jhinov.gov.in>');
 
           if (this.transporter) {
             try {
@@ -58,7 +58,11 @@ export class EmailWorker {
                 html: emailHtml
               });
               console.log(`[EmailWorker] Email sent to ${recipientEmail}: messageId=${info.messageId}`);
-              return { success: true, messageId: info.messageId };
+              const previewUrl = nodemailer.getTestMessageUrl(info);
+              if (previewUrl) {
+                console.log(`[EmailWorker] 🔗 Ethereal Email Preview: ${previewUrl}`);
+              }
+              return { success: true, messageId: info.messageId, previewUrl: previewUrl || undefined };
             } catch (err: any) {
               console.error(`[EmailWorker] SMTP Error sending to ${recipientEmail}:`, err.message);
               throw err; // Trigger BullMQ retry

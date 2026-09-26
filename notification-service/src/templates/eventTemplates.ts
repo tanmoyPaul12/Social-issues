@@ -27,6 +27,50 @@ export class EventTemplateEngine {
     const baseActionUrl = actionUrl || '/';
 
     switch (eventType) {
+      case 'AUTH_OTP':
+      case 'OTP_VERIFICATION': {
+        const otpCode = statDeltas.otp || referenceEntityId || '------';
+        const expiryMinutes = statDeltas.expiryMinutes || 10;
+        const formattedTitle = title || 'One-Time Password (OTP) Verification';
+        const formattedMsg =
+          message ||
+          `Your one-time verification code is ${otpCode}. It is valid for ${expiryMinutes} minutes. Please do not share this code with anyone.`;
+        return {
+          title: formattedTitle,
+          message: formattedMsg,
+          actionUrl: baseActionUrl,
+          emailSubject: `[Jharkhand Innovation] Your Verification Code: ${otpCode}`,
+          emailHtml: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 24px; color: #1e293b; max-width: 580px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+              <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 24px;">
+                <h2 style="color: #38bdf8; margin: 0; font-size: 20px; letter-spacing: -0.5px;">Jharkhand Grassroot Innovation Platform</h2>
+                <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0;">Government of Jharkhand &bull; Higher & Technical Education</p>
+              </div>
+              <h3 style="color: #0f172a; margin-top: 0; font-size: 18px;">${formattedTitle}</h3>
+              <p style="font-size: 15px; line-height: 1.6; color: #475569;">
+                You recently requested a verification code to access your account or verify an action on the portal. Use the one-time password below to proceed:
+              </p>
+              <div style="margin: 28px 0; text-align: center;">
+                <div style="display: inline-block; background: #f8fafc; border: 2px dashed #0284c7; border-radius: 10px; padding: 16px 36px;">
+                  <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0369a1;">${otpCode}</span>
+                </div>
+                <p style="font-size: 13px; color: #64748b; margin-top: 10px;">Valid for <strong>${expiryMinutes} minutes</strong></p>
+              </div>
+              <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;">
+                <p style="font-size: 13px; color: #991b1b; margin: 0; line-height: 1.5;">
+                  <strong>Security Alert:</strong> If you did not request this OTP, please ignore this email. Never disclose this code or your credentials to anyone.
+                </p>
+              </div>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                This is an automated system notification. Please do not reply directly to this email.
+              </p>
+            </div>
+          `,
+          smsText: `[JHINOV] Your OTP verification code is ${otpCode}. Valid for ${expiryMinutes} minutes. Do not share this code.`
+        };
+      }
+
       case 'ISSUE_SUBMITTED': {
         const issueRef = statDeltas.issueNumber || referenceEntityId || 'New';
         const formattedTitle = title || `Challenge #${issueRef} Received`;
