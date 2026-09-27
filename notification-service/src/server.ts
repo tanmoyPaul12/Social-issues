@@ -13,6 +13,7 @@ import { notificationStore } from './storage/notificationStore.js';
 import { NotificationPayload } from './types.js';
 
 dotenv.config();
+dotenv.config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 8082;
@@ -195,10 +196,10 @@ app.listen(PORT, () => {
   console.log(`=======================================================`);
 
   // 1. Connect Redis Subscriber
-  const redisInstance = redisSubscriber.init(REDIS_HOST, REDIS_PORT);
+  redisSubscriber.init(REDIS_HOST, REDIS_PORT);
 
-  // 2. Initialize Redis-backed Notification Store
-  notificationStore.init(redisInstance);
+  // 2. Initialize Dedicated Redis-backed Notification Store
+  notificationStore.init(REDIS_HOST, REDIS_PORT);
 
   // 3. Initialize BullMQ Queue
   queueManager.init(REDIS_HOST, REDIS_PORT);
