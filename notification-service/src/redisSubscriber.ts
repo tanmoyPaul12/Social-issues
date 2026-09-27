@@ -20,6 +20,7 @@ export class RedisSubscriber {
     this.redis = new Redis({
       host,
       port,
+      enableReadyCheck: false,
       retryStrategy: (times) => {
         const delay = Math.min(times * 1000, 5000);
         console.log(`[Redis] Reconnecting subscriber in ${delay}ms... (attempt ${times})`);

@@ -6,9 +6,18 @@ export class NotificationStore {
   private inMemoryInbox: Map<string, NotificationRecord[]> = new Map();
   private readonly MAX_INBOX_SIZE = 500;
 
-  public init(redisInstance: Redis): void {
-    this.redis = redisInstance;
-    console.log('[NotificationStore] Initialized with Redis storage backend.');
+  public init(host: string, port: number): void {
+    try {
+      this.redis = new Redis({
+        host,
+        port,
+        retryStrategy: (times) => Math.min(times * 1000, 5000),
+        maxRetriesPerRequest: 3
+      });
+      console.log(`[NotificationStore] Initialized with dedicated Redis storage backend (redis://${host}:${port}).`);
+    } catch (err) {
+      console.warn('[NotificationStore] Failed to connect to Redis storage, using in-memory store:', err);
+    }
   }
 
   /**
