@@ -32,12 +32,13 @@ public class IssueDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (issueRepository.count() > 0) {
-            log.info("Grassroot issues already exist in database (count: {}). Skipping seeder.", issueRepository.count());
-            return;
-        }
+        try {
+            if (issueRepository.count() > 0) {
+                log.info("Grassroot issues already exist in database (count: {}). Skipping seeder.", issueRepository.count());
+                return;
+            }
 
-        log.info("Seeding realistic Grassroot Issues across Jharkhand districts and sectors...");
+            log.info("Seeding realistic Grassroot Issues across Jharkhand districts and sectors...");
 
         User defaultSubmitter = userRepository.findAll().stream().findFirst().orElseGet(() -> {
             User u = new User();
@@ -327,6 +328,9 @@ public class IssueDataSeeder implements CommandLineRunner {
 
         issueRepository.saveAll(seedList);
         log.info("Successfully seeded {} live Grassroot Issues into database.", seedList.size());
+        } catch (Exception e) {
+            log.warn("IssueDataSeeder non-fatal notice: {}", e.getMessage());
+        }
     }
 
     private GrassrootIssue createIssue(

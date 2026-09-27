@@ -23,7 +23,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final CitizenProfileRepository citizenProfileRepository;
-    private final GovernmentProfileRepository governmentProfileRepository;
+    
     private final OtpSessionRepository otpSessionRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final JwtService jwtService;
@@ -38,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
                            RedisSessionService redisSessionService) {
         this.userRepository = userRepository;
         this.citizenProfileRepository = citizenProfileRepository;
-        this.governmentProfileRepository = governmentProfileRepository;
+        
         this.otpSessionRepository = otpSessionRepository;
         this.jwtService = jwtService;
         this.redisSessionService = redisSessionService;

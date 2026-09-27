@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export interface GrassrootIssueRecord {
   id: string;
   numericId?: number;
+  issueNumber?: string;
   title: string;
   description: string;
   originalText?: string;
@@ -29,6 +30,7 @@ export interface GrassrootIssueRecord {
   pdfFileName?: string;
   pdfExtractedText?: string;
   attachmentCount?: number;
+  attachments?: any[];
   validationReportJson?: any;
   modalityBreakdown?: any;
   generalizedConsensus?: any;
@@ -195,7 +197,23 @@ export const useIssueStore = create<IssueState>()(
 
           if (res.ok) {
             const data = await res.json();
-            const content = data.content || data.issues || (Array.isArray(data) ? data : []);
+            const rawContent = data.content || data.issues || (Array.isArray(data) ? data : []);
+            const content = rawContent.map((item: any) => {
+              const ticketId = item.issueNumber || (typeof item.id === "string" ? item.id : `GRI-${item.id}`);
+              const numId = typeof item.id === "number" ? item.id : (item.numericId || undefined);
+              let resolvedImg = item.imageUrl;
+              if (!resolvedImg && item.attachments && Array.isArray(item.attachments)) {
+                const imgAtt = item.attachments.find((a: any) => a.fileType?.includes("image") || a.fileUrl?.match(/\.(jpeg|jpg|png|webp|gif)/i));
+                if (imgAtt) resolvedImg = imgAtt.fileUrl;
+              }
+              return {
+                ...item,
+                id: ticketId,
+                numericId: numId,
+                issueNumber: ticketId,
+                imageUrl: resolvedImg || item.imageUrl || null
+              };
+            });
             const total = data.totalElements ?? (content.length > 0 ? content.length : get().issues.length);
             const size = params?.size ?? get().pageSize ?? 10;
             const pages = data.totalPages ?? Math.max(1, Math.ceil(total / size));

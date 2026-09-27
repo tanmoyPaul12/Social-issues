@@ -51,7 +51,7 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
 
     @Query("""
         SELECT i FROM GrassrootIssue i
-        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status IN (com.example.social_issues.problemsubmission.model.IssueStatus.SUBMITTED, com.example.social_issues.problemsubmission.model.IssueStatus.TRIAGED, com.example.social_issues.problemsubmission.model.IssueStatus.UNDER_REVIEW)) )
+        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status NOT IN (com.example.social_issues.problemsubmission.model.IssueStatus.REJECTED, com.example.social_issues.problemsubmission.model.IssueStatus.DRAFT)) )
           AND (:sector IS NULL OR i.sector = :sector)
           AND (:priority IS NULL OR i.priority = :priority)
           AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))
@@ -67,7 +67,7 @@ public interface GrassrootIssueRepository extends JpaRepository<GrassrootIssue, 
 
     @Query("""
         SELECT i FROM GrassrootIssue i
-        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status IN (com.example.social_issues.problemsubmission.model.IssueStatus.SUBMITTED, com.example.social_issues.problemsubmission.model.IssueStatus.TRIAGED, com.example.social_issues.problemsubmission.model.IssueStatus.UNDER_REVIEW)) )
+        WHERE ( (:status IS NOT NULL AND i.status = :status) OR (:status IS NULL AND i.status NOT IN (com.example.social_issues.problemsubmission.model.IssueStatus.REJECTED, com.example.social_issues.problemsubmission.model.IssueStatus.DRAFT)) )
           AND (:sector IS NULL OR i.sector = :sector)
           AND (:priority IS NULL OR i.priority = :priority)
           AND (CAST(:district AS string) IS NULL OR LOWER(i.district) = LOWER(CAST(:district AS string)))

@@ -99,21 +99,13 @@ export function AiRoutingMasterOversight({ userDistrict }: AiRoutingMasterOversi
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(
-    isDistrictScoped ? rawDistrict : "All 24 Districts"
-  );
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING_APPROVAL" | "ALLOCATED" | "REVOKED">("PENDING_APPROVAL");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("All 24 Districts");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING_APPROVAL" | "ALLOCATED" | "REVOKED">("ALL");
   const [sectorFilter, setSectorFilter] = useState("ALL");
 
   // Local Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  useEffect(() => {
-    if (isDistrictScoped) {
-      setSelectedDistrict(rawDistrict);
-    }
-  }, [isDistrictScoped, rawDistrict]);
 
   // Fetch registered universities from database API
   useEffect(() => {
@@ -137,7 +129,7 @@ export function AiRoutingMasterOversight({ userDistrict }: AiRoutingMasterOversi
 
   // Server-driven paginated fetch
   const loadData = useCallback(() => {
-    const activeDistrict = isDistrictScoped ? rawDistrict : (selectedDistrict === "All 24 Districts" ? undefined : selectedDistrict);
+    const activeDistrict = selectedDistrict === "All 24 Districts" ? undefined : selectedDistrict;
     const backendStatus =
       statusFilter === "ALLOCATED"
         ? "ASSIGNED_HEI"
@@ -154,7 +146,7 @@ export function AiRoutingMasterOversight({ userDistrict }: AiRoutingMasterOversi
       size: rowsPerPage,
       token: token || undefined
     });
-  }, [fetchPaginatedIssues, isDistrictScoped, rawDistrict, selectedDistrict, statusFilter, sectorFilter, searchQuery, page, rowsPerPage, token]);
+  }, [fetchPaginatedIssues, selectedDistrict, statusFilter, sectorFilter, searchQuery, page, rowsPerPage, token]);
 
   useEffect(() => {
     loadData();

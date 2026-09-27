@@ -17,11 +17,13 @@ spring:
     password: ${DB_PASSWORD:39i9?+fED6gwv!F}
     driver-class-name: org.postgresql.Driver
     hikari:
-      minimum-idle: 3
+      minimum-idle: 2
       maximum-pool-size: 10
       idle-timeout: 30000
-      max-lifetime: 120000
-      connection-timeout: 5000
+      max-lifetime: 60000
+      keepalive-time: 30000
+      connection-timeout: 10000
+      validation-timeout: 3000
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:

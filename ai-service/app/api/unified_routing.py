@@ -41,6 +41,7 @@ async def analyze_and_route_societal_problem(input_data: UnifiedPipelineInput):
     try:
         logger.info(f"Received Master Unified Routing Request for text length {len(input_data.problem_text)}")
         output = _master_pipeline.run(input_data)
+        _sync_with_backend_database(input_data, output)
         return output
     except Exception as e:
         logger.error(f"Error executing Master Unified Intelligence API: {e}", exc_info=True)
@@ -48,6 +49,36 @@ async def analyze_and_route_societal_problem(input_data: UnifiedPipelineInput):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Master pipeline execution failed: {str(e)}"
         )
+
+
+def _sync_with_backend_database(input_data: UnifiedPipelineInput, output: UnifiedPipelineOutput):
+    """
+    Syncs the verified problem statement and university routing recommendation
+    directly into the Spring Boot backend PostgreSQL database (grassroot_issues).
+    """
+    try:
+        import httpx
+        backend_url = os.getenv("BACKEND_API_URL", "http://localhost:8080/api")
+        payload = {
+            "title": input_data.problem_text[:280],
+            "description": input_data.problem_text,
+            "district": input_data.district or "Ranchi",
+            "state": input_data.state or "Jharkhand",
+            "latitude": input_data.latitude,
+            "longitude": input_data.longitude,
+            "ai_result": output.model_dump()
+        }
+        for base in [backend_url, "http://localhost:8081/api", "http://localhost:8080/api"]:
+            try:
+                with httpx.Client(timeout=2.5) as client:
+                    resp = client.post(f"{base}/triage/ai-verification", json=payload)
+                    if resp.status_code in (200, 201):
+                        logger.info(f"Successfully synced AI verified problem to backend database via {base}")
+                        break
+            except Exception:
+                continue
+    except Exception as e:
+        logger.warning(f"Notice syncing with Spring backend: {e}")
 
 
 def _extract_document_text(filename: str, content: bytes) -> str:
@@ -128,6 +159,7 @@ async def analyze_and_route_with_file_uploads(
 
         logger.info(f"Received Swagger File Upload Routing Request: text={len(problem_text)}, images={len(image_b64_list)}, video={bool(video_temp_path)}, doc={bool(document_text)}")
         output = _master_pipeline.run(input_data)
+        _sync_with_backend_database(input_data, output)
         return output
     except Exception as e:
         logger.error(f"Error executing Swagger File Upload Master API: {e}", exc_info=True)

@@ -84,7 +84,7 @@ export function GovernmentDashboardView({
     rawDistrict.toLowerCase() !== "all 24 districts" &&
     rawDistrict.toLowerCase() !== "jharkhand"
   );
-  const districtJurisdiction = isDistrictScoped ? rawDistrict : "All 24 Districts";
+  const districtJurisdiction = "All 24 Districts";
 
   const [selectedDistrict, setSelectedDistrict] = useState<string>(districtJurisdiction);
   const [selectedAuditIssue, setSelectedAuditIssue] = useState<GrassrootIssueRecord | null>(null);
@@ -93,14 +93,7 @@ export function GovernmentDashboardView({
   const [escalations, setEscalations] = useState<EscalationItem[]>([]);
   const [resolvedEscalations, setResolvedEscalations] = useState<string[]>([]);
 
-  // Keep selected district in sync if user changes or is scoped
-  useEffect(() => {
-    if (isDistrictScoped) {
-      setSelectedDistrict(rawDistrict);
-    }
-  }, [isDistrictScoped, rawDistrict]);
-
-  const activeDistrictFilter = isDistrictScoped ? rawDistrict : selectedDistrict;
+  const activeDistrictFilter = selectedDistrict;
 
   useEffect(() => {
     fetchIssues();

@@ -17,6 +17,22 @@ public class UniversityEmbeddingService {
 
     private static final Logger log = LoggerFactory.getLogger(UniversityEmbeddingService.class);
 
+    private static final Map<String, String> FACULTY_PHOTO_MAP = Map.of(
+            "Prof. Arun Kumar", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+            "Prof. Bindhu Lal", "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80",
+            "Prof. Sarat Kumar Das", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+            "Prof. Alok Sinha", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+            "Prof. S. K. Paswan", "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80",
+            "Prof. Sanjay", "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=600&q=80",
+            "Prof. D. N. Singh", "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80",
+            "Prof. Saurabh Varshney", "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80"
+    );
+
+    public static String getFacultyPhotoUrl(String name) {
+        if (name == null) return "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80";
+        return FACULTY_PHOTO_MAP.getOrDefault(name, "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80");
+    }
+
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
     private final GrassrootIssueRepository issueRepository;
@@ -308,7 +324,7 @@ public class UniversityEmbeddingService {
                 fac.put("email", row.get("email"));
                 fac.put("phone", row.get("phone"));
                 fac.put("profile_url", row.get("profile_url"));
-                fac.put("profile_image_url", null); // Academic initials badge
+                fac.put("profile_image_url", getFacultyPhotoUrl((String) row.get("name")));
                 fac.put("cv_url", row.get("profile_url") + "/cv.pdf");
                 fac.put("publications_pdf_url", row.get("profile_url") + "/publications.pdf");
                 fac.put("match_score", score);
