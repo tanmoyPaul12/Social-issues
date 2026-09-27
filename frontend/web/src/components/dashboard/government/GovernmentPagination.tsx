@@ -15,19 +15,20 @@ interface GovernmentPaginationProps {
 }
 
 export function GovernmentPagination({
-  currentPage,
-  totalPages,
-  pageSize,
-  totalElements,
+  currentPage = 0,
+  totalPages = 0,
+  pageSize = 10,
+  totalElements = 0,
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50],
   isLoading = false,
 }: GovernmentPaginationProps) {
-  if (totalElements === 0) return null;
+  const safeTotal = totalElements ?? 0;
+  if (safeTotal <= 0) return null;
 
-  const startRecord = currentPage * pageSize + 1;
-  const endRecord = Math.min((currentPage + 1) * pageSize, totalElements);
+  const startRecord = safeTotal > 0 ? currentPage * pageSize + 1 : 0;
+  const endRecord = Math.min((currentPage + 1) * pageSize, safeTotal);
 
   // Generate visible page numbers (e.g. 1 2 3 ... 10)
   const getPageNumbers = () => {
@@ -70,7 +71,7 @@ export function GovernmentPagination({
         <div>
           Showing <strong className="text-[#1a0e3d] font-mono">{startRecord}</strong> to{" "}
           <strong className="text-[#1a0e3d] font-mono">{endRecord}</strong> of{" "}
-          <strong className="text-[#1a0e3d] font-mono">{totalElements.toLocaleString()}</strong> entries
+          <strong className="text-[#1a0e3d] font-mono">{safeTotal.toLocaleString()}</strong> entries
         </div>
 
         {/* Page Size Selector */}
