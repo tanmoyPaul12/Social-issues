@@ -317,7 +317,7 @@ function generateClusterInfo(i: { sector?: string; domain?: string; title?: stri
     return {
       track: "RESEARCH_INNOVATION",
       clusterCode: "CHAL-2026-SOLAR-09",
-      clusterTitle: "Resilient High-Voltage Surge-Isolated Power Architecture for Remote Forest Health Microgrids",
+      clusterTitle: i.title || "Resilient High-Voltage Surge-Isolated Power Architecture for Remote Forest Health Microgrids",
       clusterIncidentCount: 14,
       clusterTotalPopulation: 8400,
       clusterDistricts: ["Latehar", "Palamu"],
@@ -380,7 +380,7 @@ function generateClusterInfo(i: { sector?: string; domain?: string; title?: stri
     return {
       track: "RESEARCH_INNOVATION",
       clusterCode: "CHAL-2026-WATER-04",
-      clusterTitle: "Community-Scale Gravity-Feed Arsenic & Heavy Metal Adsorption Filtration Architecture",
+      clusterTitle: i.title || "Community-Scale Gravity-Feed Arsenic & Heavy Metal Adsorption Filtration Architecture",
       clusterIncidentCount: 18,
       clusterTotalPopulation: 12600,
       clusterDistricts: ["Sahibganj", "Pakur"],
@@ -431,7 +431,7 @@ function generateClusterInfo(i: { sector?: string; domain?: string; title?: stri
     return {
       track: "RESEARCH_INNOVATION",
       clusterCode: "CHAL-2026-AGRI-12",
-      clusterTitle: "Decentralized Solar-Thermal Micro Cold Storage with Phase Change Material for Perishable Horticulture",
+      clusterTitle: i.title || "Decentralized Solar-Thermal Micro Cold Storage with Phase Change Material for Perishable Horticulture",
       clusterIncidentCount: 9,
       clusterTotalPopulation: 6200,
       clusterDistricts: ["Ranchi", "Khunti"],
@@ -471,7 +471,7 @@ function generateClusterInfo(i: { sector?: string; domain?: string; title?: stri
   return {
     track: "RESEARCH_INNOVATION",
     clusterCode: "CHAL-2026-CIVIC-07",
-    clusterTitle: "Low-Power Mesh IoT Telemetry & Predictive Failure Sensing Node for Public Utilities",
+    clusterTitle: i.title || "Low-Power Mesh IoT Telemetry & Predictive Failure Sensing Node for Public Utilities",
     clusterIncidentCount: 8,
     clusterTotalPopulation: 5100,
     clusterDistricts: ["Ranchi", "Hazaribagh"],
@@ -549,7 +549,7 @@ export function useUniversity(aisheCode: string = "U-0205", token?: string | nul
           return {
             id: i.numericId || idx + 9000,
             ticketId: i.id,
-            title: cluster.clusterTitle || i.title,
+            title: i.title || cluster.clusterTitle,
             description: i.description,
             domain: i.domain || "Civic Technology",
             sector: i.sector || "WATER",

@@ -26,7 +26,7 @@ export function IndustryCommunicationTab() {
           try {
             await postThreadMessage(
               token,
-              typeof pitch.threadId === "number" ? pitch.threadId : parseInt(pitch.threadId.replace(/\D/g, "") || "101"),
+              typeof pitch.threadId === "number" ? pitch.threadId : parseInt(String(pitch.threadId).replace(/\D/g, "") || "101"),
               `CSR GRANT PROPOSAL ACCEPTED\n\nProject: ${pitch.projectTitle}\nSponsor: ${user?.name || "Corporate CSR Sponsor"}\nApproved Grant: ₹${pitch.requestedAmount.toLocaleString("en-IN")}\n\nLegal MoU & Tranche 1 disbursement process initiated.`,
               undefined,
               undefined,

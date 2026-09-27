@@ -13,8 +13,10 @@ import math
 import logging
 from pathlib import Path
 from typing import Dict, Any, List
-from sentence_transformers import SentenceTransformer
-from app.agents.requirement_extractor import ExtractedChallengeRequirements
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,16 @@ _EMBED_MODEL = None
 def get_embedding_model():
     global _EMBED_MODEL
     if _EMBED_MODEL is None:
-        try:
-            # Only load if already cached locally, avoiding slow HuggingFace network retries
-            _EMBED_MODEL = SentenceTransformer("intfloat/multilingual-e5-small", local_files_only=True)
-            logger.info("Loaded local embedding model 'intfloat/multilingual-e5-small' from cache.")
-        except Exception as e:
-            logger.info("SentenceTransformer local cache unavailable; using fast deterministic semantic embedding.")
+        if SentenceTransformer is not None:
+            try:
+                # Only load if already cached locally, avoiding slow HuggingFace network retries
+                _EMBED_MODEL = SentenceTransformer("intfloat/multilingual-e5-small", local_files_only=True)
+                logger.info("Loaded local embedding model 'intfloat/multilingual-e5-small' from cache.")
+            except Exception as e:
+                logger.info("SentenceTransformer local cache unavailable; using fast deterministic semantic embedding.")
+                _EMBED_MODEL = "FALLBACK"
+        else:
+            logger.info("SentenceTransformers not installed; using fast deterministic semantic embedding.")
             _EMBED_MODEL = "FALLBACK"
     return _EMBED_MODEL
 

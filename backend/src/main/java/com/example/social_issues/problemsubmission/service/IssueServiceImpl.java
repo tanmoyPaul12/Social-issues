@@ -11,6 +11,7 @@ import com.example.social_issues.problemsubmission.repository.GrassrootIssueRepo
 import com.example.social_issues.problemsubmission.repository.IssueAttachmentRepository;
 import com.example.social_issues.notifications.dto.NotificationEvent;
 import com.example.social_issues.notifications.service.NotificationEventPublisher;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ public class IssueServiceImpl implements IssueService {
     private final FileStorageService fileStorageService;
     private final AiServiceClient aiServiceClient;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final ObjectMapper objectMapper;
     private final SecureRandom random = new SecureRandom();
 
     public IssueServiceImpl(
@@ -47,7 +49,8 @@ public class IssueServiceImpl implements IssueService {
             UserRepository userRepository,
             FileStorageService fileStorageService,
             AiServiceClient aiServiceClient,
-            NotificationEventPublisher notificationEventPublisher
+            NotificationEventPublisher notificationEventPublisher,
+            ObjectMapper objectMapper
     ) {
         this.issueRepository = issueRepository;
         this.attachmentRepository = attachmentRepository;
@@ -55,6 +58,7 @@ public class IssueServiceImpl implements IssueService {
         this.fileStorageService = fileStorageService;
         this.aiServiceClient = aiServiceClient;
         this.notificationEventPublisher = notificationEventPublisher;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -525,7 +529,11 @@ public class IssueServiceImpl implements IssueService {
                         } else if ("LOW".equalsIgnoreCase(level)) {
                             issueToAudit.setPriority(IssuePriority.LOW);
                         }
-                        issueToAudit.setValidationReportJson(aiResult.toString());
+                        try {
+                            issueToAudit.setValidationReportJson(objectMapper.writeValueAsString(aiResult));
+                        } catch (Exception e) {
+                            issueToAudit.setValidationReportJson(aiResult.toString());
+                        }
                     }
 
                     // Route challenge to matching university HEIs via AI engine
@@ -536,7 +544,11 @@ public class IssueServiceImpl implements IssueService {
                             issueToAudit.setAssignedHEI(topHeiName);
                             log.info("AI Matched issue #{} with top university: {}", issueToAudit.getIssueNumber(), topHeiName);
                         }
-                        issueToAudit.setRecommendedHeisJson(recsList.toString());
+                        try {
+                            issueToAudit.setRecommendedHeisJson(objectMapper.writeValueAsString(recsList));
+                        } catch (Exception e) {
+                            issueToAudit.setRecommendedHeisJson(recsList.toString());
+                        }
                     }
 
                     issueRepository.save(issueToAudit);
