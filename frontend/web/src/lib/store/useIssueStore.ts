@@ -195,12 +195,46 @@ export const useIssueStore = create<IssueState>()(
 
           if (res.ok) {
             const data = await res.json();
-            const content = data.content || data.issues || (Array.isArray(data) ? data : []);
-            const total = data.totalElements ?? (content.length > 0 ? content.length : get().issues.length);
+            const rawContent = data.content || data.issues || (Array.isArray(data) ? data : []);
+            const mappedContent = rawContent.map((item: any) => ({
+              ...item,
+              id: item.issueNumber || item.id || `GRI-${item.id}`,
+              numericId: item.numericId || (typeof item.id === 'number' ? item.id : undefined),
+              title: item.title || "",
+              description: item.description || item.snippet || item.title || "",
+              district: item.district || "Ranchi",
+              sector: item.sector || "OTHER",
+              status: item.status || "SUBMITTED",
+              validationReportJson: item.validationReportJson,
+              recommendedHeisJson: item.recommendedHeisJson || item.validationReportJson,
+              assignedHEI: item.assignedHEI
+            }));
+
+            const currentIssues = get().issues || [];
+            const merged = [...mappedContent];
+            for (const localItem of currentIssues) {
+              const matchIdx = merged.findIndex(
+                m => m.id === localItem.id || (m.numericId && m.numericId === localItem.numericId)
+              );
+              if (matchIdx === -1) {
+                merged.push(localItem);
+              } else {
+                merged[matchIdx] = {
+                  ...localItem,
+                  ...merged[matchIdx],
+                  validationReportJson: merged[matchIdx].validationReportJson || localItem.validationReportJson,
+                  recommendedHeisJson: merged[matchIdx].recommendedHeisJson || localItem.recommendedHeisJson,
+                  assignedHEI: merged[matchIdx].assignedHEI || localItem.assignedHEI
+                };
+              }
+            }
+
+            const total = Math.max(data.totalElements ?? 0, merged.length);
             const size = params?.size ?? get().pageSize ?? 10;
-            const pages = data.totalPages ?? Math.max(1, Math.ceil(total / size));
+            const pages = Math.max(data.totalPages ?? 1, Math.ceil(total / size));
+
             set({
-              issues: content.length > 0 ? content : get().issues,
+              issues: merged,
               totalElements: total,
               totalPages: pages,
               currentPage: params?.page ?? 0,

@@ -158,18 +158,34 @@ export function GovernmentDashboardView({
               createdAt: item.createdAt || new Date().toISOString(),
               attachmentCount: item.attachmentCount || 1,
               validationReportJson: item.validationReportJson,
+              recommendedHeisJson: item.recommendedHeisJson || item.validationReportJson,
               isDuplicate: item.isDuplicate || false,
               duplicateClusterId: item.duplicateClusterId,
               potentialDuplicatesJson: item.potentialDuplicatesJson,
             };
           });
 
-          setStoreIssues(mapped);
-        } else {
-          setStoreIssues([]);
+          // Merge with current local store issues so newly submitted issues & local AI routing details are never lost
+          const currentLocal = useIssueStore.getState().issues || [];
+          const merged = [...mapped];
+          for (const localItem of currentLocal) {
+            const idx = merged.findIndex(
+              (m) => m.id === localItem.id || (m.numericId && m.numericId === localItem.numericId)
+            );
+            if (idx === -1) {
+              merged.push(localItem);
+            } else {
+              merged[idx] = {
+                ...localItem,
+                ...merged[idx],
+                validationReportJson: merged[idx].validationReportJson || localItem.validationReportJson,
+                recommendedHeisJson: merged[idx].recommendedHeisJson || localItem.recommendedHeisJson,
+                assignedHEI: merged[idx].assignedHEI || localItem.assignedHEI
+              };
+            }
+          }
+          setStoreIssues(merged);
         }
-      } else {
-        setStoreIssues([]);
       }
     } catch (e) {
       console.warn("Failed to fetch government dashboard issues from backend:", e);
